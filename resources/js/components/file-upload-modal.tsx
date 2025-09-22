@@ -1,0 +1,256 @@
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Upload, X, File, Folder, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm } from '@inertiajs/react';
+
+interface FileUploadModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onUpload: (files: File[]) => void;
+    currentFolderId?: number;
+}
+
+export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId }: FileUploadModalProps) {
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    
+    const { data, setData, post, processing, errors, reset } = useForm({
+        files: [] as File[],
+        folder_id: currentFolderId || null,
+        description: '',
+        tags: '',
+        visibility: 'private',
+    });
+
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        setUploadedFiles(acceptedFiles);
+        setData('files', acceptedFiles);
+    }, [setData]);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        multiple: true,
+        accept: {
+            'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'],
+            'application/pdf': ['.pdf'],
+            'application/msword': ['.doc'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+            'application/vnd.ms-excel': ['.xls'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+            'application/vnd.ms-powerpoint': ['.ppt'],
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+            'text/plain': ['.txt'],
+            'application/zip': ['.zip'],
+            'application/x-rar-compressed': ['.rar'],
+            'application/x-7z-compressed': ['.7z'],
+        },
+    });
+
+    const handleUpload = () => {
+        if (uploadedFiles.length === 0) return;
+
+        post('/files', {
+            onSuccess: () => {
+                onUpload(uploadedFiles);
+                setUploadedFiles([]);
+                reset();
+                onClose();
+            },
+            onError: (errors) => {
+                console.error('Upload error:', errors);
+            },
+        });
+    };
+
+    const removeFile = (index: number) => {
+        const newFiles = uploadedFiles.filter((_, i) => i !== index);
+        setUploadedFiles(newFiles);
+        setData('files', newFiles);
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Upload className="h-5 w-5" />
+                        Upload File
+                    </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                    {/* Dropzone */}
+                    <div
+                        {...getRootProps()}
+                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                            isDragActive
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-slate-300 hover:border-slate-400 dark:border-slate-600'
+                        }`}
+                    >
+                        <input {...getInputProps()} />
+                        <Upload className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+                        {isDragActive ? (
+                            <p className="text-lg font-medium text-blue-600 dark:text-blue-400">
+                                Drop files here...
+                            </p>
+                        ) : (
+                            <div>
+                                <p className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                                    Drag & drop files here, or click to select
+                                </p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Supports: Images, PDF, Word, Excel, PowerPoint, Text, Archives
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* File List */}
+                    {uploadedFiles.length > 0 && (
+                        <div className="space-y-3">
+                            <h4 className="font-medium text-slate-900 dark:text-white">
+                                Files to upload ({uploadedFiles.length})
+                            </h4>
+                            <div className="max-h-48 overflow-y-auto space-y-2">
+                                {uploadedFiles.map((file, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <File className="h-5 w-5 text-slate-500" />
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                    {file.name}
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {formatFileSize(file.size)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeFile(index)}
+                                            className="text-slate-400 hover:text-red-500"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* File Options */}
+                    {uploadedFiles.length > 0 && (
+                        <div className="space-y-4 border-t pt-4">
+                            <h4 className="font-medium text-slate-900 dark:text-white">
+                                Pengaturan File
+                            </h4>
+                            
+                            {/* Visibility */}
+                            <div className="space-y-2">
+                                <Label htmlFor="visibility">Visibilitas</Label>
+                                <Select value={data.visibility} onValueChange={(value) => setData('visibility', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih visibilitas" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="private">Private</SelectItem>
+                                        <SelectItem value="shared">Shared</SelectItem>
+                                        <SelectItem value="public">Public</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.visibility && (
+                                    <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {errors.visibility}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Deskripsi (Opsional)</Label>
+                                <textarea
+                                    id="description"
+                                    value={data.description}
+                                    onChange={(e) => setData('description', e.target.value)}
+                                    placeholder="Tambahkan deskripsi untuk file..."
+                                    rows={3}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
+                                />
+                                {errors.description && (
+                                    <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {errors.description}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Tags */}
+                            <div className="space-y-2">
+                                <Label htmlFor="tags">Tag (Opsional)</Label>
+                                <Input
+                                    id="tags"
+                                    value={data.tags}
+                                    onChange={(e) => setData('tags', e.target.value)}
+                                    placeholder="Masukkan tag dipisahkan koma (contoh: dokumen, penting, proyek)"
+                                />
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Pisahkan tag dengan koma untuk memudahkan pencarian
+                                </p>
+                                {errors.tags && (
+                                    <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {errors.tags}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Upload Progress */}
+                    {processing && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600 dark:text-slate-300">Uploading...</span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                <div className="bg-blue-600 h-2 rounded-full animate-pulse" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-3">
+                        <Button variant="outline" onClick={onClose} disabled={processing}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleUpload}
+                            disabled={uploadedFiles.length === 0 || processing}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {processing ? 'Uploading...' : `Upload ${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''}`}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}

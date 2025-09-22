@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->string('user_agent');
             $table->boolean('success');
             $table->json('details')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
         });
     }
 
