@@ -4,14 +4,14 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
-import { 
-    Cloud, 
-    Folder, 
-    FileText, 
-    Upload, 
-    Download, 
-    Share2, 
-    Users, 
+import {
+    Cloud,
+    Folder,
+    FileText,
+    Upload,
+    Download,
+    Share2,
+    Users,
     Activity,
     HardDrive,
     TrendingUp,
@@ -103,14 +103,14 @@ export default function Dashboard({ stats, recentFiles, recentFolders }: Dashboa
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <button 
+                        <button
                             onClick={() => setShowUploadModal(true)}
                             className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl"
                         >
                             <Upload className="mr-2 h-4 w-4" />
                             Upload File
                         </button>
-                        <button 
+                        <button
                             onClick={() => setShowCreateFolderModal(true)}
                             className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
@@ -153,8 +153,8 @@ export default function Dashboard({ stats, recentFiles, recentFolders }: Dashboa
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Penyimpanan Terpakai</p>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.storageUsed} GB</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">dari {stats.storageLimit} GB</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.storageUsed}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">dari {stats.storageLimit}</p>
                             </div>
                         </div>
                     </div>
