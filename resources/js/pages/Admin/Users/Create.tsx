@@ -13,7 +13,7 @@ export default function UserCreate() {
         email: '',
         password: '',
         password_confirmation: '',
-        role: 'user' as 'admin' | 'staff' | 'user',
+        role: 'guest' as 'admin' | 'staff' | 'guest',
         storage_limit: 1073741824, // 1GB default
     });
 
@@ -55,13 +55,13 @@ export default function UserCreate() {
                     <Button variant="outline" size="sm" asChild>
                         <Link href="/admin/users">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Users
+                            Kembali ke Pengguna
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Create User</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Tambah Pengguna</h1>
                         <p className="text-muted-foreground">
-                            Add a new user to the system
+                            Tambahkan pengguna baru ke sistem
                         </p>
                     </div>
                 </div>
@@ -70,23 +70,23 @@ export default function UserCreate() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <UserPlus className="h-5 w-5" />
-                            User Information
+                            Informasi Pengguna
                         </CardTitle>
                         <CardDescription>
-                            Enter the user's basic information and account settings
+                            Masukkan informasi dasar pengguna dan pengaturan akun
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Full Name</Label>
+                                    <Label htmlFor="name">Nama Lengkap</Label>
                                     <Input
                                         id="name"
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
                                         className={errors.name ? 'border-red-500' : ''}
-                                        placeholder="Enter full name"
+                                        placeholder="Masukkan nama lengkap"
                                         required
                                     />
                                     {errors.name && (
@@ -95,14 +95,14 @@ export default function UserCreate() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email Address</Label>
+                                    <Label htmlFor="email">Alamat Email</Label>
                                     <Input
                                         id="email"
                                         type="email"
                                         value={data.email}
                                         onChange={(e) => setData('email', e.target.value)}
                                         className={errors.email ? 'border-red-500' : ''}
-                                        placeholder="Enter email address"
+                                        placeholder="Masukkan alamat email"
                                         required
                                     />
                                     {errors.email && (
@@ -113,14 +113,14 @@ export default function UserCreate() {
 
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label htmlFor="password">Kata Sandi</Label>
                                     <Input
                                         id="password"
                                         type="password"
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
                                         className={errors.password ? 'border-red-500' : ''}
-                                        placeholder="Enter password"
+                                        placeholder="Masukkan kata sandi"
                                         required
                                     />
                                     {errors.password && (
@@ -129,14 +129,14 @@ export default function UserCreate() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="password_confirmation">Confirm Password</Label>
+                                    <Label htmlFor="password_confirmation">Konfirmasi Kata Sandi</Label>
                                     <Input
                                         id="password_confirmation"
                                         type="password"
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
                                         className={errors.password_confirmation ? 'border-red-500' : ''}
-                                        placeholder="Confirm password"
+                                        placeholder="Konfirmasi kata sandi"
                                         required
                                     />
                                     {errors.password_confirmation && (
@@ -147,24 +147,24 @@ export default function UserCreate() {
 
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="role">Role</Label>
+                                    <Label htmlFor="role">Peran</Label>
                                     <Select
-                                        value={data.role || 'user'}
-                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff' | 'user')}
+                                        value={data.role || 'guest'}
+                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff' | 'guest')}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select role" />
+                                            <SelectValue placeholder="Pilih peran" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="user">User</SelectItem>
-                                            <SelectItem value="staff">Staff</SelectItem>
+                                            <SelectItem value="guest">Tamu</SelectItem>
+                                            <SelectItem value="staff">Staf</SelectItem>
                                             <SelectItem value="admin">Admin</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        {data.role === 'admin' && 'Full system access and user management'}
-                                        {data.role === 'staff' && 'Limited admin access and user support'}
-                                        {data.role === 'user' && 'Standard user access to files and folders'}
+                                        {data.role === 'admin' && 'Akses penuh sistem dan manajemen pengguna'}
+                                        {data.role === 'staff' && 'Akses admin terbatas dan dukungan pengguna'}
+                                        {data.role === 'guest' && 'Akses tamu standar ke file dan folder'}
                                     </p>
                                     {errors.role && (
                                         <p className="text-sm text-red-500">{errors.role}</p>
@@ -172,13 +172,13 @@ export default function UserCreate() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="storage_limit">Storage Limit</Label>
+                                    <Label htmlFor="storage_limit">Batas Penyimpanan</Label>
                                     <Select
                                         value={data.storage_limit.toString()}
                                         onValueChange={(value) => setData('storage_limit', parseInt(value))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select storage limit" />
+                                            <SelectValue placeholder="Pilih batas penyimpanan" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {storageOptions.map((option) => (
@@ -189,7 +189,7 @@ export default function UserCreate() {
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        Current selection: {formatStorage(data.storage_limit)}
+                                        Pilihan saat ini: {formatStorage(data.storage_limit)}
                                     </p>
                                     {errors.storage_limit && (
                                         <p className="text-sm text-red-500">{errors.storage_limit}</p>
@@ -199,11 +199,11 @@ export default function UserCreate() {
 
                             <div className="flex items-center justify-end space-x-4">
                                 <Button type="button" variant="outline" asChild>
-                                    <Link href="/admin/users">Cancel</Link>
+                                    <Link href="/admin/users">Batal</Link>
                                 </Button>
                                 <Button type="submit" disabled={processing}>
                                     <Save className="h-4 w-4 mr-2" />
-                                    {processing ? 'Creating...' : 'Create User'}
+                                    {processing ? 'Membuat...' : 'Buat Pengguna'}
                                 </Button>
                             </div>
                         </form>

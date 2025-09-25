@@ -35,7 +35,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'admin' | 'staff' | 'user';
+    role: 'admin' | 'staff' | 'guest';
     is_active: boolean;
     storage_limit: number;
     storage_used: number;
@@ -153,15 +153,15 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Manajemen Pengguna</h1>
                         <p className="text-muted-foreground">
-                            Manage users, roles, and permissions
+                            Kelola pengguna, peran, dan izin
                         </p>
                     </div>
                     <Button asChild>
                         <Link href="/admin/users/create">
                             <UserPlus className="h-4 w-4 mr-2" />
-                            Add User
+                            Tambah Pengguna
                         </Link>
                     </Button>
                 </div>
@@ -170,7 +170,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Pengguna</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -179,7 +179,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+                            <CardTitle className="text-sm font-medium">Admin</CardTitle>
                             <Crown className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -188,7 +188,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Staff</CardTitle>
+                            <CardTitle className="text-sm font-medium">Staf</CardTitle>
                             <Shield className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -197,7 +197,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Regular Users</CardTitle>
+                            <CardTitle className="text-sm font-medium">Pengguna Biasa</CardTitle>
                             <User className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -209,17 +209,17 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                 {/* Filters */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Filters</CardTitle>
+                        <CardTitle>Filter</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                             <div className="flex-1">
-                                <Label htmlFor="search">Search</Label>
+                                <Label htmlFor="search">Cari</Label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                     <Input
                                         id="search"
-                                        placeholder="Search users..."
+                                        placeholder="Cari pengguna..."
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         className="pl-10"
@@ -227,22 +227,22 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                 </div>
                             </div>
                             <div className="sm:w-48">
-                                <Label htmlFor="role">Role</Label>
+                                <Label htmlFor="role">Peran</Label>
                                 <Select value={role || "all"} onValueChange={(value) => setRole(value === "all" ? "" : value)}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All roles" />
+                                        <SelectValue placeholder="Semua peran" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All roles</SelectItem>
+                                        <SelectItem value="all">Semua peran</SelectItem>
                                         <SelectItem value="admin">Admin</SelectItem>
-                                        <SelectItem value="staff">Staff</SelectItem>
-                                        <SelectItem value="user">User</SelectItem>
+                                        <SelectItem value="staff">Staf</SelectItem>
+                                        <SelectItem value="guest">Tamu</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <Button onClick={handleSearch}>
                                 <Filter className="h-4 w-4 mr-2" />
-                                Apply Filters
+                                Terapkan Filter
                             </Button>
                         </div>
                     </CardContent>
@@ -251,9 +251,9 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                 {/* Users Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Users</CardTitle>
+                        <CardTitle>Pengguna</CardTitle>
                         <CardDescription>
-                            Manage all users in the system
+                            Kelola semua pengguna dalam sistem
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -265,24 +265,24 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                             className="cursor-pointer hover:bg-muted/50"
                                             onClick={() => handleSort('name')}
                                         >
-                                            User
+                                            Pengguna
                                         </TableHead>
                                         <TableHead
                                             className="cursor-pointer hover:bg-muted/50"
                                             onClick={() => handleSort('role')}
                                         >
-                                            Role
+                                            Peran
                                         </TableHead>
-                                        <TableHead>Storage</TableHead>
-                                        <TableHead>Files</TableHead>
+                                        <TableHead>Penyimpanan</TableHead>
+                                        <TableHead>File</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead
                                             className="cursor-pointer hover:bg-muted/50"
                                             onClick={() => handleSort('created_at')}
                                         >
-                                            Created
+                                            Dibuat
                                         </TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -342,7 +342,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                                         onCheckedChange={() => handleToggleStatus(user.id)}
                                                     />
                                                     <span className="text-sm">
-                                                        {user.is_active ? 'Active' : 'Inactive'}
+                                                        {user.is_active ? 'Aktif' : 'Tidak Aktif'}
                                                     </span>
                                                 </div>
                                             </TableCell>
@@ -362,7 +362,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`/admin/users/${user.id}`}>
                                                                 <Eye className="h-4 w-4 mr-2" />
-                                                                View
+                                                                Lihat
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem asChild>
@@ -376,7 +376,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                                             onClick={() => handleDelete(user.id, user.name)}
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-2" />
-                                                            Delete
+                                                            Hapus
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -391,7 +391,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                         {users.last_page > 1 && (
                             <div className="flex items-center justify-between mt-4">
                                 <div className="text-sm text-muted-foreground">
-                                    Showing {((users.current_page - 1) * users.per_page) + 1} to {Math.min(users.current_page * users.per_page, users.total)} of {users.total} users
+                                    Menampilkan {((users.current_page - 1) * users.per_page) + 1} sampai {Math.min(users.current_page * users.per_page, users.total)} dari {users.total} pengguna
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     {users.current_page > 1 && (
@@ -400,7 +400,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                             size="sm"
                                             onClick={() => router.get('/admin/users', { ...filters, page: users.current_page - 1 })}
                                         >
-                                            Previous
+                                            Sebelumnya
                                         </Button>
                                     )}
                                     {users.current_page < users.last_page && (
@@ -409,7 +409,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                             size="sm"
                                             onClick={() => router.get('/admin/users', { ...filters, page: users.current_page + 1 })}
                                         >
-                                            Next
+                                            Selanjutnya
                                         </Button>
                                     )}
                                 </div>

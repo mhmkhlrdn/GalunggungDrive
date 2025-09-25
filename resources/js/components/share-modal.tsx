@@ -50,15 +50,15 @@ export default function ShareModal({
 
     useEffect(() => {
         if (isOpen) {
-            console.log('[ShareModal] open with mode:', mode, 'files:', files.length, 'users:', users.length);
+            if (mode === 'user-selection' && selectedFiles.length > 0) {
+                // Preselect file(s) passed in and jump to users step
+                setSelectedFileIds(selectedFiles.map(f => f.id));
+                setStep('users');
+            } else if (mode === 'file-selection') {
+                setStep('files');
+            }
         }
-        if (mode === 'user-selection' && selectedFiles.length > 0) {
-            setSelectedFileIds(selectedFiles.map(f => f.id));
-            setStep('users');
-        } else if (mode === 'file-selection') {
-            setStep('files');
-        }
-    }, [mode, selectedFiles]);
+    }, [isOpen, mode, selectedFiles]);
 
     const filteredFiles = files.filter(file => 
         file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

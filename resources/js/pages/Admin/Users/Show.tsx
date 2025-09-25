@@ -29,7 +29,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'admin' | 'staff' | 'user';
+    role: 'admin' | 'staff' | 'guest';
     is_active: boolean;
     storage_limit: number;
     storage_used: number;
@@ -129,7 +129,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                         <Button variant="outline" size="sm" asChild>
                             <Link href="/admin/users">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Users
+                                Kembali ke Pengguna
                             </Link>
                         </Button>
                         <div>
@@ -141,14 +141,14 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline">
                                 <MoreHorizontal className="h-4 w-4 mr-2" />
-                                Actions
+                                Aksi
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
                                 <Link href={`/admin/users/${user.id}/edit`}>
                                     <Edit className="h-4 w-4 mr-2" />
-                                    Edit User
+                                    Edit Pengguna
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem 
@@ -156,7 +156,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                                 onClick={handleDelete}
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
+                                    Hapus Pengguna
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -166,7 +166,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Role</CardTitle>
+                            <CardTitle className="text-sm font-medium">Peran</CardTitle>
                             {getRoleIcon(user.role)}
                         </CardHeader>
                         <CardContent>
@@ -197,7 +197,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
+                            <CardTitle className="text-sm font-medium">Penyimpanan Terpakai</CardTitle>
                             <HardDrive className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -209,7 +209,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Files & Folders</CardTitle>
+                            <CardTitle className="text-sm font-medium">File & Folder</CardTitle>
                             <FileText className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -224,9 +224,9 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                 {/* Account Details */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Account Details</CardTitle>
+                        <CardTitle>Detail Akun</CardTitle>
                         <CardDescription>
-                            Basic information about this user account
+                            Informasi dasar tentang akun pengguna ini
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -234,7 +234,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-2">
                                     <User className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Name</span>
+                                    <span className="text-sm font-medium">Nama</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">{user.name}</p>
                             </div>
@@ -248,7 +248,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-2">
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Created</span>
+                                    <span className="text-sm font-medium">Dibuat</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {new Date(user.created_at).toLocaleDateString()}
@@ -257,7 +257,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-2">
                                     <Clock className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Last Updated</span>
+                                    <span className="text-sm font-medium">Terakhir Diperbarui</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {new Date(user.updated_at).toLocaleDateString()}
@@ -272,10 +272,10 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                     {/* Recent Files */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Recent Files</CardTitle>
-                            <CardDescription>
-                                Latest files uploaded by this user
-                            </CardDescription>
+                        <CardTitle>File Terbaru</CardTitle>
+                        <CardDescription>
+                            File terbaru yang diunggah oleh pengguna ini
+                        </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {recentFiles.length > 0 ? (

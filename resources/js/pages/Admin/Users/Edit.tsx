@@ -11,7 +11,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'admin' | 'staff' | 'user';
+    role: 'admin' | 'staff' | 'guest';
     storage_limit: number;
     storage_used: number;
     is_active: boolean;
@@ -71,13 +71,13 @@ export default function UserEdit({ user }: Props) {
                     <Button variant="outline" size="sm" asChild>
                         <Link href="/admin/users">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Users
+                            Kembali ke Pengguna
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Edit User</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Edit Pengguna</h1>
                         <p className="text-muted-foreground">
-                            Update user information and settings
+                            Perbarui informasi dan pengaturan pengguna
                         </p>
                     </div>
                 </div>
@@ -86,23 +86,23 @@ export default function UserEdit({ user }: Props) {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <User className="h-5 w-5" />
-                            User Information
+                            Informasi Pengguna
                         </CardTitle>
                         <CardDescription>
-                            Update the user's information and account settings
+                            Perbarui informasi pengguna dan pengaturan akun
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Full Name</Label>
+                                    <Label htmlFor="name">Nama Lengkap</Label>
                                     <Input
                                         id="name"
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
                                         className={errors.name ? 'border-red-500' : ''}
-                                        placeholder="Enter full name"
+                                        placeholder="Masukkan nama lengkap"
                                         required
                                     />
                                     {errors.name && (
@@ -111,14 +111,14 @@ export default function UserEdit({ user }: Props) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email Address</Label>
+                                    <Label htmlFor="email">Alamat Email</Label>
                                     <Input
                                         id="email"
                                         type="email"
                                         value={data.email}
                                         onChange={(e) => setData('email', e.target.value)}
                                         className={errors.email ? 'border-red-500' : ''}
-                                        placeholder="Enter email address"
+                                        placeholder="Masukkan alamat email"
                                         required
                                     />
                                     {errors.email && (
@@ -129,17 +129,17 @@ export default function UserEdit({ user }: Props) {
 
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="password">New Password</Label>
+                                    <Label htmlFor="password">Kata Sandi Baru</Label>
                                     <Input
                                         id="password"
                                         type="password"
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
                                         className={errors.password ? 'border-red-500' : ''}
-                                        placeholder="Leave blank to keep current password"
+                                        placeholder="Kosongkan untuk mempertahankan kata sandi saat ini"
                                     />
                                     <p className="text-sm text-muted-foreground">
-                                        Leave blank to keep the current password
+                                        Kosongkan untuk mempertahankan kata sandi saat ini
                                     </p>
                                     {errors.password && (
                                         <p className="text-sm text-red-500">{errors.password}</p>
@@ -147,14 +147,14 @@ export default function UserEdit({ user }: Props) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="password_confirmation">Confirm New Password</Label>
+                                    <Label htmlFor="password_confirmation">Konfirmasi Kata Sandi Baru</Label>
                                     <Input
                                         id="password_confirmation"
                                         type="password"
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
                                         className={errors.password_confirmation ? 'border-red-500' : ''}
-                                        placeholder="Confirm new password"
+                                        placeholder="Konfirmasi kata sandi baru"
                                     />
                                     {errors.password_confirmation && (
                                         <p className="text-sm text-red-500">{errors.password_confirmation}</p>
@@ -164,24 +164,24 @@ export default function UserEdit({ user }: Props) {
 
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="role">Role</Label>
+                                    <Label htmlFor="role">Peran</Label>
                                     <Select
                                         value={data.role}
-                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff' | 'user')}
+                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff' | 'guest')}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select role" />
+                                            <SelectValue placeholder="Pilih peran" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="user">User</SelectItem>
-                                            <SelectItem value="staff">Staff</SelectItem>
+                                            <SelectItem value="guest">Tamu</SelectItem>
+                                            <SelectItem value="staff">Staf</SelectItem>
                                             <SelectItem value="admin">Admin</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        {data.role === 'admin' && 'Full system access and user management'}
-                                        {data.role === 'staff' && 'Limited admin access and user support'}
-                                        {data.role === 'user' && 'Standard user access to files and folders'}
+                                        {data.role === 'admin' && 'Akses penuh sistem dan manajemen pengguna'}
+                                        {data.role === 'staff' && 'Akses admin terbatas dan dukungan pengguna'}
+                                        {data.role === 'guest' && 'Akses tamu standar ke file dan folder'}
                                     </p>
                                     {errors.role && (
                                         <p className="text-sm text-red-500">{errors.role}</p>
@@ -189,13 +189,13 @@ export default function UserEdit({ user }: Props) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="storage_limit">Storage Limit</Label>
+                                    <Label htmlFor="storage_limit">Batas Penyimpanan</Label>
                                     <Select
                                         value={data.storage_limit.toString()}
                                         onValueChange={(value) => setData('storage_limit', parseInt(value))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select storage limit" />
+                                            <SelectValue placeholder="Pilih batas penyimpanan" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {storageOptions.map((option) => (
@@ -206,7 +206,7 @@ export default function UserEdit({ user }: Props) {
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        Current: {formatStorage(user.storage_used)} / {formatStorage(data.storage_limit)}
+                                        Saat ini: {formatStorage(user.storage_used)} / {formatStorage(data.storage_limit)}
                                     </p>
                                     {errors.storage_limit && (
                                         <p className="text-sm text-red-500">{errors.storage_limit}</p>
@@ -216,11 +216,11 @@ export default function UserEdit({ user }: Props) {
 
                             <div className="flex items-center justify-end space-x-4">
                                 <Button type="button" variant="outline" asChild>
-                                    <Link href="/admin/users">Cancel</Link>
+                                    <Link href="/admin/users">Batal</Link>
                                 </Button>
                                 <Button type="submit" disabled={processing}>
                                     <Save className="h-4 w-4 mr-2" />
-                                    {processing ? 'Saving...' : 'Save Changes'}
+                                    {processing ? 'Menyimpan...' : 'Simpan Perubahan'}
                                 </Button>
                             </div>
                         </form>

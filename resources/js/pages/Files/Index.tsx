@@ -3,6 +3,9 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
+import MoveFileModal from '@/components/move-file-modal';
+import FileEditModal from '@/components/file-edit-modal';
+import ShareModal from '@/components/share-modal';
 import { 
     Upload, 
     FolderPlus, 
@@ -22,7 +25,8 @@ import {
     Video,
     Music,
     Archive,
-    File
+    File,
+    Move
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -40,6 +44,12 @@ interface File {
         id: number;
         name: string;
     };
+}
+
+interface Folder {
+    id: number;
+    name: string;
+    parent_id?: number;
 }
 
 interface Props {
@@ -60,13 +70,26 @@ interface Props {
         sort_by: string;
         sort_order: string;
     };
+    folders: Folder[];
+    users?: Array<{
+        id: number;
+        name: string;
+        email: string;
+    }>;
+    disks?: Array<{ key: string; label: string }>;
 }
 
-export default function FilesIndex({ files, currentFolder, breadcrumbs, filters }: Props) {
+export default function FilesIndex({ files, currentFolder, breadcrumbs, filters, folders, users = [], disks = [] }: Props) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [fileToMove, setFileToMove] = useState<{id: number, name: string} | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [fileToEdit, setFileToEdit] = useState<File | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [fileToShare, setFileToShare] = useState<File | null>(null);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -110,6 +133,62 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
         router.reload();
     };
 
+    // Per-file actions open modals or perform direct navigation as appropriate
+    const handleShareFile = (file: File) => {
+        setFileToShare(file);
+        setShowShareModal(true);
+    };
+
+    const handleDeleteFile = (fileId: number) => {
+        if (confirm('Are you sure you want to delete this file?')) {
+            router.delete(`/files/${fileId}`);
+        }
+    };
+
+    const handleViewFile = (fileId: number) => {
+        window.open(`/files/${fileId}/preview`, '_blank');
+    };
+
+    const handleShare = (fileIds: number[], userIds: number[], permission: string, expiresAt?: string, isPublicLink?: boolean) => {
+        // Create share for each file
+        fileIds.forEach(fileId => {
+            if (isPublicLink) {
+                // Create public link
+                router.post(`/files/${fileId}/share`, {
+                    is_public_link: true,
+                    permission,
+                    expires_at: expiresAt
+                });
+            } else {
+                // Share with specific users
+                userIds.forEach(userId => {
+                    router.post(`/files/${fileId}/share`, {
+                        shared_with: userId,
+                        permission,
+                        expires_at: expiresAt
+                    });
+                });
+            }
+        });
+        
+        // Reload the page to show updated shares
+        router.reload();
+    };
+
+    const handleMoveFile = (fileId: number, fileName: string) => {
+        setFileToMove({ id: fileId, name: fileName });
+        setShowMoveModal(true);
+    };
+
+    const handleFileMove = (folderId: number | null) => {
+        router.reload();
+    };
+
+    const handleEditFile = (file: File) => {
+        setFileToEdit(file);
+        setShowEditModal(true);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="File Saya" />
@@ -130,7 +209,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
                             className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl"
                         >
                             <Upload className="mr-2 h-4 w-4" />
-                            Upload File
+                            {currentFolder ? `Upload to ${currentFolder.name}` : 'Upload File'}
                         </button>
                         <button 
                             onClick={() => setShowCreateFolderModal(true)}
@@ -200,7 +279,17 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
                                     <Download className="mr-1 h-3 w-3" />
                                     Download
                                 </button>
-                                <button className="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
+                                <button 
+                                    onClick={() => {
+                                        console.log('[FilesIndex] Bulk Bagikan clicked, selected:', selectedFiles);
+                                        const filesToShare = files.data.filter(f => selectedFiles.includes(f.id));
+                                        if (filesToShare.length > 0) {
+                                            setFileToShare(filesToShare[0]); // For now, share the first file
+                                            setShowShareModal(true);
+                                        }
+                                    }}
+                                    className="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                >
                                     <Share2 className="mr-1 h-3 w-3" />
                                     Bagikan
                                 </button>
@@ -221,12 +310,17 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
                         </div>
                         <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Tidak ada file ditemukan</h3>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {filters.search ? 'Coba sesuaikan kata kunci pencarian Anda.' : 'Upload file pertama Anda untuk memulai.'}
+                            {filters.search ? 'Coba sesuaikan kata kunci pencarian Anda.' : 
+                             currentFolder ? `Upload file ke folder "${currentFolder.name}" untuk memulai.` : 
+                             'Upload file pertama Anda untuk memulai.'}
                         </p>
                         {!filters.search && (
-                            <button className="mt-4 inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-blue-700 hover:to-indigo-700">
+                            <button 
+                                onClick={() => setShowUploadModal(true)}
+                                className="mt-4 inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-blue-700 hover:to-indigo-700"
+                            >
                                 <Upload className="mr-2 h-4 w-4" />
-                                Upload File
+                                {currentFolder ? `Upload to ${currentFolder.name}` : 'Upload File'}
                             </button>
                         )}
                     </div>
@@ -300,20 +394,43 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
                                         </div>
                                     </div>
                                     
-                                    {/* Quick Actions */}
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <div className="flex items-center space-x-2">
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                    {/* Quick Actions - non-blocking overlay for checkbox */}
+                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <div className="pointer-events-auto flex items-center space-x-2">
+                                            <button 
+                                                onClick={() => handleViewFile(file.id)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="View file"
+                                            >
                                                 <Eye className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Download file"
+                                            >
                                                 <Download className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => handleMoveFile(file.id, file.name)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Move file"
+                                            >
+                                                <Move className="h-4 w-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleShareFile(file)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Share file"
+                                            >
                                                 <Share2 className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
-                                                <Edit className="h-4 w-4" />
+                                            <button 
+                                                onClick={() => handleDeleteFile(file.id)}
+                                                className="rounded-full bg-white p-2 text-red-600 hover:bg-red-50"
+                                                title="Delete file"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -352,6 +469,8 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
                     onClose={() => setShowUploadModal(false)}
                     onUpload={handleFileUpload}
                     currentFolderId={currentFolder?.id}
+                    currentFolderName={currentFolder?.name}
+                    disks={disks}
                 />
                 <CreateFolderModal
                     isOpen={showCreateFolderModal}
@@ -359,6 +478,43 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters 
                     onCreate={handleFolderCreate}
                     parentId={currentFolder?.id}
                 />
+                {fileToMove && (
+                    <MoveFileModal
+                        isOpen={showMoveModal}
+                        onClose={() => {
+                            setShowMoveModal(false);
+                            setFileToMove(null);
+                        }}
+                        onMove={handleFileMove}
+                        fileId={fileToMove.id}
+                        fileName={fileToMove.name}
+                        currentFolderId={currentFolder?.id}
+                        folders={folders}
+                    />
+                )}
+                {fileToEdit && (
+                    <FileEditModal
+                        isOpen={showEditModal}
+                        onClose={() => {
+                            setShowEditModal(false);
+                            setFileToEdit(null);
+                        }}
+                        file={fileToEdit}
+                    />
+                )}
+                {fileToShare && (
+                    <ShareModal
+                        isOpen={showShareModal}
+                        onClose={() => {
+                            setShowShareModal(false);
+                            setFileToShare(null);
+                        }}
+                        onShare={handleShare}
+                        files={[fileToShare]}
+                        users={users}
+                        mode="user-selection"
+                    />
+                )}
             </div>
         </AppLayout>
     );

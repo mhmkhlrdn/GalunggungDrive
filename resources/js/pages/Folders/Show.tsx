@@ -196,7 +196,14 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                                                         <Edit className="h-4 w-4 mr-2" />
                                                         Rename
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-red-600">
+                                                    <DropdownMenuItem 
+                                                        className="text-red-600"
+                                                        onClick={() => {
+                                                            if (confirm('Are you sure you want to delete this folder and its contents?')) {
+                                                                router.delete(`/folders/${subfolder.id}`);
+                                                            }
+                                                        }}
+                                                    >
                                                         <Trash2 className="h-4 w-4 mr-2" />
                                                         Delete
                                                     </DropdownMenuItem>
