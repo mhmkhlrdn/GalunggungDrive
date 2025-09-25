@@ -23,6 +23,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'storage_limit',
+        'storage_used',
     ];
 
     /**
@@ -88,5 +91,21 @@ class User extends Authenticatable
         }
         
         return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    /**
+     * Check if the user is an admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if the user is staff or admin
+     */
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['admin', 'staff']);
     }
 }

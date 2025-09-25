@@ -8,6 +8,7 @@ use App\Models\FileShare;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Crypt;
 
 class DashboardController extends Controller
 {
@@ -25,9 +26,12 @@ class DashboardController extends Controller
             'sharedFiles' => FileShare::where('shared_by', $user->id)->count(),
         ];
 
-        // Get recent files
-        $recentFiles = File::where('user_id', $user->id)
-            ->with('folder')
+        // Get recent files (user's own files + public files from others)
+        $recentFiles = File::where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('visibility', 'public');
+            })
+            ->with(['folder', 'user'])
             ->orderBy('updated_at', 'desc')
             ->limit(5)
             ->get()
@@ -36,9 +40,19 @@ class DashboardController extends Controller
                     'id' => $file->id,
                     'name' => $file->name,
                     'type' => $this->getFileType($file->mime_type),
+                    'mime_type' => $file->mime_type,
                     'size' => $this->formatFileSize($file->size),
                     'modified' => $file->updated_at->diffForHumans(),
+                    'created_at' => $file->created_at->toISOString(),
+                    'description' => $file->description,
+                    'tags' => $file->tags,
                     'starred' => false, // You can add a starred field to files table
+                    'folder_id' => $file->folder_id,
+                    'uploader' => [
+                        'id' => $file->user->id,
+                        'name' => $file->user->name,
+                        'email' => $file->user->email,
+                    ],
                 ];
             });
 
@@ -53,13 +67,24 @@ class DashboardController extends Controller
                     'name' => $folder->name,
                     'files' => File::where('folder_id', $folder->id)->count(),
                     'modified' => $folder->updated_at->diffForHumans(),
+                    'link' => route('folders.show', ['folder' => $folder->id]),
                 ];
             });
+
+        $availableDisks = collect(config('filesystems.disks', []))
+            ->map(function ($config, $key) {
+                return [
+                    'key' => $key,
+                    'label' => ucfirst($key),
+                ];
+            })
+            ->values();
 
         return Inertia::render('dashboard', [
             'stats' => $stats,
             'recentFiles' => $recentFiles,
             'recentFolders' => $recentFolders,
+            'disks' => $availableDisks,
         ]);
     }
 

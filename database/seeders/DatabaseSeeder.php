@@ -7,32 +7,21 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 
 class DatabaseSeeder extends Seeder {
-    public function run(): void {
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'storage_limit' => 10737418240, // 10 GB
-            'storage_used' => 0,
-        ]);
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // \App\Models\User::factory(10)->create();
 
-        User::create([
-            'name' => 'Staff User',
-            'email' => 'staff@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'staff',
-            'storage_limit' => 5368709120, // 5 GB
-            'storage_used' => 0,
-        ]);
+        // \App\Models\User::factory()->create([
+        //     'name' => 'Test User',
+        //     'email' => 'test@example.com',
+        // ]);
 
-        User::create([
-            'name' => 'Guest User',
-            'email' => 'guest@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'guest',
-            'storage_limit' => 1073741824, // 1 GB
-            'storage_used' => 0,
+        $this->call([
+            StorageLocationSeeder::class,
+            AdminUserSeeder::class,
         ]);
     }
 }

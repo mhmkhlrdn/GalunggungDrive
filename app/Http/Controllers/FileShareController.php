@@ -46,10 +46,35 @@ class FileShareController extends Controller
             \Log::error('FileShareController error: ' . $e->getMessage());
         }
 
+        // Get all files for sharing
+        $files = File::with('folder')
+            ->where('user_id', $user->id)
+            ->select('id', 'name', 'mime_type', 'size', 'folder_id')
+            ->get()
+            ->map(function ($file) {
+                return [
+                    'id' => $file->id,
+                    'name' => $file->name,
+                    'mime_type' => $file->mime_type,
+                    'size' => $this->formatFileSize($file->size),
+                    'folder' => $file->folder ? [
+                        'id' => $file->folder->id,
+                        'name' => $file->folder->name,
+                    ] : null,
+                ];
+            });
+
+        // Get all users for sharing
+        $users = User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->get();
+
         return Inertia::render('shared/index', [
             'sharedByMe' => $sharedByMe,
             'sharedWithMe' => $sharedWithMe,
             'publicLinks' => $publicLinks,
+            'files' => $files,
+            'users' => $users,
         ]);
     }
 
@@ -261,5 +286,16 @@ class FileShareController extends Controller
         ]);
 
         return \Storage::disk($file->disk)->download($file->path, $file->name);
+    }
+
+    private function formatFileSize($bytes)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, 2) . ' ' . $units[$i];
     }
 }

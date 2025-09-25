@@ -13,9 +13,10 @@ interface FileUploadModalProps {
     onClose: () => void;
     onUpload: (files: File[]) => void;
     currentFolderId?: number;
+    currentFolderName?: string;
 }
 
-export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId }: FileUploadModalProps) {
+export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName }: FileUploadModalProps) {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -82,7 +83,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Upload className="h-5 w-5" />
@@ -90,7 +91,17 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-6">
+                <div className="space-y-6 overflow-y-auto flex-1">
+                    {/* Folder Indicator */}
+                    {currentFolderName && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <Folder className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-sm text-blue-800 dark:text-blue-200">
+                                Files will be uploaded to: <strong>{currentFolderName}</strong>
+                            </span>
+                        </div>
+                    )}
+
                     {/* Dropzone */}
                     <div
                         {...getRootProps()}
@@ -124,7 +135,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                             <h4 className="font-medium text-slate-900 dark:text-white">
                                 Files to upload ({uploadedFiles.length})
                             </h4>
-                            <div className="max-h-48 overflow-y-auto space-y-2">
+                            <div className="max-h-32 overflow-y-auto space-y-2">
                                 {uploadedFiles.map((file, index) => (
                                     <div
                                         key={index}
@@ -236,19 +247,20 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                         </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-3">
-                        <Button variant="outline" onClick={onClose} disabled={processing}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleUpload}
-                            disabled={uploadedFiles.length === 0 || processing}
-                            className="bg-blue-600 hover:bg-blue-700"
-                        >
-                            {processing ? 'Uploading...' : `Upload ${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''}`}
-                        </Button>
-                    </div>
+                </div>
+
+                {/* Actions - Fixed at bottom */}
+                <div className="flex items-center justify-end gap-3 border-t pt-4 mt-4">
+                    <Button variant="outline" onClick={onClose} disabled={processing}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleUpload}
+                        disabled={uploadedFiles.length === 0 || processing}
+                        className="bg-blue-600 hover:bg-blue-700"
+                    >
+                        {processing ? 'Uploading...' : `Upload ${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''}`}
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>

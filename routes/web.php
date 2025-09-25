@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FolderController;
+use App\Http\Controllers\CloudController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\RecentController;
 use App\Http\Controllers\StarredController;
@@ -26,7 +27,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // File Management Routes
         Route::resource('files', FileController::class);
         Route::get('files/{file}/download', [FileController::class, 'download'])->name('files.download');
+        Route::get('files/{file}/preview', [FileController::class, 'preview'])->name('files.preview');
         Route::post('files/{file}/restore', [FileController::class, 'restore'])->name('files.restore');
+        Route::post('files/{file}/move', [FileController::class, 'move'])->name('files.move');
 
         // File Sharing Routes
         Route::get('files/{file}/share', [App\Http\Controllers\FileShareController::class, 'create'])->name('files.share');
@@ -44,6 +47,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Folder Management Routes
         Route::resource('folders', FolderController::class);
         Route::post('folders/{folder}/restore', [FolderController::class, 'restore'])->name('folders.restore');
+        Route::get('folders/{folder}/download', [FolderController::class, 'download'])->name('folders.download');
+        // Encrypted folder view route
+        Route::get('f/{token}', [FolderController::class, 'view'])->name('folders.view');
 
         // Folder Sharing Routes
         Route::get('folders/{folder}/share', [App\Http\Controllers\FolderShareController::class, 'create'])->name('folders.share');
@@ -66,11 +72,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Storage Management Route
     Route::get('storage', [StorageController::class, 'index'])->name('storage.index');
 
+    // Cloud (All Files and Folders) Route
+    Route::get('cloud', [CloudController::class, 'index'])->name('cloud.index');
+
     // Activity Log Route
     Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
 
     // Trash Route
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
+
+    // Admin Routes
+    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::resource('storage-locations', \App\Http\Controllers\Admin\StorageLocationController::class);
+        Route::post('storage-locations/{storageLocation}/toggle', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggle'])->name('storage-locations.toggle');
+    });
 });
 
 require __DIR__.'/settings.php';
