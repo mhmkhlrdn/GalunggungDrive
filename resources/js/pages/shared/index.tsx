@@ -107,6 +107,20 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
     const [activeTab, setActiveTab] = useState<'shared-by-me' | 'shared-with-me' | 'public-links'>('shared-by-me');
     const [copiedTokens, setCopiedTokens] = useState<Set<string>>(new Set());
 
+    // Safety check to prevent crashes
+    if (!sharedByMe || !sharedWithMe || !publicLinks) {
+        return (
+            <AppLayout breadcrumbs={[{ title: 'File Dibagikan', href: '/shared' }]}>
+                <Head title="File Dibagikan" />
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
+
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -176,22 +190,33 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
             }
         };
 
+        let currentData;
         switch (activeTab) {
             case 'shared-by-me':
-                return sharedByMe || defaultData;
+                currentData = sharedByMe;
+                break;
             case 'shared-with-me':
-                return sharedWithMe || defaultData;
+                currentData = sharedWithMe;
+                break;
             case 'public-links':
-                return publicLinks || defaultData;
+                currentData = publicLinks;
+                break;
             default:
-                return sharedByMe || defaultData;
+                currentData = sharedByMe;
         }
+
+        // Ensure we always return a valid structure
+        if (!currentData || !currentData.meta) {
+            return defaultData;
+        }
+
+        return currentData;
     };
 
     const getTabTitle = () => {
         switch (activeTab) {
-            case 'shared-by-me':
-                return 'Dibagikan oleh Saya';
+            // case 'shared-by-me':
+            //     return 'Dibagikan oleh Saya';
             case 'shared-with-me':
                 return 'Dibagikan dengan Saya';
             case 'public-links':
@@ -216,7 +241,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                             File Dibagikan
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {getCurrentData().meta.total} file • {getTabTitle()}
+                            {getCurrentData().meta?.total || 0} file • {getTabTitle()}
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -238,7 +263,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
                             }`}
                         >
-                            Dibagikan oleh Saya ({sharedByMe.meta.total})
+                            Dibagikan oleh Saya ({sharedByMe?.meta?.total || 0})
                         </button>
                         <button
                             onClick={() => setActiveTab('shared-with-me')}
@@ -248,7 +273,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
                             }`}
                         >
-                            Dibagikan dengan Saya ({sharedWithMe.meta.total})
+                            Dibagikan dengan Saya ({sharedWithMe?.meta?.total || 0})
                         </button>
                         <button
                             onClick={() => setActiveTab('public-links')}
@@ -258,7 +283,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
                             }`}
                         >
-                            Link Publik ({publicLinks.meta.total})
+                            Link Publik ({publicLinks?.meta?.total || 0})
                         </button>
                     </nav>
                 </div>
@@ -453,20 +478,20 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                 )}
 
                 {/* Pagination */}
-                {getCurrentData().meta.last_page > 1 && (
+                {getCurrentData().meta?.last_page && getCurrentData().meta.last_page > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-600 dark:text-slate-300">
-                            Menampilkan {((getCurrentData().meta.current_page - 1) * getCurrentData().meta.per_page) + 1} sampai {Math.min(getCurrentData().meta.current_page * getCurrentData().meta.per_page, getCurrentData().meta.total)} dari {getCurrentData().meta.total} hasil
+                            Menampilkan {((getCurrentData().meta?.current_page || 1) - 1) * (getCurrentData().meta?.per_page || 20) + 1} sampai {Math.min((getCurrentData().meta?.current_page || 1) * (getCurrentData().meta?.per_page || 20), getCurrentData().meta?.total || 0)} dari {getCurrentData().meta?.total || 0} hasil
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
-                                disabled={getCurrentData().meta.current_page === 1}
+                                disabled={getCurrentData().meta?.current_page === 1}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Sebelumnya
                             </button>
                             <button
-                                disabled={getCurrentData().meta.current_page === getCurrentData().meta.last_page}
+                                disabled={getCurrentData().meta?.current_page === getCurrentData().meta?.last_page}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Selanjutnya

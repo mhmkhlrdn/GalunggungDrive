@@ -16,6 +16,7 @@ class Folder extends Model
         'user_id',
         'parent_id',
         'name',
+        'visibility',
     ];
 
     public function user(): BelongsTo

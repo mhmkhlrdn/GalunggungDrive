@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Folder;
 use App\Models\ActivityLog;
+use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Zip;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,7 +23,10 @@ class FolderController extends Controller
         $sortOrder = $request->get('sort_order', 'asc');
 
         $query = Folder::with(['user', 'parent'])
-            ->where('user_id', auth()->id());
+            ->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                  ->orWhere('visibility', 'public');
+            });
 
         if ($parentId) {
             $query->where('parent_id', $parentId);
@@ -33,13 +40,30 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
+        // Users list for share modal
+        $users = \App\Models\User::where('id', '!=', auth()->id())
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
         $currentFolder = $parentId ? Folder::find($parentId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
+
+        $availableDisks = collect(config('filesystems.disks', []))
+            ->map(function ($config, $key) {
+                return [
+                    'key' => $key,
+                    'label' => ucfirst($key),
+                ];
+            })
+            ->values();
 
         return Inertia::render('Folders/Index', [
             'folders' => $folders,
             'currentFolder' => $currentFolder,
             'breadcrumbs' => $breadcrumbs,
+            'users' => $users,
+            'disks' => $availableDisks,
             'filters' => [
                 'search' => $search,
                 'sort_by' => $sortBy,
@@ -53,6 +77,7 @@ class FolderController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:folders,id',
+            'visibility' => 'nullable|in:private,shared,public',
         ]);
 
         // Check if folder with same name exists in parent
@@ -71,6 +96,7 @@ class FolderController extends Controller
             'user_id' => auth()->id(),
             'parent_id' => $request->parent_id,
             'name' => $request->name,
+            'visibility' => $request->input('visibility', 'private'),
         ]);
 
         ActivityLog::create([
@@ -90,15 +116,197 @@ class FolderController extends Controller
         return redirect()->back()->with('success', 'Folder created successfully.');
     }
 
-    public function show(Folder $folder): Response
+    public function show(Folder $folder)
     {
         $this->authorize('view', $folder);
 
-        $folder->load(['user', 'parent', 'children', 'files', 'shares.sharedWith']);
+        // Get files in this folder
+        $files = File::where('folder_id', $folder->id)
+            ->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                  ->orWhere('visibility', 'public');
+            })
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->map(function ($file) {
+                return [
+                    'id' => $file->id,
+                    'name' => $file->name,
+                    'size' => $file->size,
+                    'mime_type' => $file->mime_type,
+                    'created_at' => $file->created_at->toISOString(),
+                    'updated_at' => $file->updated_at->toISOString(),
+                    'folder_id' => $file->folder_id,
+                    'starred' => $file->starred ?? false,
+                    'description' => $file->description,
+                    'tags' => $file->tags ?? [],
+                ];
+            });
 
-        return Inertia::render('Folders/Show', [
-            'folder' => $folder,
+        // Get subfolders
+        $subfolders = Folder::where('parent_id', $folder->id)
+            ->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                  ->orWhere('visibility', 'public');
+            })
+            ->orderBy('name')
+            ->get()
+            ->map(function ($subfolder) {
+                $filesCount = File::where('folder_id', $subfolder->id)
+                    ->where(function ($q) {
+                        $q->where('user_id', auth()->id())
+                          ->orWhere('visibility', 'public');
+                    })
+                    ->count();
+                $foldersCount = Folder::where('parent_id', $subfolder->id)->count();
+                
+                return [
+                    'id' => $subfolder->id,
+                    'name' => $subfolder->name,
+                    'parent_id' => $subfolder->parent_id,
+                    'created_at' => $subfolder->created_at->toISOString(),
+                    'updated_at' => $subfolder->updated_at->toISOString(),
+                    'files_count' => $filesCount,
+                    'folders_count' => $foldersCount,
+                ];
+            });
+
+        // Get breadcrumbs
+        $breadcrumbs = $this->getBreadcrumbs($folder);
+
+        // Get all folders for move functionality
+        $allFolders = Folder::where('user_id', auth()->id())
+            ->where('id', '!=', $folder->id) // Exclude current folder
+            ->orderBy('name')
+            ->get()
+            ->map(function ($folder) {
+                return [
+                    'id' => $folder->id,
+                    'name' => $folder->name,
+                    'parent_id' => $folder->parent_id,
+                ];
+            });
+
+        $availableDisks = collect(config('filesystems.disks', []))
+            ->map(function ($config, $key) {
+                return [
+                    'key' => $key,
+                    'label' => ucfirst($key),
+                ];
+            })
+            ->values();
+
+        return inertia('Folders/Show', [
+            'folder' => [
+                'id' => $folder->id,
+                'name' => $folder->name,
+                'parent_id' => $folder->parent_id,
+                'created_at' => $folder->created_at->toISOString(),
+                'updated_at' => $folder->updated_at->toISOString(),
+                'files_count' => $files->count(),
+                'folders_count' => $subfolders->count(),
+            ],
+            'files' => $files,
+            'folders' => $subfolders,
+            'breadcrumbs' => $breadcrumbs,
+            'currentFolderId' => $folder->id,
+            'allFolders' => $allFolders,
+            'disks' => $availableDisks,
         ]);
+    }
+
+    /**
+     * View a folder using an encrypted token and redirect to files listing.
+     */
+    public function view(string $token): RedirectResponse
+    {
+        $folderId = (int) Crypt::decryptString($token);
+        $folder = Folder::findOrFail($folderId);
+        $this->authorize('view', $folder);
+
+        return redirect()->route('files.index', ['folder_id' => $folder->id]);
+    }
+
+    public function download(Folder $folder)
+    {
+        $this->authorize('view', $folder);
+
+        // Get all files in this folder and subfolders
+        $files = $this->getAllFilesInFolder($folder);
+        
+        if ($files->isEmpty()) {
+            return redirect()->back()->with('error', 'Folder is empty.');
+        }
+
+        // Create a temporary ZIP file
+        $zipFileName = 'folder_' . $folder->name . '_' . time() . '.zip';
+        $zipPath = storage_path('app/temp/' . $zipFileName);
+        
+        // Ensure temp directory exists
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        // Create ZIP file
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
+            return redirect()->back()->with('error', 'Cannot create ZIP file.');
+        }
+
+        foreach ($files as $file) {
+            if (Storage::disk($file->disk)->exists($file->path)) {
+                $fileContent = Storage::disk($file->disk)->get($file->path);
+                $zip->addFromString($file->name, $fileContent);
+            }
+        }
+
+        $zip->close();
+
+        // Log download activity
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'download',
+            'target_type' => 'folder',
+            'target_id' => $folder->id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'success' => true,
+            'details' => [
+                'folder_name' => $folder->name,
+                'files_count' => $files->count(),
+            ],
+        ]);
+
+        // Return the ZIP file for download
+        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+    }
+
+    private function getAllFilesInFolder(Folder $folder)
+    {
+        $files = collect();
+        
+        // Get files directly in this folder
+        $directFiles = File::where('folder_id', $folder->id)
+            ->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                  ->orWhere('visibility', 'public');
+            })
+            ->get();
+        $files = $files->merge($directFiles);
+        
+        // Get files from subfolders recursively
+        $subfolders = Folder::where('parent_id', $folder->id)
+            ->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                  ->orWhere('visibility', 'public');
+            })
+            ->get();
+            
+        foreach ($subfolders as $subfolder) {
+            $files = $files->merge($this->getAllFilesInFolder($subfolder));
+        }
+        
+        return $files;
     }
 
     public function update(Request $request, Folder $folder): RedirectResponse
@@ -183,7 +391,7 @@ class FolderController extends Controller
     private function getBreadcrumbs(?Folder $folder): array
     {
         $breadcrumbs = [
-            ['title' => 'My Folders', 'href' => route('folders.index')],
+            ['id' => 0, 'name' => 'All Folders', 'link' => route('folders.index')],
         ];
 
         if ($folder) {
@@ -197,8 +405,9 @@ class FolderController extends Controller
 
             foreach ($path as $folderItem) {
                 $breadcrumbs[] = [
-                    'title' => $folderItem->name,
-                    'href' => route('folders.index', ['parent_id' => $folderItem->id]),
+                    'id' => $folderItem->id,
+                    'name' => $folderItem->name,
+                    'link' => route('folders.show', ['folder' => $folderItem->id]),
                 ];
             }
         }

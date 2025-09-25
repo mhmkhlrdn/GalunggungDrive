@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import { 
     FolderPlus, 
     Search, 
@@ -17,9 +17,15 @@ import {
     FolderOpen,
     FileText,
     Clock,
-    Users
+    Users,
+    Download
 } from 'lucide-react';
 import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import CreateFolderModal from '@/components/create-folder-modal';
 
 interface FolderItem {
     id: number;
@@ -52,11 +58,28 @@ interface Props {
         sort_by: string;
         sort_order: string;
     };
+    users: Array<{ id: number; name: string; email: string }>;
 }
 
-export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filters }: Props) {
+export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filters, users }: Props) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFolders, setSelectedFolders] = useState<number[]>([]);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [shareFolderId, setShareFolderId] = useState<number | null>(null);
+    const [showRenameModal, setShowRenameModal] = useState(false);
+    const [renameFolder, setRenameFolder] = useState<{ id: number; name: string } | null>(null);
+    const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+
+    const shareForm = useForm({
+        shared_with: '' as string,
+        permission: 'view' as 'view' | 'edit',
+        is_public_link: false as boolean,
+        expires_at: '' as string,
+    });
+
+    const renameForm = useForm({
+        name: '',
+    });
 
     const toggleFolderSelection = (folderId: number) => {
         setSelectedFolders(prev => 
@@ -101,7 +124,9 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <button className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl">
+                        <button 
+                            onClick={() => setShowCreateFolderModal(true)}
+                            className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl">
                             <FolderPlus className="mr-2 h-4 w-4" />
                             Folder Baru
                         </button>
@@ -186,7 +211,9 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                             {filters.search ? 'Coba sesuaikan kata kunci pencarian Anda.' : 'Buat folder pertama Anda untuk memulai.'}
                         </p>
                         {!filters.search && (
-                            <button className="mt-4 inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-blue-700 hover:to-indigo-700">
+                            <button 
+                                onClick={() => setShowCreateFolderModal(true)}
+                                className="mt-4 inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-blue-700 hover:to-indigo-700">
                                 <FolderPlus className="mr-2 h-4 w-4" />
                                 Folder Baru
                             </button>
@@ -252,13 +279,36 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                             <Link
                                                 href={`/folders/${folder.id}`}
                                                 className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="View folder"
                                             >
                                                 <Eye className="h-4 w-4" />
                                             </Link>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button
+                                                onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Download folder as ZIP"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShareFolderId(folder.id);
+                                                    setShowShareModal(true);
+                                                }}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Share folder"
+                                            >
                                                 <Share2 className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button
+                                                onClick={() => {
+                                                    setRenameFolder({ id: folder.id, name: folder.name });
+                                                    renameForm.setData('name', folder.name);
+                                                    setShowRenameModal(true);
+                                                }}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Rename folder"
+                                            >
                                                 <Edit className="h-4 w-4" />
                                             </button>
                                         </div>
@@ -292,6 +342,96 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                     </div>
                 )}
             </div>
+
+            {/* Share Modal */}
+            <Dialog open={showShareModal} onOpenChange={(open) => { if (!open) { setShowShareModal(false); setShareFolderId(null); shareForm.reset(); } }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Bagikan Folder</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Pilih Pengguna</label>
+                            <Select value={shareForm.data.shared_with} onValueChange={(v) => shareForm.setData('shared_with', v)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih pengguna" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {users.map((u) => (
+                                        <SelectItem key={u.id} value={String(u.id)}>{u.name} ({u.email})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Izin</label>
+                            <Select value={shareForm.data.permission} onValueChange={(v) => shareForm.setData('permission', v as 'view' | 'edit')}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih izin" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="view">Lihat</SelectItem>
+                                    <SelectItem value="edit">Edit</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" onClick={() => { setShowShareModal(false); setShareFolderId(null); }}>Batal</Button>
+                            <Button
+                                onClick={() => {
+                                    if (!shareFolderId) return;
+                                    shareForm.post(`/folders/${shareFolderId}/share`, {
+                                        preserveScroll: true,
+                                        onSuccess: () => { setShowShareModal(false); setShareFolderId(null); shareForm.reset(); },
+                                    });
+                                }}
+                                disabled={!shareForm.data.shared_with}
+                                className="bg-blue-600 hover:bg-blue-700"
+                            >
+                                Bagikan
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Rename Modal */}
+            <Dialog open={showRenameModal} onOpenChange={(open) => { if (!open) { setShowRenameModal(false); setRenameFolder(null); renameForm.reset(); } }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Ganti Nama Folder</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Nama</label>
+                            <Input value={renameForm.data.name} onChange={(e) => renameForm.setData('name', e.target.value)} />
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" onClick={() => { setShowRenameModal(false); setRenameFolder(null); }}>Batal</Button>
+                            <Button
+                                onClick={() => {
+                                    if (!renameFolder) return;
+                                    renameForm.put(`/folders/${renameFolder.id}`, {
+                                        preserveScroll: true,
+                                        onSuccess: () => { setShowRenameModal(false); setRenameFolder(null); },
+                                    });
+                                }}
+                                disabled={!renameForm.data.name || renameForm.processing}
+                                className="bg-blue-600 hover:bg-blue-700"
+                            >
+                                Simpan
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* Create Folder Modal (shared with dashboard) */}
+            <CreateFolderModal
+                isOpen={showCreateFolderModal}
+                onClose={() => setShowCreateFolderModal(false)}
+                onCreate={() => router.reload()}
+                parentId={currentFolder?.id}
+            />
         </AppLayout>
     );
 }

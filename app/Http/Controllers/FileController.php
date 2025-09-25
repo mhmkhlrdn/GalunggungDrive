@@ -9,12 +9,55 @@ use App\Models\FileShare;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
+use App\Models\StorageLocation;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class FileController extends Controller
 {
+    /**
+     * Pick a storage disk from active storage locations based on free space.
+     * Falls back to 'private' if none can be determined.
+     */
+    private function pickStorageDisk(): string
+    {
+        try {
+            $locations = \App\Models\StorageLocation::query()
+                ->where('is_active', true)
+                ->get();
+
+            $candidates = [];
+            foreach ($locations as $loc) {
+                // Only local driver free-space detection implemented
+                if ($loc->driver === 'local' && $loc->root) {
+                    try {
+                        $freeBytes = @disk_free_space($loc->root);
+                        if ($freeBytes !== false) {
+                            $candidates[] = [
+                                'key' => $loc->key,
+                                'free' => (int) $freeBytes,
+                            ];
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore unreadable paths
+                    }
+                }
+            }
+
+            if (!empty($candidates)) {
+                // choose disk with most free space
+                usort($candidates, function ($a, $b) { return $b['free'] <=> $a['free']; });
+                return $candidates[0]['key'];
+            }
+        } catch (\Throwable $e) {
+            // ignore and fall back
+        }
+
+        // fallback to configured or private
+        return config('upload.storage_disk') ?? 'private';
+    }
     public function index(Request $request): Response
     {
         $folderId = $request->get('folder_id');
@@ -23,7 +66,10 @@ class FileController extends Controller
         $sortOrder = $request->get('sort_order', 'asc');
 
         $query = File::with(['user', 'folder'])
-            ->where('user_id', auth()->id());
+            ->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                  ->orWhere('visibility', 'public');
+            });
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
@@ -44,10 +90,22 @@ class FileController extends Controller
         $currentFolder = $folderId ? Folder::find($folderId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
 
+        // Get all folders for move functionality
+        $allFolders = Folder::where('user_id', auth()->id())
+            ->orderBy('name')
+            ->get(['id', 'name', 'parent_id']);
+
+        // Get all users for sharing
+        $users = \App\Models\User::where('id', '!=', auth()->id())
+            ->select('id', 'name', 'email')
+            ->get();
+
         return Inertia::render('Files/Index', [
             'files' => $files,
             'currentFolder' => $currentFolder,
             'breadcrumbs' => $breadcrumbs,
+            'folders' => $allFolders,
+            'users' => $users,
             'filters' => [
                 'search' => $search,
                 'sort_by' => $sortBy,
@@ -78,11 +136,13 @@ class FileController extends Controller
         
         $request->validate($validationRules);
 
+        // Auto-select storage disk based on available free space
+        $storageDisk = $this->pickStorageDisk();
+
         $uploadedFiles = [];
 
         foreach ($request->file('files') as $uploadedFile) {
             $storagePath = $uploadConfig['storage_path'] ?? 'files';
-            $storageDisk = $uploadConfig['storage_disk'] ?? 'private';
             $path = $uploadedFile->store($storagePath, $storageDisk);
             $checksum = hash_file('sha256', $uploadedFile->getRealPath());
 
@@ -218,6 +278,61 @@ class FileController extends Controller
         return Storage::disk($file->disk)->download($file->path, $file->name);
     }
 
+    public function preview(File $file)
+    {
+        try {
+            $this->authorize('view', $file);
+
+            // Check if file exists
+            if (!Storage::disk($file->disk)->exists($file->path)) {
+                abort(404, 'File not found');
+            }
+
+            // Log preview activity
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'preview',
+                'target_type' => 'file',
+                'target_id' => $file->id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'success' => true,
+                'details' => [
+                    'file_name' => $file->name,
+                    'mime_type' => $file->mime_type,
+                ],
+            ]);
+
+            // Get file content
+            $fileContent = Storage::disk($file->disk)->get($file->path);
+            
+            // Return the file for preview (inline display)
+            return response($fileContent)
+                ->header('Content-Type', $file->mime_type)
+                ->header('Content-Disposition', 'inline; filename="' . $file->name . '"')
+                ->header('Content-Length', strlen($fileContent))
+                ->header('Cache-Control', 'public, max-age=3600');
+        } catch (\Exception $e) {
+            // Log the error
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'preview',
+                'target_type' => 'file',
+                'target_id' => $file->id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'success' => false,
+                'details' => [
+                    'file_name' => $file->name,
+                    'error' => $e->getMessage(),
+                ],
+            ]);
+
+            abort(500, 'Failed to load file preview: ' . $e->getMessage());
+        }
+    }
+
+
     public function restore(File $file): RedirectResponse
     {
         $this->authorize('restore', $file);
@@ -240,6 +355,50 @@ class FileController extends Controller
         return redirect()->back()->with('success', 'File restored successfully.');
     }
 
+    public function move(Request $request, File $file): RedirectResponse
+    {
+        $this->authorize('update', $file);
+
+        $request->validate([
+            'folder_id' => 'nullable|exists:folders,id',
+        ]);
+
+        // Check if the target folder belongs to the user
+        if ($request->folder_id) {
+            $folder = Folder::where('id', $request->folder_id)
+                ->where('user_id', auth()->id())
+                ->first();
+            
+            if (!$folder) {
+                return redirect()->back()->withErrors([
+                    'folder_id' => 'Invalid folder selected.'
+                ]);
+            }
+        }
+
+        $oldFolderId = $file->folder_id;
+        $file->update([
+            'folder_id' => $request->folder_id,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'move',
+            'target_type' => 'file',
+            'target_id' => $file->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'success' => true,
+            'details' => [
+                'file_name' => $file->name,
+                'from_folder_id' => $oldFolderId,
+                'to_folder_id' => $request->folder_id,
+            ],
+        ]);
+
+        return redirect()->back()->with('success', 'File moved successfully.');
+    }
+
     private function getBreadcrumbs(?Folder $folder): array
     {
         $breadcrumbs = [
@@ -256,9 +415,10 @@ class FileController extends Controller
             }
 
             foreach ($path as $folderItem) {
+                $token = Crypt::encryptString((string) $folderItem->id);
                 $breadcrumbs[] = [
                     'title' => $folderItem->name,
-                    'href' => route('files.index', ['folder_id' => $folderItem->id]),
+                    'href' => route('folders.view', ['token' => $token]),
                 ];
             }
         }

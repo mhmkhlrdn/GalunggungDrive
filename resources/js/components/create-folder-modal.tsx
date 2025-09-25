@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from '@inertiajs/react';
 
 interface CreateFolderModalProps {
@@ -17,6 +18,7 @@ export default function CreateFolderModal({ isOpen, onClose, onCreate, parentId 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         parent_id: parentId || null,
+        visibility: 'private' as 'private' | 'shared' | 'public',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -69,6 +71,26 @@ export default function CreateFolderModal({ isOpen, onClose, onCreate, parentId 
                             <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                                 <AlertCircle className="h-4 w-4" />
                                 {errors.name}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="folderVisibility">Visibilitas</Label>
+                        <Select value={data.visibility} onValueChange={(v) => setData('visibility', v as 'private' | 'shared' | 'public')}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih visibilitas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="private">Private</SelectItem>
+                                <SelectItem value="shared">Shared</SelectItem>
+                                <SelectItem value="public">Public</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {errors.visibility && (
+                            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                <AlertCircle className="h-4 w-4" />
+                                {errors.visibility}
                             </div>
                         )}
                     </div>

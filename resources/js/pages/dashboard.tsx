@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
+import FilePreviewModal from '@/components/file-preview-modal';
 import {
     Cloud,
     Folder,
@@ -22,7 +23,14 @@ import {
     Grid3X3,
     List,
     Plus,
-    MoreHorizontal
+    MoreHorizontal,
+    File,
+    FileSpreadsheet,
+    Image,
+    Video,
+    Music,
+    Archive,
+    Folder as FileFolderIcon
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -49,43 +57,56 @@ interface DashboardProps {
         size: string;
         modified: string;
         starred: boolean;
+        folder_id?: number | null;
+        uploader: {
+            id: number;
+            name: string;
+            email: string;
+        };
     }>;
     recentFolders: Array<{
         id: number;
         name: string;
         files: number;
         modified: string;
+        link?: string;
     }>;
+    disks?: Array<{ key: string; label: string }>;
 }
 
-export default function Dashboard({ stats, recentFiles, recentFolders }: DashboardProps) {
+export default function Dashboard({ stats, recentFiles, recentFolders, disks = [] }: DashboardProps) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<any>(null);
 
     const getFileIcon = (type: string) => {
         switch (type) {
-            case 'pdf': return '📄';
-            case 'docx': return '📝';
-            case 'xlsx': return '📊';
-            case 'image': return '🖼️';
-            case 'video': return '🎥';
-            case 'audio': return '🎵';
-            case 'archive': return '📦';
-            case 'folder': return '📁';
-            default: return '📄';
+            case 'pdf': return <File className="h-4 w-4" />;
+            case 'docx': return <FileText className="h-4 w-4" />;
+            case 'xlsx': return <FileSpreadsheet className="h-4 w-4" />;
+            case 'image': return <Image className="h-4 w-4" />;
+            case 'video': return <Video className="h-4 w-4" />;
+            case 'audio': return <Music className="h-4 w-4" />;
+            case 'archive': return <Archive className="h-4 w-4" />;
+            case 'folder': return <FileFolderIcon className="h-4 w-4" />;
+            default: return <File className="h-4 w-4" />;
         }
     };
 
     const handleFileUpload = (files: globalThis.File[]) => {
-        // Refresh the page to show new files
         router.reload();
     };
 
     const handleFolderCreate = (name: string) => {
-        // Refresh the page to show new folder
         router.reload();
+    };
+
+    const handleFilePreview = (file: any) => {
+        setSelectedFile(file);
+        setShowFilePreview(true);
     };
 
     return (
@@ -218,9 +239,12 @@ export default function Dashboard({ stats, recentFiles, recentFolders }: Dashboa
                         </div>
                         <div className="space-y-3">
                             {recentFiles.map((file) => (
-                                <div key={file.id} className="flex items-center space-x-3 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                <div key={file.id} className="flex items-center space-x-3 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 group">
                                     <div className="text-2xl">{getFileIcon(file.type)}</div>
-                                    <div className="flex-1 min-w-0">
+                                    <button 
+                                        onClick={() => handleFilePreview(file)}
+                                        className="flex-1 min-w-0 text-left"
+                                    >
                                         <div className="flex items-center space-x-2">
                                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                                                 {file.name}
@@ -230,9 +254,13 @@ export default function Dashboard({ stats, recentFiles, recentFolders }: Dashboa
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
                                             {file.size} • {file.modified}
                                         </p>
-                                    </div>
-                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                        <MoreHorizontal className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-opacity"
+                                        title="Download file"
+                                    >
+                                        <Download className="h-4 w-4" />
                                     </button>
                                 </div>
                             ))}
@@ -249,18 +277,24 @@ export default function Dashboard({ stats, recentFiles, recentFolders }: Dashboa
                         </div>
                         <div className="space-y-3">
                             {recentFolders.map((folder) => (
-                                <div key={folder.id} className="flex items-center space-x-3 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                    <div className="text-2xl">📁</div>
-                                    <div className="flex-1 min-w-0">
+                                <div key={folder.id} className="flex items-center space-x-3 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 group">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-sm">
+                                        <FileFolderIcon className="h-4 w-4" />
+                                    </div>
+                                    <Link href={folder.link ?? `/folders/${folder.id}`} className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                                             {folder.name}
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
                                             {folder.files} files • {folder.modified}
                                         </p>
-                                    </div>
-                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Link>
+                                    <button
+                                        onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
+                                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-opacity"
+                                        title="Download folder as ZIP"
+                                    >
+                                        <Download className="h-4 w-4" />
                                     </button>
                                 </div>
                             ))}
@@ -297,11 +331,20 @@ export default function Dashboard({ stats, recentFiles, recentFolders }: Dashboa
                     isOpen={showUploadModal}
                     onClose={() => setShowUploadModal(false)}
                     onUpload={handleFileUpload}
+                    disks={disks}
                 />
                 <CreateFolderModal
                     isOpen={showCreateFolderModal}
                     onClose={() => setShowCreateFolderModal(false)}
                     onCreate={handleFolderCreate}
+                />
+                <FilePreviewModal
+                    isOpen={showFilePreview}
+                    onClose={() => {
+                        setShowFilePreview(false);
+                        setSelectedFile(null);
+                    }}
+                    file={selectedFile}
                 />
             </div>
         </AppLayout>
