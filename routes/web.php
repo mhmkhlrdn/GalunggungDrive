@@ -85,6 +85,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('storage-locations', \App\Http\Controllers\Admin\StorageLocationController::class);
         Route::post('storage-locations/{storageLocation}/toggle', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggle'])->name('storage-locations.toggle');
+        
+        Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+        Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
     });
 });
 

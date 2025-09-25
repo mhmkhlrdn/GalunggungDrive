@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
-import { FolderOpen, FileText, Download } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { FolderOpen, FileText, Download, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 interface CloudFile {
@@ -87,13 +87,26 @@ export default function CloudIndex({ folders, files, breadcrumbs }: Props) {
                                             <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{file.name}</div>
                                             <div className="text-xs text-slate-500 dark:text-slate-400">{formatFileSize(file.size)} • {new Date(file.updated_at).toLocaleString()}</div>
                                         </div>
-                                        <button
-                                            onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
-                                            className="rounded bg-white p-2 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"
-                                            title="Download file"
-                                        >
-                                            <Download className="h-4 w-4" />
-                                        </button>
+                                        <div className="flex items-center space-x-1">
+                                            <button
+                                                onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                                                className="rounded bg-white p-2 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                                title="Download file"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm('Are you sure you want to delete this file?')) {
+                                                        router.delete(`/files/${file.id}`);
+                                                    }
+                                                }}
+                                                className="rounded bg-white p-2 text-red-600 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-700"
+                                                title="Delete file"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

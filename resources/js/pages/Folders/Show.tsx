@@ -1,6 +1,6 @@
-import { Head, Link, usePage, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, Image, Video, Music, File, FileText, FileSpreadsheet, PresentationChart, Archive } from 'lucide-react';
+import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, Image, Video, Music, File, FileText, FileSpreadsheet, Presentation, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,7 +65,6 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
     };
 
     const handleFileMove = (folderId: number | null) => {
-        // Refresh the page to show updated file locations
         window.location.reload();
     };
 
@@ -81,7 +80,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
         if (mimeType === 'application/pdf') return <File className="h-4 w-4" />;
         if (mimeType.includes('word')) return <FileText className="h-4 w-4" />;
         if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return <FileSpreadsheet className="h-4 w-4" />;
-        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return <PresentationChart className="h-4 w-4" />;
+        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return <Presentation className="h-4 w-4" />;
         if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-4 w-4" />;
         return <File className="h-4 w-4" />;
     };
@@ -314,7 +313,14 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                                                                     <Edit className="h-4 w-4 mr-2" />
                                                                     Edit
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem className="text-red-600">
+                                                                <DropdownMenuItem 
+                                                                    className="text-red-600"
+                                                                    onClick={() => {
+                                                                        if (confirm('Are you sure you want to delete this file?')) {
+                                                                            router.delete(`/files/${file.id}`);
+                                                                        }
+                                                                    }}
+                                                                >
                                                                     <Trash2 className="h-4 w-4 mr-2" />
                                                                     Delete
                                                                 </DropdownMenuItem>

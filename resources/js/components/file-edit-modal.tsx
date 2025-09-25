@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from '@inertiajs/react';
-import { File, X, Image, Video, Music, FileText, FileSpreadsheet, PresentationChart, Archive } from 'lucide-react';
+import { File, Image, Video, Music, FileText, FileSpreadsheet, Presentation, Archive } from 'lucide-react';
 
 interface File {
     id: number;
@@ -64,7 +64,7 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
         if (mimeType === 'application/pdf') return <File className="h-4 w-4" />;
         if (mimeType.includes('word')) return <FileText className="h-4 w-4" />;
         if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return <FileSpreadsheet className="h-4 w-4" />;
-        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return <PresentationChart className="h-4 w-4" />;
+        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return <Presentation className="h-4 w-4" />;
         if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-4 w-4" />;
         return <File className="h-4 w-4" />;
     };
@@ -73,12 +73,12 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
         const units = ['B', 'KB', 'MB', 'GB', 'TB'];
         let size = bytes;
         let unitIndex = 0;
-        
+
         while (size >= 1024 && unitIndex < units.length - 1) {
             size /= 1024;
             unitIndex++;
         }
-        
+
         return `${size.toFixed(1)} ${units[unitIndex]}`;
     };
 

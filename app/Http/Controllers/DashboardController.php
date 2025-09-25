@@ -16,22 +16,18 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         
-        // Get real statistics
+        // Get real statistics - Global stats for all users
         $stats = [
-            'totalFiles' => File::where('user_id', $user->id)->count(),
-            'totalFolders' => Folder::where('user_id', $user->id)->count(),
+            'totalFiles' => File::count(),
+            'totalFolders' => Folder::count(),
             'storageUsed' => $user->formatted_storage_used,
             'storageLimit' => '100 GB', // You can make this configurable
-            'recentActivity' => ActivityLog::where('user_id', $user->id)->count(),
-            'sharedFiles' => FileShare::where('shared_by', $user->id)->count(),
+            'recentActivity' => ActivityLog::count(),
+            'sharedFiles' => FileShare::count(),
         ];
 
-        // Get recent files (user's own files + public files from others)
-        $recentFiles = File::where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhere('visibility', 'public');
-            })
-            ->with(['folder', 'user'])
+        // Get recent files from all users globally
+        $recentFiles = File::with(['folder', 'user'])
             ->orderBy('updated_at', 'desc')
             ->limit(5)
             ->get()
@@ -56,8 +52,8 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get recent folders
-        $recentFolders = Folder::where('user_id', $user->id)
+        // Get recent folders from all users globally
+        $recentFolders = Folder::with('user')
             ->orderBy('updated_at', 'desc')
             ->limit(4)
             ->get()
@@ -68,6 +64,11 @@ class DashboardController extends Controller
                     'files' => File::where('folder_id', $folder->id)->count(),
                     'modified' => $folder->updated_at->diffForHumans(),
                     'link' => route('folders.show', ['folder' => $folder->id]),
+                    'creator' => [
+                        'id' => $folder->user->id,
+                        'name' => $folder->user->name,
+                        'email' => $folder->user->email,
+                    ],
                 ];
             });
 

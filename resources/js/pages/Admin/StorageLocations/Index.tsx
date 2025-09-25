@@ -51,7 +51,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
         >
             <Head title="Storage Locations" />
 
-                <div className="space-y-6">
+            <div className="p-6 space-y-6">
                     <div className="flex justify-between items-center">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">Storage Locations</h1>
@@ -197,7 +197,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                             </Table>
                         </CardContent>
                     </Card>
-                </div>
+            </div>
         </AppSidebarLayout>
     );
 }
