@@ -22,10 +22,19 @@ interface StorageLocation {
 
 interface ShowStorageLocationProps {
     storageLocation: StorageLocation;
+    diskStats?: { total: number | null; free: number | null; available: number | null };
 }
 
-export default function ShowStorageLocation({ storageLocation }: ShowStorageLocationProps) {
+export default function ShowStorageLocation({ storageLocation, diskStats }: ShowStorageLocationProps) {
     const [isToggling, setIsToggling] = useState(false);
+
+    const formatBytes = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
 
     const handleToggle = () => {
         setIsToggling(true);
@@ -176,6 +185,37 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                             </CardContent>
                         </Card>
                     </div>
+
+                    {diskStats && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Disk Usage</CardTitle>
+                                <CardDescription>
+                                    Current disk space for this location
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {diskStats.total !== null && diskStats.free !== null ? (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span>Total</span>
+                                            <span>{formatBytes(diskStats.total!)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span>Free</span>
+                                            <span>{formatBytes(diskStats.free!)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span>Used</span>
+                                            <span>{formatBytes((diskStats.total! - diskStats.free!))}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Disk stats not available for this driver.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
                     <Card>
                         <CardHeader>

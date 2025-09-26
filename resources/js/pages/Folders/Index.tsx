@@ -97,6 +97,18 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
         setSelectedFolders([]);
     };
 
+    const handleDeleteFolder = (folderId: number) => {
+        if (!confirm('Apakah Anda yakin ingin menghapus folder ini?')) return;
+        router.delete(`/folders/${folderId}`);
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedFolders.length === 0) return;
+        if (!confirm(`Hapus ${selectedFolders.length} folder terpilih?`)) return;
+        selectedFolders.forEach(id => router.delete(`/folders/${id}`));
+        router.reload();
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -144,7 +156,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                             className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
                         />
                     </div>
-                    <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
                         {selectedFolders.length > 0 && (
                             <div className="flex items-center space-x-2">
                                 <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -158,10 +170,26 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                 </button>
                             </div>
                         )}
-                        <button className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
-                            <Filter className="mr-2 h-4 w-4" />
-                            Filter
-                        </button>
+                        <div className="flex items-center space-x-2">
+                            <label className="text-sm text-slate-600 dark:text-slate-300">Sort by</label>
+                            <select
+                                defaultValue={filters.sort_by}
+                                onChange={(e) => router.get('/folders', { sort_by: e.target.value, sort_order: filters.sort_order, search: filters.search }, { preserveState: true, replace: true })}
+                                className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            >
+                                <option value="name">Name</option>
+                                <option value="updated_at">Updated</option>
+                                <option value="created_at">Created</option>
+                            </select>
+                            <select
+                                defaultValue={filters.sort_order}
+                                onChange={(e) => router.get('/folders', { sort_by: filters.sort_by, sort_order: e.target.value, search: filters.search }, { preserveState: true, replace: true })}
+                                className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            >
+                                <option value="asc">Asc</option>
+                                <option value="desc">Desc</option>
+                            </select>
+                        </div>
                         <div className="flex rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800">
                             <button
                                 onClick={() => setViewMode('grid')}
@@ -191,7 +219,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                     <Share2 className="mr-1 h-3 w-3" />
                                     Bagikan
                                 </button>
-                                <button className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                                <button onClick={handleBulkDelete} className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
                                     <Trash2 className="mr-1 h-3 w-3" />
                                     Hapus
                                 </button>
@@ -274,8 +302,8 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                     </div>
                                     
                                     {/* Quick Actions */}
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <div className="flex items-center space-x-2">
+                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <div className="pointer-events-auto flex items-center space-x-2">
                                             <Link
                                                 href={`/folders/${folder.id}`}
                                                 className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
@@ -310,6 +338,13 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                                 title="Rename folder"
                                             >
                                                 <Edit className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteFolder(folder.id)}
+                                                className="rounded-full bg-white p-2 text-red-600 hover:bg-red-50"
+                                                title="Hapus folder"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
                                             </button>
                                         </div>
                                     </div>

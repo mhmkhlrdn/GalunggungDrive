@@ -47,8 +47,27 @@ class StorageLocationController extends Controller
 
     public function show(StorageLocation $storageLocation): Response
     {
+        // attempt to compute disk stats similar to /storage page for local drivers
+        $diskStats = [
+            'total' => null,
+            'free' => null,
+            'available' => null,
+        ];
+        if ($storageLocation->driver === 'local' && $storageLocation->root) {
+            try {
+                $diskStats['total'] = @disk_total_space($storageLocation->root) ?: null;
+                $diskStats['free'] = @disk_free_space($storageLocation->root) ?: null;
+                if ($diskStats['total'] !== null && $diskStats['free'] !== null) {
+                    $diskStats['available'] = $diskStats['total'] - $diskStats['free'];
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
         return Inertia::render('Admin/StorageLocations/Show', [
             'storageLocation' => $storageLocation,
+            'diskStats' => $diskStats,
         ]);
     }
 

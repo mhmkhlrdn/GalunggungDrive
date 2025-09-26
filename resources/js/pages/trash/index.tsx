@@ -1,18 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { 
-    Search, 
-    Filter, 
-    Grid3X3, 
-    List, 
+import { Head, router } from '@inertiajs/react';
+import {
+    Search,
+    Filter,
+    Grid3X3,
+    List,
     MoreHorizontal,
-    Star,
-    Download,
-    Share2,
     Trash2,
-    Eye,
-    Edit,
     FileText,
     Image,
     Video,
@@ -21,8 +16,7 @@ import {
     File,
     RotateCcw,
     Trash,
-    Folder,
-    Calendar
+    Folder
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -77,6 +71,49 @@ interface Props {
 }
 
 export default function TrashIndex({ files, folders, filters }: Props) {
+    const handleEmptyTrash = () => {
+        if (!confirm('Empty trash permanently? This cannot be undone.')) return;
+        router.post('/trash/empty');
+    };
+
+    const handleRestoreFile = (fileId: number) => {
+        router.post(`/trash/files/${fileId}/restore`);
+    };
+
+    const handleForceDeleteFile = (fileId: number) => {
+        if (!confirm('Permanently delete this file? This cannot be undone.')) return;
+        router.delete(`/trash/files/${fileId}/force`);
+    };
+
+    const handleRestoreFolder = (folderId: number) => {
+        router.post(`/trash/folders/${folderId}/restore`);
+    };
+
+    const handleForceDeleteFolder = (folderId: number) => {
+        if (!confirm('Permanently delete this folder? This cannot be undone.')) return;
+        router.delete(`/trash/folders/${folderId}/force`);
+    };
+
+    const handleBulkRestore = () => {
+        if (selectedItems.length === 0) return;
+        if (activeTab === 'files') {
+            selectedItems.forEach(id => handleRestoreFile(id));
+        } else if (activeTab === 'folders') {
+            selectedItems.forEach(id => handleRestoreFolder(id));
+        }
+        clearSelection();
+    };
+
+    const handleBulkForceDelete = () => {
+        if (selectedItems.length === 0) return;
+        if (!confirm(`Permanently delete ${selectedItems.length} selected item(s)?`)) return;
+        if (activeTab === 'files') {
+            selectedItems.forEach(id => handleForceDeleteFile(id));
+        } else if (activeTab === 'folders') {
+            selectedItems.forEach(id => handleForceDeleteFolder(id));
+        }
+        clearSelection();
+    };
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedItems, setSelectedItems] = useState<number[]>([]);
     const [activeTab, setActiveTab] = useState<'all' | 'files' | 'folders'>(filters.type as any || 'all');
@@ -100,8 +137,8 @@ export default function TrashIndex({ files, folders, filters }: Props) {
     };
 
     const toggleItemSelection = (itemId: number) => {
-        setSelectedItems(prev => 
-            prev.includes(itemId) 
+        setSelectedItems(prev =>
+            prev.includes(itemId)
                 ? prev.filter(id => id !== itemId)
                 : [...prev, itemId]
         );
@@ -142,7 +179,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <button className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                        <button onClick={handleEmptyTrash} className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Empty Trash
                         </button>
@@ -239,11 +276,11 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                 {selectedItems.length} item dipilih
                             </span>
                             <div className="flex items-center space-x-2">
-                                <button className="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
+                                <button onClick={handleBulkRestore} className="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
                                     <RotateCcw className="mr-1 h-3 w-3" />
                                     Restore
                                 </button>
-                                <button className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                                <button onClick={handleBulkForceDelete} className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
                                     <Trash className="mr-1 h-3 w-3" />
                                     Delete Forever
                                 </button>
@@ -264,21 +301,21 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                         </p>
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    <div className={viewMode === 'grid'
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
                         {/* Files */}
                         {(activeTab === 'all' || activeTab === 'files') && files?.data.map((file) => {
                             const IconComponent = getFileIcon(file.mime_type);
                             const isSelected = selectedItems.includes(file.id);
-                            
+
                             return (
                                 <div
                                     key={`file-${file.id}`}
                                     className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
@@ -311,14 +348,14 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Quick Actions */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button onClick={() => handleRestoreFile(file.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <RotateCcw className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button onClick={() => handleForceDeleteFile(file.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <Trash className="h-4 w-4" />
                                             </button>
                                         </div>
@@ -330,13 +367,13 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                         {/* Folders */}
                         {(activeTab === 'all' || activeTab === 'folders') && folders?.data.map((folder) => {
                             const isSelected = selectedItems.includes(folder.id);
-                            
+
                             return (
                                 <div
                                     key={`folder-${folder.id}`}
                                     className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
@@ -366,14 +403,14 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Quick Actions */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button onClick={() => handleRestoreFolder(folder.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <RotateCcw className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button onClick={() => handleForceDeleteFolder(folder.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <Trash className="h-4 w-4" />
                                             </button>
                                         </div>

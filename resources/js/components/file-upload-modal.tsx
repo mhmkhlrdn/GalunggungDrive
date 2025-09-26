@@ -24,7 +24,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         folder_id: currentFolderId || null,
         description: '',
         tags: '',
-        visibility: 'private',
+        visibility: 'public',
     });
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -46,7 +46,10 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
             'text/plain': ['.txt'],
             'application/zip': ['.zip'],
+            'application/x-zip-compressed': ['.zip'],
+            'application/x-compressed-zip': ['.zip'],
             'application/x-rar-compressed': ['.rar'],
+            'application/vnd.rar': ['.rar'],
             'application/x-7z-compressed': ['.7z'],
         },
     });
@@ -55,6 +58,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         if (uploadedFiles.length === 0) return;
 
         post('/files', {
+            forceFormData: true,
             onSuccess: () => {
                 onUpload(uploadedFiles);
                 setUploadedFiles([]);

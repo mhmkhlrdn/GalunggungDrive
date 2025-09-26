@@ -80,6 +80,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Trash Route
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
+    Route::post('trash/empty', [TrashController::class, 'empty'])->name('trash.empty');
+    Route::post('trash/files/{file}/restore', [TrashController::class, 'restoreFile'])->name('trash.files.restore');
+    Route::delete('trash/files/{file}/force', [TrashController::class, 'destroyFilePermanently'])->name('trash.files.force');
+    Route::post('trash/folders/{folder}/restore', [TrashController::class, 'restoreFolder'])->name('trash.folders.restore');
+    Route::delete('trash/folders/{folder}/force', [TrashController::class, 'destroyFolderPermanently'])->name('trash.folders.force');
 
     // Admin Routes
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
