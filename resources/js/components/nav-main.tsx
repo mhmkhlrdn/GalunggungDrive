@@ -82,8 +82,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
 
     const defaultItems: NavItem[] = [
         {
-            title: 'Dashboard',
-            href: '/dashboard',
+            title: 'Beranda',
+            href: '/home',
             icon: Home,
         },
         {

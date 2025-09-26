@@ -331,29 +331,6 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold">Aksi Cepat</h3>
-                            <p className="text-blue-100">Mulai dengan tugas-tugas umum ini</p>
-                        </div>
-                        <div className="flex space-x-3">
-                            <Link href="/files" className="rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30 transition-colors">
-                                <Upload className="mr-2 h-4 w-4 inline" />
-                                Upload
-                            </Link>
-                            <Link href="/shared" className="rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30 transition-colors">
-                                <Share2 className="mr-2 h-4 w-4 inline" />
-                                Bagikan
-                            </Link>
-                            <Link href="/activity" className="rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30 transition-colors">
-                                <Activity className="mr-2 h-4 w-4 inline" />
-                                Aktivitas
-                            </Link>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Modals */}
                 <FileUploadModal

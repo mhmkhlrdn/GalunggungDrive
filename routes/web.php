@@ -23,6 +23,7 @@ Route::get('public/folder/{token}', [App\Http\Controllers\FolderShareController:
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('home', [\App\Http\Controllers\HomeController::class, 'index'])->name('home.index');
 
         // File Management Routes
         Route::resource('files', FileController::class);

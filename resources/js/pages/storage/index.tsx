@@ -1,13 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { 
-    HardDrive, 
-    FileText, 
-    Folder, 
-    Upload, 
-    Download, 
-    Trash2, 
+import {
+    HardDrive,
+    FileText,
+    Folder,
+    Upload,
+    Download,
+    Trash2,
     TrendingUp,
     TrendingDown,
     Calendar,
@@ -137,7 +137,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                 </span>
                             </div>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -147,14 +147,14 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                     {getUsagePercentage().toFixed(1)}%
                                 </span>
                             </div>
-                            
+
                             <div className="h-3 w-full rounded-full bg-slate-200 dark:bg-slate-700">
                                 <div
                                     className={`h-3 rounded-full ${getUsageBarColor(getUsagePercentage())}`}
                                     style={{ width: `${getUsagePercentage()}%` }}
                                 />
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4 pt-4">
                                 <div className="text-center">
                                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -228,7 +228,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                             {fileTypeStats.map((fileType, index) => (
                                 <div key={index} className="flex items-center justify-between">
                                     <div className="flex items-center space-x-3">
-                                        <div 
+                                        <div
                                             className="h-3 w-3 rounded-full"
                                             style={{ backgroundColor: fileType.color }}
                                         />
@@ -333,47 +333,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                     </div>
                 )}
 
-                {/* Storage Tips */}
-                <div className="rounded-xl bg-blue-50 border border-blue-200 p-6 dark:bg-blue-900/20 dark:border-blue-800">
-                    <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3">
-                        Storage Optimization Tips
-                    </h4>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <div className="flex items-start space-x-3">
-                            <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                    Delete duplicate files
-                                </p>
-                                <p className="text-xs text-blue-700 dark:text-blue-300">
-                                    Remove duplicate files to free up space
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                            <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                    Archive old files
-                                </p>
-                                <p className="text-xs text-blue-700 dark:text-blue-300">
-                                    Move old files to archive folders
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                            <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                    Compress large files
-                                </p>
-                                <p className="text-xs text-blue-700 dark:text-blue-300">
-                                    Compress large files to save space
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </AppLayout>
     );
