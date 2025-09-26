@@ -20,7 +20,7 @@ import {
     Users,
     Download
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -69,6 +69,22 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [renameFolder, setRenameFolder] = useState<{ id: number; name: string } | null>(null);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+    // Open modal based on ?action= query param on first load
+    useEffect(() => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            if (action === 'create') {
+                setShowCreateFolderModal(true);
+            }
+            if (action) {
+                params.delete('action');
+                const query = params.toString();
+                const newUrl = window.location.pathname + (query ? `?${query}` : '');
+                window.history.replaceState({}, '', newUrl);
+            }
+        } catch {}
+    }, []);
 
     const shareForm = useForm({
         shared_with: '' as string,

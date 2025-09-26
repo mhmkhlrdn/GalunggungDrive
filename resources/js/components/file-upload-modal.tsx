@@ -91,7 +91,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Upload className="h-5 w-5" />
-                        Upload File
+                        Unggah File
                     </DialogTitle>
                 </DialogHeader>
 
@@ -101,7 +101,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                         <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <Folder className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             <span className="text-sm text-blue-800 dark:text-blue-200">
-                                Files will be uploaded to: <strong>{currentFolderName}</strong>
+                                File akan diunggah ke: <strong>{currentFolderName}</strong>
                             </span>
                         </div>
                     )}
@@ -124,7 +124,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                         ) : (
                             <div>
                                 <p className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                                    Drag & drop files here, or click to select
+                                    Seret & lepaskan file di sini, atau klik untuk memilih
                                 </p>
                                 <p className="text-sm text-slate-500 dark:text-slate-400">
                                     Supports: Images, PDF, Word, Excel, PowerPoint, Text, Archives
@@ -137,7 +137,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                     {uploadedFiles.length > 0 && (
                         <div className="space-y-3">
                             <h4 className="font-medium text-slate-900 dark:text-white">
-                                Files to upload ({uploadedFiles.length})
+                                File untuk diunggah ({uploadedFiles.length})
                             </h4>
                             <div className="max-h-32 overflow-y-auto space-y-2">
                                 {uploadedFiles.map((file, index) => (
@@ -185,9 +185,9 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                                         <SelectValue placeholder="Pilih visibilitas" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="private">Private</SelectItem>
-                                        <SelectItem value="shared">Shared</SelectItem>
-                                        <SelectItem value="public">Public</SelectItem>
+                                        <SelectItem value="private">Pribadi</SelectItem>
+                                        <SelectItem value="shared">Dibagikan</SelectItem>
+                                        <SelectItem value="public">Publik</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.visibility && (
@@ -243,7 +243,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                     {processing && (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600 dark:text-slate-300">Uploading...</span>
+                                <span className="text-slate-600 dark:text-slate-300">Mengunggah...</span>
                             </div>
                             <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                                 <div className="bg-blue-600 h-2 rounded-full animate-pulse" />
@@ -256,14 +256,14 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                 {/* Actions - Fixed at bottom */}
                 <div className="flex items-center justify-end gap-3 border-t pt-4 mt-4">
                     <Button variant="outline" onClick={onClose} disabled={processing}>
-                        Cancel
+                        Batal
                     </Button>
                     <Button
                         onClick={handleUpload}
                         disabled={uploadedFiles.length === 0 || processing}
                         className="bg-blue-600 hover:bg-blue-700"
                     >
-                        {processing ? 'Uploading...' : `Upload ${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''}`}
+                        {processing ? 'Mengunggah...' : `Unggah ${uploadedFiles.length} file`}
                     </Button>
                 </div>
             </DialogContent>

@@ -49,20 +49,20 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                 { title: 'Storage Locations', href: '/admin/storage-locations' },
             ]}
         >
-            <Head title="Storage Locations" />
+            <Head title="Lokasi Penyimpanan" />
 
             <div className="p-6 space-y-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Storage Locations</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">Lokasi Penyimpanan</h1>
                             <p className="text-muted-foreground">
-                                Manage storage locations for your application
+                                Kelola lokasi penyimpanan untuk aplikasi Anda
                             </p>
                         </div>
                         <Button asChild>
                             <Link href="/admin/storage-locations/create">
                                 <Plus className="h-4 w-4 mr-2" />
-                                Add Storage Location
+                                Tambah Lokasi Penyimpanan
                             </Link>
                         </Button>
                     </div>
@@ -70,7 +70,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
+                                <CardTitle className="text-sm font-medium">Total Lokasi</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{storageLocations.length}</div>
@@ -78,7 +78,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                         </Card>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Active Locations</CardTitle>
+                                <CardTitle className="text-sm font-medium">Lokasi Aktif</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
@@ -88,7 +88,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                         </Card>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Public Locations</CardTitle>
+                                <CardTitle className="text-sm font-medium">Lokasi Publik</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
@@ -100,22 +100,22 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Storage Locations</CardTitle>
+                            <CardTitle>Lokasi Penyimpanan</CardTitle>
                             <CardDescription>
-                                A list of all storage locations in your system
+                                Daftar semua lokasi penyimpanan di sistem Anda
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Key</TableHead>
+                                        <TableHead>Nama</TableHead>
+                                        <TableHead>Kunci</TableHead>
                                         <TableHead>Driver</TableHead>
-                                        <TableHead>Visibility</TableHead>
+                                        <TableHead>Visibilitas</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Created</TableHead>
-                                        <TableHead className="w-[50px]">Actions</TableHead>
+                                        <TableHead>Dibuat</TableHead>
+                                        <TableHead className="w-[50px]">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -134,12 +134,12 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant={location.visibility === 'public' ? 'default' : 'secondary'}>
-                                                    {location.visibility}
+                                                    {location.visibility === 'public' ? 'publik' : 'pribadi'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant={location.is_active ? 'default' : 'destructive'}>
-                                                    {location.is_active ? 'Active' : 'Inactive'}
+                                                    {location.is_active ? 'Aktif' : 'Nonaktif'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
@@ -153,17 +153,17 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/admin/storage-locations/${location.id}`}>
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        Lihat
+                                                    </Link>
+                                                </DropdownMenuItem>
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/storage-locations/${location.id}`}>
-                                                                <Eye className="h-4 w-4 mr-2" />
-                                                                View
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/storage-locations/${location.id}/edit`}>
-                                                                <Edit className="h-4 w-4 mr-2" />
-                                                                Edit
-                                                            </Link>
+                                                    <Link href={`/admin/storage-locations/${location.id}/edit`}>
+                                                        <Edit className="h-4 w-4 mr-2" />
+                                                        Ubah
+                                                    </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => handleToggle(location.id)}
@@ -172,12 +172,12 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                                             {location.is_active ? (
                                                                 <>
                                                                     <PowerOff className="h-4 w-4 mr-2" />
-                                                                    Deactivate
+                                                                    Nonaktifkan
                                                                 </>
                                                             ) : (
                                                                 <>
                                                                     <Power className="h-4 w-4 mr-2" />
-                                                                    Activate
+                                                                    Aktifkan
                                                                 </>
                                                             )}
                                                         </DropdownMenuItem>
@@ -186,7 +186,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                                             className="text-destructive focus:text-destructive"
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-2" />
-                                                            Delete
+                                                            Hapus
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>

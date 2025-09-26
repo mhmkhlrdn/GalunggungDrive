@@ -40,7 +40,7 @@ export default function FileShare({ file, users }: Props) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         post(route('files.share.store', file.id), {
             onSuccess: () => {
                 reset();
@@ -63,7 +63,7 @@ export default function FileShare({ file, users }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Bagikan ${file.name}`} />
-            
+
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -250,13 +250,13 @@ export default function FileShare({ file, users }: Props) {
                                                 Peringatan Keamanan
                                             </h4>
                                             <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                                                Link publik dapat diakses oleh siapa saja yang memiliki link tersebut. 
+                                                Link publik dapat diakses oleh siapa saja yang memiliki link tersebut.
                                                 Pastikan file tidak mengandung informasi sensitif.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <Label>Link akan tersedia setelah berbagi</Label>
                                     <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
