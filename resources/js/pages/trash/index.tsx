@@ -72,7 +72,7 @@ interface Props {
 
 export default function TrashIndex({ files, folders, filters }: Props) {
     const handleEmptyTrash = () => {
-        if (!confirm('Empty trash permanently? This cannot be undone.')) return;
+        if (!confirm('Kosongkan sampah secara permanen? Tindakan ini tidak dapat dibatalkan.')) return;
         router.post('/trash/empty');
     };
 
@@ -81,7 +81,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
     };
 
     const handleForceDeleteFile = (fileId: number) => {
-        if (!confirm('Permanently delete this file? This cannot be undone.')) return;
+        if (!confirm('Hapus file ini secara permanen? Tindakan ini tidak dapat dibatalkan.')) return;
         router.delete(`/trash/files/${fileId}/force`);
     };
 
@@ -90,7 +90,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
     };
 
     const handleForceDeleteFolder = (folderId: number) => {
-        if (!confirm('Permanently delete this folder? This cannot be undone.')) return;
+        if (!confirm('Hapus folder ini secara permanen? Tindakan ini tidak dapat dibatalkan.')) return;
         router.delete(`/trash/folders/${folderId}/force`);
     };
 
@@ -106,7 +106,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
 
     const handleBulkForceDelete = () => {
         if (selectedItems.length === 0) return;
-        if (!confirm(`Permanently delete ${selectedItems.length} selected item(s)?`)) return;
+        if (!confirm(`Hapus ${selectedItems.length} item yang dipilih secara permanen?`)) return;
         if (activeTab === 'files') {
             selectedItems.forEach(id => handleForceDeleteFile(id));
         } else if (activeTab === 'folders') {
@@ -161,27 +161,27 @@ export default function TrashIndex({ files, folders, filters }: Props) {
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Trash', href: '/trash' },
+        { title: 'Sampah', href: '/trash' },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Trash" />
+            <Head title="Sampah" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                            Trash
+                            Sampah
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {getTotalItems()} items • Deleted files and folders
+                            {getTotalItems()} item • File dan folder yang dihapus
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
                         <button onClick={handleEmptyTrash} className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Empty Trash
+                            Kosongkan Sampah
                         </button>
                     </div>
                 </div>
@@ -197,7 +197,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
                             }`}
                         >
-                            All ({getTotalItems()})
+                            Semua ({getTotalItems()})
                         </button>
                         <button
                             onClick={() => setActiveTab('files')}
@@ -207,7 +207,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
                             }`}
                         >
-                            Files ({files?.total || 0})
+                            File ({files?.total || 0})
                         </button>
                         <button
                             onClick={() => setActiveTab('folders')}
@@ -217,7 +217,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
                             }`}
                         >
-                            Folders ({folders?.total || 0})
+                            Folder ({folders?.total || 0})
                         </button>
                     </nav>
                 </div>
@@ -278,11 +278,11 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                             <div className="flex items-center space-x-2">
                                 <button onClick={handleBulkRestore} className="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
                                     <RotateCcw className="mr-1 h-3 w-3" />
-                                    Restore
+                                    Pulihkan
                                 </button>
                                 <button onClick={handleBulkForceDelete} className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
                                     <Trash className="mr-1 h-3 w-3" />
-                                    Delete Forever
+                                    Hapus Selamanya
                                 </button>
                             </div>
                         </div>
@@ -295,9 +295,9 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                         <div className="rounded-full bg-slate-100 p-6 dark:bg-slate-800">
                             <Trash2 className="h-12 w-12 text-slate-400" />
                         </div>
-                        <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Trash is empty</h3>
+                        <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Sampah kosong</h3>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            Deleted files and folders will appear here.
+                            File dan folder yang dihapus akan muncul di sini.
                         </p>
                     </div>
                 ) : (
@@ -344,7 +344,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                                 {file.size} • {file.folder?.name || 'Root'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Deleted {new Date(file.deleted_at).toLocaleDateString()}
+                                                Dihapus {new Date(file.deleted_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                     </div>
@@ -399,7 +399,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                                 </div>
                                             </div>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Deleted {new Date(folder.deleted_at).toLocaleDateString()}
+                                                Dihapus {new Date(folder.deleted_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                     </div>

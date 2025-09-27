@@ -94,6 +94,20 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order as any || 'desc');
 
+    // Handle URL action parameter
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        
+        if (action === 'upload') {
+            setShowUploadModal(true);
+            // Clean up the URL by removing the action parameter
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('action');
+            window.history.replaceState({}, '', newUrl.toString());
+        }
+    }, []);
+
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
         if (mimeType.startsWith('video/')) return Video;
@@ -139,6 +153,12 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     // Debounced search & filter routing
     const searchDebounceRef = useRef<number | null>(null);
     useEffect(() => {
+        // Don't trigger search if there's an action parameter in the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('action')) {
+            return;
+        }
+        
         if (searchDebounceRef.current) {
             window.clearTimeout(searchDebounceRef.current);
         }
@@ -474,6 +494,14 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                                 title="Move file"
                                             >
                                                 <Move className="h-4 w-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleEditFile(file)}
+                                                className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
+                                                aria-label="Edit file"
+                                                title="Edit file"
+                                            >
+                                                <Edit className="h-4 w-4" />
                                             </button>
                                             <button 
                                                 onClick={() => handleShareFile(file)}

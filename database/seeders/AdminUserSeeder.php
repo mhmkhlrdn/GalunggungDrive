@@ -20,7 +20,6 @@ class AdminUserSeeder extends Seeder
                 'role' => 'admin',
                 'storage_limit' => 10737418240, // 10GB
                 'storage_used' => 0,
-                'email_verified_at' => now(),
             ]
         );
 
@@ -34,7 +33,6 @@ class AdminUserSeeder extends Seeder
                 'role' => 'guest',
                 'storage_limit' => 1073741824, // 1GB
                 'storage_used' => 0,
-                'email_verified_at' => now(),
             ]
         );
     }
