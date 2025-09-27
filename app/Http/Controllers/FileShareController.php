@@ -230,10 +230,10 @@ class FileShareController extends Controller
 
         $file = $share->file;
 
-        // Log access
+        // Log access (view)
         ActivityLog::create([
             'user_id' => null, // Anonymous access
-            'action' => 'download',
+            'action' => 'view',
             'target_type' => 'file',
             'target_id' => $file->id,
             'ip_address' => request()->ip(),

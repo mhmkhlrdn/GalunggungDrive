@@ -47,13 +47,13 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Storage Locations', href: '/admin/storage-locations' },
+                { title: 'Lokasi Penyimpanan', href: '/admin/storage-locations' },
                 { title: storageLocation.name, href: `/admin/storage-locations/${storageLocation.id}/edit` },
             ]}
         >
             <Head title={`Edit ${storageLocation.name}`} />
 
-                <div className="space-y-6">
+            <div className="p-6 space-y-6">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" asChild>
                             <Link href="/admin/storage-locations">
@@ -62,18 +62,18 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Edit Storage Location</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">Edit Lokasi Penyimpanan</h1>
                             <p className="text-muted-foreground">
-                                Update the storage location settings
+                                Perbarui setelan penyimpanan
                             </p>
                         </div>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Storage Location Details</CardTitle>
+                            <CardTitle>Rincian Lokasi Penyimpinan</CardTitle>
                             <CardDescription>
-                                Configure the storage location settings
+                                Ubah pengaturan lokasi penyimpanan
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -209,7 +209,7 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
                             </form>
                         </CardContent>
                     </Card>
-                </div>
+            </div>
         </AppSidebarLayout>
     );
 }

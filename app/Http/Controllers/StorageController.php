@@ -9,6 +9,7 @@ use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\StorageLocation;
 
 class StorageController extends Controller
 {
@@ -21,10 +22,10 @@ class StorageController extends Controller
         $totalFolders = Folder::where('user_id', $user->id)->count();
         $sharedFiles = FileShare::where('shared_by', $user->id)->count();
         
-        // Calculate storage usage
+        // Calculate storage usage based on user's capacity
         $usedSpace = File::where('user_id', $user->id)->sum('size');
-        $totalSpace = 100 * 1024 * 1024 * 1024; // 100 GB in bytes
-        $availableSpace = $totalSpace - $usedSpace;
+        $totalSpace = (int) ($user->storage_limit ?? (100 * 1024 * 1024 * 1024));
+        $availableSpace = max(0, $totalSpace - $usedSpace);
         
         $stats = [
             'totalSpace' => $totalSpace,
@@ -84,10 +85,44 @@ class StorageController extends Controller
                 ];
             });
         
+        // For admins, include per-storage-location disk stats (best-effort)
+        $locations = [];
+        if ($user->role === 'admin') {
+            $locations = StorageLocation::where('is_active', true)
+                ->get()
+                ->map(function ($loc) {
+                    $diskKey = $loc->key;
+                    $diskConfig = config("filesystems.disks.$diskKey", []);
+                    $root = $diskConfig['root'] ?? $loc->root ?? null;
+                    $total = null;
+                    $free = null;
+                    if ($root && @is_dir($root)) {
+                        try {
+                            $total = @disk_total_space($root) ?: null;
+                            $free = @disk_free_space($root) ?: null;
+                        } catch (\Throwable $e) {
+                            $total = null;
+                            $free = null;
+                        }
+                    }
+                    return [
+                        'id' => $loc->id,
+                        'name' => $loc->name,
+                        'key' => $loc->key,
+                        'driver' => $loc->driver,
+                        'root' => $root,
+                        'total' => $total,
+                        'free' => $free,
+                        'available' => is_null($total) || is_null($free) ? null : max(0, $total - ($total - $free)),
+                    ];
+                });
+        }
+
         return Inertia::render('storage/index', [
             'stats' => $stats,
             'fileTypeStats' => $fileTypeStats,
             'recentActivity' => $recentActivity,
+            'locations' => $locations,
         ]);
     }
     

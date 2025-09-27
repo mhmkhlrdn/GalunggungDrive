@@ -23,6 +23,7 @@ Route::get('public/folder/{token}', [App\Http\Controllers\FolderShareController:
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('home', [\App\Http\Controllers\HomeController::class, 'index'])->name('home.index');
 
         // File Management Routes
         Route::resource('files', FileController::class);
@@ -80,11 +81,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Trash Route
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
+    Route::post('trash/empty', [TrashController::class, 'empty'])->name('trash.empty');
+    Route::post('trash/files/{file}/restore', [TrashController::class, 'restoreFile'])->name('trash.files.restore');
+    Route::delete('trash/files/{file}/force', [TrashController::class, 'destroyFilePermanently'])->name('trash.files.force');
+    Route::post('trash/folders/{folder}/restore', [TrashController::class, 'restoreFolder'])->name('trash.folders.restore');
+    Route::delete('trash/folders/{folder}/force', [TrashController::class, 'destroyFolderPermanently'])->name('trash.folders.force');
 
     // Admin Routes
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('storage-locations', \App\Http\Controllers\Admin\StorageLocationController::class);
         Route::post('storage-locations/{storageLocation}/toggle', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggle'])->name('storage-locations.toggle');
+        
+        Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+        Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
     });
 });
 

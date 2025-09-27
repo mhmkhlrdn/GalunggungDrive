@@ -50,15 +50,15 @@ export default function ShareModal({
 
     useEffect(() => {
         if (isOpen) {
-            console.log('[ShareModal] open with mode:', mode, 'files:', files.length, 'users:', users.length);
+            if (mode === 'user-selection' && selectedFiles.length > 0) {
+                // Preselect file(s) passed in and jump to users step
+                setSelectedFileIds(selectedFiles.map(f => f.id));
+                setStep('users');
+            } else if (mode === 'file-selection') {
+                setStep('files');
+            }
         }
-        if (mode === 'user-selection' && selectedFiles.length > 0) {
-            setSelectedFileIds(selectedFiles.map(f => f.id));
-            setStep('users');
-        } else if (mode === 'file-selection') {
-            setStep('files');
-        }
-    }, [mode, selectedFiles]);
+    }, [isOpen, mode, selectedFiles]);
 
     const filteredFiles = files.filter(file => 
         file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -219,7 +219,7 @@ export default function ShareModal({
                                             {file.name}
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {file.size} • {file.folder?.name || 'Root'}
+                                            {file.size} • {file.folder?.name || 'Akar'}
                                         </p>
                                     </div>
                                 </div>
@@ -230,7 +230,7 @@ export default function ShareModal({
                     {/* User Selection Step */}
                     {step === 'users' && (
                         <div className="space-y-4">
-                            {/* Public Link Option */}
+                                {/* Opsi Tautan Publik */}
                             <div className="p-4 border border-slate-200 rounded-lg dark:border-slate-700">
                                 <label className="flex items-center space-x-3 cursor-pointer">
                                     <input

@@ -1,9 +1,9 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { 
-    Search, 
-    Filter, 
+import {
+    Search,
+    Filter,
     Calendar,
     Clock,
     User,
@@ -17,7 +17,6 @@ import {
     LogIn,
     FileText,
     Folder,
-    AlertCircle,
     CheckCircle,
     XCircle
 } from 'lucide-react';
@@ -110,7 +109,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
         const diffMinutes = Math.ceil(diffTime / (1000 * 60));
         const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         if (diffMinutes < 60) return `${diffMinutes}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays < 7) return `${diffDays}d ago`;
@@ -118,16 +117,13 @@ export default function ActivityIndex({ activities, availableActions, filters }:
     };
 
     const toggleActivitySelection = (activityId: number) => {
-        setSelectedActivities(prev => 
-            prev.includes(activityId) 
+        setSelectedActivities(prev =>
+            prev.includes(activityId)
                 ? prev.filter(id => id !== activityId)
                 : [...prev, activityId]
         );
     };
 
-    const clearSelection = () => {
-        setSelectedActivities([]);
-    };
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Log Aktivitas', href: '/activity' },
@@ -243,13 +239,13 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                             const TargetIcon = getTargetIcon(activity.target_type);
                             const SuccessIcon = getSuccessIcon(activity.success);
                             const isSelected = selectedActivities.includes(activity.id);
-                            
+
                             return (
                                 <div
                                     key={activity.id}
                                     className={`rounded-lg border p-4 transition-all hover:shadow-md dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white dark:bg-slate-800'
                                     }`}
                                 >

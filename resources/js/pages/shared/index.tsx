@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { 
     Search, 
     Filter, 
@@ -27,6 +27,7 @@ import {
     Check
 } from 'lucide-react';
 import { useState } from 'react';
+import ShareModal from '@/components/share-modal';
 
 interface FileShare {
     id: number;
@@ -99,13 +100,29 @@ interface Props {
             total: number;
         };
     };
+    files?: Array<{
+        id: number;
+        name: string;
+        mime_type: string;
+        size: string;
+        folder?: {
+            id: number;
+            name: string;
+        };
+    }>;
+    users?: Array<{
+        id: number;
+        name: string;
+        email: string;
+    }>;
 }
 
-export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: Props) {
+export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, files = [], users = [] }: Props) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
     const [activeTab, setActiveTab] = useState<'shared-by-me' | 'shared-with-me' | 'public-links'>('shared-by-me');
     const [copiedTokens, setCopiedTokens] = useState<Set<string>>(new Set());
+    const [showShareModal, setShowShareModal] = useState(false);
 
     // Safety check to prevent crashes
     if (!sharedByMe || !sharedWithMe || !publicLinks) {
@@ -171,6 +188,32 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                 return newSet;
             });
         }, 2000);
+    };
+
+    const handleShare = (fileIds: number[], userIds: number[], permission: string, expiresAt?: string, isPublicLink?: boolean) => {
+        // Create share for each file
+        fileIds.forEach(fileId => {
+            if (isPublicLink) {
+                // Create public link
+                router.post(`/files/${fileId}/share`, {
+                    is_public_link: true,
+                    permission,
+                    expires_at: expiresAt
+                });
+            } else {
+                // Share with specific users
+                userIds.forEach(userId => {
+                    router.post(`/files/${fileId}/share`, {
+                        shared_with: userId,
+                        permission,
+                        expires_at: expiresAt
+                    });
+                });
+            }
+        });
+        
+        // Reload the page to show updated shares
+        router.reload();
     };
 
     const getCurrentData = () => {
@@ -245,7 +288,13 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <button className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                        <button 
+                            onClick={() => {
+                                console.log('[SharedIndex] Bagikan File button clicked');
+                                setShowShareModal(true);
+                            }}
+                            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
                             <Share2 className="mr-2 h-4 w-4" />
                             Bagikan File
                         </button>
@@ -500,6 +549,16 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks }: P
                     </div>
                 )}
             </div>
+
+            {/* Share Modal */}
+            <ShareModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                onShare={handleShare}
+                files={files}
+                users={users}
+                mode="file-selection"
+            />
         </AppLayout>
     );
 }

@@ -6,31 +6,27 @@ import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
 import FilePreviewModal from '@/components/file-preview-modal';
 import {
-    Cloud,
     Folder,
     FileText,
     Upload,
     Download,
     Share2,
-    Users,
     Activity,
     HardDrive,
-    TrendingUp,
-    Clock,
     Star,
     Search,
     Filter,
     Grid3X3,
     List,
     Plus,
-    MoreHorizontal,
     File,
     FileSpreadsheet,
     Image,
     Video,
     Music,
     Archive,
-    Folder as FileFolderIcon
+    Folder as FileFolderIcon,
+    Trash2
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -70,6 +66,11 @@ interface DashboardProps {
         files: number;
         modified: string;
         link?: string;
+        creator: {
+            id: number;
+            name: string;
+            email: string;
+        };
     }>;
     disks?: Array<{ key: string; label: string }>;
 }
@@ -120,7 +121,7 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                             Selamat datang kembali!
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            Berikut adalah aktivitas file internal perusahaan hari ini.
+                            Berikut adalah aktivitas dari semua pengguna.
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -232,7 +233,9 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                     {/* Recent Files */}
                     <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">File Terbaru</h3>
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">File Terbaru
+
+                            </h3>
                             <Link href="/files" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
                                 Lihat semua
                             </Link>
@@ -241,7 +244,7 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                             {recentFiles.map((file) => (
                                 <div key={file.id} className="flex items-center space-x-3 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 group">
                                     <div className="text-2xl">{getFileIcon(file.type)}</div>
-                                    <button 
+                                    <button
                                         onClick={() => handleFilePreview(file)}
                                         className="flex-1 min-w-0 text-left"
                                     >
@@ -252,16 +255,29 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                             {file.starred && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
                                         </div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {file.size} • {file.modified}
+                                            {file.size} • {file.modified} • oleh {file.uploader.name}
                                         </p>
                                     </button>
-                                    <button
-                                        onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
-                                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-opacity"
-                                        title="Download file"
-                                    >
-                                        <Download className="h-4 w-4" />
-                                    </button>
+                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                            title="Download file"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('Are you sure you want to delete this file?')) {
+                                                    router.delete(`/files/${file.id}`);
+                                                }
+                                            }}
+                                            className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                                            title="Delete file"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -286,45 +302,35 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                             {folder.name}
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {folder.files} files • {folder.modified}
+                                            {folder.files} files • {folder.modified} • oleh {folder.creator.name}
                                         </p>
                                     </Link>
-                                    <button
-                                        onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
-                                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-opacity"
-                                        title="Download folder as ZIP"
-                                    >
-                                        <Download className="h-4 w-4" />
-                                    </button>
+                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
+                                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                            title="Download folder as ZIP"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('Are you sure you want to delete this folder?')) {
+                                                    router.delete(`/folders/${folder.id}`);
+                                                }
+                                            }}
+                                            className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                                            title="Delete folder"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold">Aksi Cepat</h3>
-                            <p className="text-blue-100">Mulai dengan tugas-tugas umum ini</p>
-                        </div>
-                        <div className="flex space-x-3">
-                            <Link href="/files" className="rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30 transition-colors">
-                                <Upload className="mr-2 h-4 w-4 inline" />
-                                Upload
-                            </Link>
-                            <Link href="/shared" className="rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30 transition-colors">
-                                <Share2 className="mr-2 h-4 w-4 inline" />
-                                Bagikan
-                            </Link>
-                            <Link href="/activity" className="rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30 transition-colors">
-                                <Activity className="mr-2 h-4 w-4 inline" />
-                                Aktivitas
-                            </Link>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Modals */}
                 <FileUploadModal

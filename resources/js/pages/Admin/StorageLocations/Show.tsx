@@ -22,10 +22,19 @@ interface StorageLocation {
 
 interface ShowStorageLocationProps {
     storageLocation: StorageLocation;
+    diskStats?: { total: number | null; free: number | null; available: number | null };
 }
 
-export default function ShowStorageLocation({ storageLocation }: ShowStorageLocationProps) {
+export default function ShowStorageLocation({ storageLocation, diskStats }: ShowStorageLocationProps) {
     const [isToggling, setIsToggling] = useState(false);
+
+    const formatBytes = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
 
     const handleToggle = () => {
         setIsToggling(true);
@@ -50,19 +59,19 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
         >
             <Head title={storageLocation.name} />
 
-                <div className="space-y-6">
+            <div className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Button variant="outline" size="sm" asChild>
                                 <Link href="/admin/storage-locations">
                                     <ArrowLeft className="h-4 w-4 mr-2" />
-                                    Back
+                                    Kembali
                                 </Link>
                             </Button>
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight">{storageLocation.name}</h1>
                                 <p className="text-muted-foreground">
-                                    Storage location details and configuration
+                                    Detail dan konfigurasi lokasi penyimpanan
                                 </p>
                             </div>
                         </div>
@@ -70,7 +79,7 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                             <Button variant="outline" asChild>
                                 <Link href={`/admin/storage-locations/${storageLocation.id}/edit`}>
                                     <Edit className="h-4 w-4 mr-2" />
-                                    Edit
+                                    Ubah
                                 </Link>
                             </Button>
                             <Button
@@ -81,12 +90,12 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                                 {storageLocation.is_active ? (
                                     <>
                                         <PowerOff className="h-4 w-4 mr-2" />
-                                        {isToggling ? 'Deactivating...' : 'Deactivate'}
+                                        {isToggling ? 'Menonaktifkan...' : 'Nonaktifkan'}
                                     </>
                                 ) : (
                                     <>
                                         <Power className="h-4 w-4 mr-2" />
-                                        {isToggling ? 'Activating...' : 'Activate'}
+                                        {isToggling ? 'Mengaktifkan...' : 'Aktifkan'}
                                     </>
                                 )}
                             </Button>
@@ -95,7 +104,7 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                                 onClick={handleDelete}
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                Hapus
                             </Button>
                         </div>
                     </div>
@@ -103,18 +112,18 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                     <div className="grid gap-6 md:grid-cols-2">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Basic Information</CardTitle>
+                                <CardTitle>Informasi Dasar</CardTitle>
                                 <CardDescription>
-                                    Core details about this storage location
+                                    Detail inti tentang lokasi penyimpanan ini
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Name</h4>
+                                    <h4 className="text-sm font-medium text-muted-foreground">Nama</h4>
                                     <p className="text-lg">{storageLocation.name}</p>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Key</h4>
+                                    <h4 className="text-sm font-medium text-muted-foreground">Kunci</h4>
                                     <code className="text-sm bg-muted px-2 py-1 rounded">
                                         {storageLocation.key}
                                     </code>
@@ -134,27 +143,27 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Configuration</CardTitle>
+                                <CardTitle>Konfigurasi</CardTitle>
                                 <CardDescription>
-                                    Storage location settings and options
+                                    Pengaturan dan opsi lokasi penyimpanan
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Visibility</h4>
+                                    <h4 className="text-sm font-medium text-muted-foreground">Visibilitas</h4>
                                     <Badge variant={storageLocation.visibility === 'public' ? 'default' : 'secondary'}>
                                         {storageLocation.visibility}
                                     </Badge>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Can Serve Files</h4>
+                                    <h4 className="text-sm font-medium text-muted-foreground">Dapat Menyajikan File</h4>
                                     <Badge variant={storageLocation.serve ? 'default' : 'secondary'}>
                                         {storageLocation.serve ? 'Yes' : 'No'}
                                     </Badge>
                                 </div>
                                 {storageLocation.root && (
                                     <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground">Root Path</h4>
+                                        <h4 className="text-sm font-medium text-muted-foreground">Path Root</h4>
                                         <code className="text-sm bg-muted px-2 py-1 rounded block break-all">
                                             {storageLocation.root}
                                         </code>
@@ -162,7 +171,7 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                                 )}
                                 {storageLocation.url && (
                                     <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground">Public URL</h4>
+                                        <h4 className="text-sm font-medium text-muted-foreground">URL Publik</h4>
                                         <a
                                             href={storageLocation.url}
                                             target="_blank"
@@ -177,25 +186,56 @@ export default function ShowStorageLocation({ storageLocation }: ShowStorageLoca
                         </Card>
                     </div>
 
+                    {diskStats && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Disk Usage</CardTitle>
+                                <CardDescription>
+                                    Current disk space for this location
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {diskStats.total !== null && diskStats.free !== null ? (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span>Total</span>
+                                            <span>{formatBytes(diskStats.total!)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span>Free</span>
+                                            <span>{formatBytes(diskStats.free!)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span>Used</span>
+                                            <span>{formatBytes((diskStats.total! - diskStats.free!))}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Disk stats not available for this driver.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
                     <Card>
                         <CardHeader>
-                            <CardTitle>Timestamps</CardTitle>
+                            <CardTitle>Stempel Waktu</CardTitle>
                             <CardDescription>
-                                Creation and modification dates
+                                Tanggal pembuatan dan perubahan
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <h4 className="text-sm font-medium text-muted-foreground">Created</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Dibuat</h4>
                                 <p>{new Date(storageLocation.created_at).toLocaleString()}</p>
                             </div>
                             <div>
-                                <h4 className="text-sm font-medium text-muted-foreground">Last Updated</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Terakhir Diperbarui</h4>
                                 <p>{new Date(storageLocation.updated_at).toLocaleString()}</p>
                             </div>
                         </CardContent>
                     </Card>
-                </div>
+            </div>
         </AppSidebarLayout>
     );
 }

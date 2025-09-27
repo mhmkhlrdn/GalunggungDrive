@@ -129,9 +129,8 @@ class FileController extends Controller
         
         // Add MIME type validation if configured
         if (!empty($uploadConfig['allowed_mime_types'])) {
-            $validationRules['files.*'] .= '|mimes:' . implode(',', array_map(function($mime) {
-                return str_replace(['image/', 'application/', 'text/', 'video/', 'audio/'], '', $mime);
-            }, $uploadConfig['allowed_mime_types']));
+            // Use mimetypes rule to validate against actual MIME types from config
+            $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }
         
         $request->validate($validationRules);

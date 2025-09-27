@@ -1,4 +1,4 @@
-import { Cloud, Zap } from 'lucide-react';
+import { Cloud } from 'lucide-react';
 
 export default function AppLogo() {
     return (
@@ -7,11 +7,11 @@ export default function AppLogo() {
                 <Cloud className="size-6" />
             </div>
             <div className="ml-3 grid flex-1 text-left">
-                <span className="truncate leading-tight font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="truncate leading-tight font-bold text-md bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     Galunggung Drive
                 </span>
                 <span className="text-xs text-muted-foreground truncate">
-                    Cloud Storage
+                    Penyimpanan Cloud
                 </span>
             </div>
         </>

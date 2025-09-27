@@ -47,7 +47,10 @@ return [
         
         // Archives
         'application/zip',
+        'application/x-zip-compressed',
+        'application/x-compressed-zip',
         'application/x-rar-compressed',
+        'application/vnd.rar',
         'application/x-7z-compressed',
         'application/gzip',
         
