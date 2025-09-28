@@ -44,7 +44,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
     };
 
     const handleDelete = () => {
-        if (confirm(`Are you sure you want to delete "${storageLocation.name}"? This action cannot be undone.`)) {
+        if (confirm(`Apakah Anda yakin ingin menghapus "${storageLocation.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
             router.delete(`/admin/storage-locations/${storageLocation.id}`);
         }
     };
@@ -135,7 +135,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                 <div>
                                     <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
                                     <Badge variant={storageLocation.is_active ? 'default' : 'destructive'}>
-                                        {storageLocation.is_active ? 'Active' : 'Inactive'}
+                                        {storageLocation.is_active ? 'Aktif' : 'Nonaktif'}
                                     </Badge>
                                 </div>
                             </CardContent>

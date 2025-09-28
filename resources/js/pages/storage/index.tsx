@@ -91,21 +91,21 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Storage Management', href: '/storage' },
+        { title: 'Manajemen Penyimpanan', href: '/storage' },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Storage Management" />
+            <Head title="Manajemen Penyimpanan" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                            Storage Management
+                            Manajemen Penyimpanan
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            Monitor your storage usage and file statistics
+                            Pantau penggunaan penyimpanan dan statistik file Anda
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -114,10 +114,10 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                             onChange={(e) => setTimeRange(e.target.value as any)}
                             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                         >
-                            <option value="7d">Last 7 days</option>
-                            <option value="30d">Last 30 days</option>
-                            <option value="90d">Last 90 days</option>
-                            <option value="1y">Last year</option>
+                            <option value="7d">7 hari terakhir</option>
+                            <option value="30d">30 hari terakhir</option>
+                            <option value="90d">90 hari terakhir</option>
+                            <option value="1y">Tahun terakhir</option>
                         </select>
                     </div>
                 </div>
@@ -128,12 +128,12 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                     <div className="lg:col-span-2 rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                Storage Usage
+                                Penggunaan Penyimpanan
                             </h3>
                             <div className="flex items-center space-x-2">
                                 <HardDrive className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                                 <span className="text-sm text-slate-600 dark:text-slate-300">
-                                    {formatBytes(stats.usedSpace)} of {formatBytes(stats.totalSpace)}
+                                    {formatBytes(stats.usedSpace)} dari {formatBytes(stats.totalSpace)}
                                 </span>
                             </div>
                         </div>
@@ -141,7 +141,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Used Space
+                                    Ruang Terpakai
                                 </span>
                                 <span className={`text-sm font-semibold ${getUsageColor(getUsagePercentage())}`}>
                                     {getUsagePercentage().toFixed(1)}%
@@ -160,13 +160,13 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                                         {formatBytes(stats.usedSpace)}
                                     </p>
-                                    <p className="text-sm text-slate-600 dark:text-slate-300">Used</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300">Terpakai</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                                         {formatBytes(stats.availableSpace)}
                                     </p>
-                                    <p className="text-sm text-slate-600 dark:text-slate-300">Available</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300">Tersedia</p>
                                 </div>
                             </div>
                         </div>
@@ -180,7 +180,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                     <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Total Files</p>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Total File</p>
                                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                                         {stats.totalFiles.toLocaleString()}
                                     </p>
@@ -194,7 +194,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                     <Folder className="h-5 w-5 text-green-600 dark:text-green-400" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Folders</p>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Folder</p>
                                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                                         {stats.totalFolders.toLocaleString()}
                                     </p>
@@ -208,7 +208,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                     <Share2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Shared Files</p>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">File Dibagikan</p>
                                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                                         {stats.sharedFiles.toLocaleString()}
                                     </p>
@@ -222,7 +222,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                            File Types
+                            Jenis File
                         </h3>
                         <div className="space-y-3">
                             {fileTypeStats.map((fileType, index) => (
@@ -251,7 +251,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
 
                     <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                            Recent Activity
+                            Aktivitas Terbaru
                         </h3>
                         <div className="space-y-3">
                             {recentActivity.map((activity) => (
@@ -280,18 +280,18 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                             <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                             <div>
                                 <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                                    Storage Warning
+                                    Peringatan Penyimpanan
                                 </h4>
                                 <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                                    You're using {getUsagePercentage().toFixed(1)}% of your storage. Consider cleaning up old files or upgrading your plan.
+                                    Anda menggunakan {getUsagePercentage().toFixed(1)}% dari penyimpanan Anda. Pertimbangkan untuk membersihkan file lama atau meningkatkan paket Anda.
                                 </p>
                                 <div className="mt-3 flex space-x-3">
                                     <button className="inline-flex items-center rounded-md bg-yellow-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-yellow-700">
                                         <Trash2 className="mr-1 h-3 w-3" />
-                                        Clean Up
+                                        Bersihkan
                                     </button>
                                     <button className="inline-flex items-center rounded-md border border-yellow-300 bg-white px-3 py-1.5 text-xs font-medium text-yellow-700 hover:bg-yellow-50 dark:border-yellow-600 dark:bg-slate-800 dark:text-yellow-300 dark:hover:bg-slate-700">
-                                        Upgrade Plan
+                                        Tingkatkan Paket
                                     </button>
                                 </div>
                             </div>
@@ -303,7 +303,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                 {locations.length > 0 && (
                     <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                            Storage Locations
+                            Lokasi Penyimpanan
                         </h3>
                         <div className="space-y-3">
                             {locations.map((loc) => (
@@ -320,11 +320,11 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                                         {loc.total !== null && loc.free !== null ? (
                                             <>
                                                 <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                    Free: {formatBytes(loc.free)} / Total: {formatBytes(loc.total)}
+                                                    Kosong: {formatBytes(loc.free)} / Total: {formatBytes(loc.total)}
                                                 </p>
                                             </>
                                         ) : (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">Not available</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">Tidak tersedia</p>
                                         )}
                                     </div>
                                 </div>

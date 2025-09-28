@@ -38,7 +38,7 @@ class ActivityController extends Controller
             $query->whereDate('created_at', '<=', $dateTo);
         }
         
-        $activities = $query->orderBy('created_at', 'desc')->paginate(20);
+        $activities = $query->with('user')->orderBy('created_at', 'desc')->paginate(20);
         
         // Get available actions for filter
         $availableActions = ActivityLog::where('user_id', $user->id)

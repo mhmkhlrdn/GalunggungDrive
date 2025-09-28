@@ -33,41 +33,41 @@ export default function CreateStorageLocation() {
                 { title: 'Create', href: '/admin/storage-locations/create' },
             ]}
         >
-            <Head title="Create Storage Location" />
+            <Head title="Buat Lokasi Penyimpanan" />
 
             <div className="p-6 space-y-6">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" asChild>
                             <Link href="/admin/storage-locations">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back
+                                Kembali
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Create Storage Location</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">Buat Lokasi Penyimpanan</h1>
                             <p className="text-muted-foreground">
-                                Add a new storage location to your system
+                                Tambahkan lokasi penyimpanan baru ke sistem Anda
                             </p>
                         </div>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Storage Location Details</CardTitle>
+                            <CardTitle>Detail Lokasi Penyimpanan</CardTitle>
                             <CardDescription>
-                                Configure the storage location settings
+                                Konfigurasi pengaturan lokasi penyimpanan
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Name *</Label>
+                                        <Label htmlFor="name">Nama *</Label>
                                         <Input
                                             id="name"
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="e.g., Public Storage"
+                                            placeholder="contoh: Penyimpanan Publik"
                                             className={errors.name ? 'border-destructive' : ''}
                                         />
                                         {errors.name && (
@@ -76,12 +76,12 @@ export default function CreateStorageLocation() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="key">Key *</Label>
+                                        <Label htmlFor="key">Kunci *</Label>
                                         <Input
                                             id="key"
                                             value={data.key}
                                             onChange={(e) => setData('key', e.target.value)}
-                                            placeholder="e.g., public_storage"
+                                            placeholder="contoh: penyimpanan_publik"
                                             className={errors.key ? 'border-destructive' : ''}
                                         />
                                         {errors.key && (
@@ -94,7 +94,7 @@ export default function CreateStorageLocation() {
                                     <Label htmlFor="driver">Driver *</Label>
                                     <Select value={data.driver} onValueChange={(value) => setData('driver', value)}>
                                         <SelectTrigger className={errors.driver ? 'border-destructive' : ''}>
-                                            <SelectValue placeholder="Select a driver" />
+                                            <SelectValue placeholder="Pilih driver" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="local">Local</SelectItem>
@@ -108,49 +108,49 @@ export default function CreateStorageLocation() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="root">Root Path</Label>
+                                    <Label htmlFor="root">Path Root</Label>
                                     <Input
                                         id="root"
                                         value={data.root}
                                         onChange={(e) => setData('root', e.target.value)}
-                                        placeholder="e.g., /var/www/storage/public"
+                                        placeholder="contoh: /var/www/storage/public"
                                         className={errors.root ? 'border-destructive' : ''}
                                     />
                                     {errors.root && (
                                         <p className="text-sm text-destructive">{errors.root}</p>
                                     )}
                                     <p className="text-sm text-muted-foreground">
-                                        The root directory path for local storage
+                                        Path direktori root untuk penyimpanan lokal
                                     </p>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="url">Public URL</Label>
+                                    <Label htmlFor="url">URL Publik</Label>
                                     <Input
                                         id="url"
                                         value={data.url}
                                         onChange={(e) => setData('url', e.target.value)}
-                                        placeholder="e.g., https://yourapp.com/storage"
+                                        placeholder="contoh: https://yourapp.com/storage"
                                         className={errors.url ? 'border-destructive' : ''}
                                     />
                                     {errors.url && (
                                         <p className="text-sm text-destructive">{errors.url}</p>
                                     )}
                                     <p className="text-sm text-muted-foreground">
-                                        Optional public URL for accessing files
+                                        URL publik opsional untuk mengakses file
                                     </p>
                                 </div>
 
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="visibility">Visibility *</Label>
+                                        <Label htmlFor="visibility">Visibilitas *</Label>
                                         <Select value={data.visibility} onValueChange={(value: 'private' | 'public') => setData('visibility', value)}>
                                             <SelectTrigger className={errors.visibility ? 'border-destructive' : ''}>
-                                                <SelectValue placeholder="Select visibility" />
+                                                <SelectValue placeholder="Pilih visibilitas" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="private">Private</SelectItem>
-                                                <SelectItem value="public">Public</SelectItem>
+                                                <SelectItem value="private">Pribadi</SelectItem>
+                                                <SelectItem value="public">Publik</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.visibility && (
@@ -166,7 +166,7 @@ export default function CreateStorageLocation() {
                                             checked={data.serve}
                                             onCheckedChange={(checked) => setData('serve', checked)}
                                         />
-                                        <Label htmlFor="serve">Can serve files</Label>
+                                        <Label htmlFor="serve">Dapat melayani file</Label>
                                     </div>
 
                                     <div className="flex items-center space-x-2">
@@ -175,17 +175,17 @@ export default function CreateStorageLocation() {
                                             checked={data.is_active}
                                             onCheckedChange={(checked) => setData('is_active', checked)}
                                         />
-                                        <Label htmlFor="is_active">Active</Label>
+                                        <Label htmlFor="is_active">Aktif</Label>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-2">
                                     <Button type="submit" disabled={processing}>
                                         <Save className="h-4 w-4 mr-2" />
-                                        {processing ? 'Creating...' : 'Create Storage Location'}
+                                        {processing ? 'Membuat...' : 'Buat Lokasi Penyimpanan'}
                                     </Button>
                                     <Button type="button" variant="outline" asChild>
-                                        <Link href="/admin/storage-locations">Cancel</Link>
+                                        <Link href="/admin/storage-locations">Batal</Link>
                                     </Button>
                                 </div>
                             </form>

@@ -90,10 +90,10 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <File className="h-5 w-5" />
-                        Edit File
+                        Sunting File
                     </DialogTitle>
                     <DialogDescription>
-                        Update file information and visibility settings
+                        Perbarui informasi file dan pengaturan visibilitas
                     </DialogDescription>
                 </DialogHeader>
 
@@ -113,12 +113,12 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
 
                     {/* File Name */}
                     <div className="space-y-2">
-                        <Label htmlFor="name">File Name</Label>
+                        <Label htmlFor="name">Nama File</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            placeholder="Enter file name"
+                            placeholder="Masukkan nama file"
                             className={errors.name ? 'border-red-500' : ''}
                         />
                         {errors.name && (
@@ -128,12 +128,12 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description">Deskripsi</Label>
                         <textarea
                             id="description"
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
-                            placeholder="Enter file description (optional)"
+                            placeholder="Masukkan deskripsi file (opsional)"
                             rows={3}
                             className={`flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${errors.description ? 'border-red-500' : ''}`}
                         />
@@ -144,16 +144,16 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
 
                     {/* Tags */}
                     <div className="space-y-2">
-                        <Label htmlFor="tags">Tags</Label>
+                        <Label htmlFor="tags">Tag</Label>
                         <Input
                             id="tags"
                             value={data.tags}
                             onChange={(e) => setData('tags', e.target.value)}
-                            placeholder="Enter tags separated by commas"
+                            placeholder="Masukkan tag dipisahkan dengan koma"
                             className={errors.tags ? 'border-red-500' : ''}
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Separate multiple tags with commas
+                            Pisahkan beberapa tag dengan koma
                         </p>
                         {errors.tags && (
                             <p className="text-sm text-red-500">{errors.tags}</p>
@@ -162,31 +162,31 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
 
                     {/* Visibility */}
                     <div className="space-y-2">
-                        <Label htmlFor="visibility">Visibility</Label>
+                        <Label htmlFor="visibility">Visibilitas</Label>
                         <Select
                             value={data.visibility}
                             onValueChange={(value: 'private' | 'shared' | 'public') => setData('visibility', value)}
                         >
                             <SelectTrigger className={errors.visibility ? 'border-red-500' : ''}>
-                                <SelectValue placeholder="Select visibility" />
+                                <SelectValue placeholder="Pilih visibilitas" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="private">
                                     <div className="flex flex-col">
-                                        <span className="font-medium">Private</span>
-                                        <span className="text-xs text-gray-500">Only you can see this file</span>
+                                        <span className="font-medium">Pribadi</span>
+                                        <span className="text-xs text-gray-500">Hanya Anda yang dapat melihat file ini</span>
                                     </div>
                                 </SelectItem>
                                 <SelectItem value="shared">
                                     <div className="flex flex-col">
-                                        <span className="font-medium">Shared</span>
-                                        <span className="text-xs text-gray-500">Only people you share with can see this file</span>
+                                        <span className="font-medium">Dibagikan</span>
+                                        <span className="text-xs text-gray-500">Hanya orang yang Anda bagikan yang dapat melihat file ini</span>
                                     </div>
                                 </SelectItem>
                                 <SelectItem value="public">
                                     <div className="flex flex-col">
-                                        <span className="font-medium">Public</span>
-                                        <span className="text-xs text-gray-500">Everyone can see this file</span>
+                                        <span className="font-medium">Publik</span>
+                                        <span className="text-xs text-gray-500">Semua orang dapat melihat file ini</span>
                                     </div>
                                 </SelectItem>
                             </SelectContent>
@@ -204,14 +204,14 @@ export default function FileEditModal({ isOpen, onClose, file }: FileEditModalPr
                             onClick={onClose}
                             disabled={processing}
                         >
-                            Cancel
+                            Batal
                         </Button>
                         <Button
                             type="submit"
                             disabled={processing}
                             className="bg-blue-600 hover:bg-blue-700"
                         >
-                            {processing ? 'Updating...' : 'Update File'}
+                            {processing ? 'Memperbarui...' : 'Perbarui File'}
                         </Button>
                     </div>
                 </form>

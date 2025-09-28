@@ -32,7 +32,7 @@ interface ActivityLog {
     success: boolean;
     details: Record<string, any>;
     created_at: string;
-    user: {
+    user?: {
         id: number;
         name: string;
         email: string;
@@ -102,6 +102,33 @@ export default function ActivityIndex({ activities, availableActions, filters }:
         return success ? 'text-green-600' : 'text-red-600';
     };
 
+    const getActionName = (action: string) => {
+        const actionNames: Record<string, string> = {
+            'upload': 'Unggah',
+            'download': 'Unduh',
+            'share': 'Bagikan',
+            'delete': 'Hapus',
+            'restore': 'Pulihkan',
+            'create_folder': 'Buat Folder',
+            'login': 'Masuk',
+            'preview': 'Pratinjau',
+            'edit': 'Edit',
+            'move': 'Pindahkan',
+            'copy': 'Salin',
+            'rename': 'Ubah Nama'
+        };
+        return actionNames[action] || action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    const getTargetTypeName = (targetType: string) => {
+        const targetTypeNames: Record<string, string> = {
+            'file': 'File',
+            'folder': 'Folder',
+            'user': 'Pengguna'
+        };
+        return targetTypeNames[targetType] || targetType;
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -110,9 +137,9 @@ export default function ActivityIndex({ activities, availableActions, filters }:
         const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffMinutes < 60) return `${diffMinutes}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
+        if (diffMinutes < 60) return `${diffMinutes} menit yang lalu`;
+        if (diffHours < 24) return `${diffHours} jam yang lalu`;
+        if (diffDays < 7) return `${diffDays} hari yang lalu`;
         return date.toLocaleDateString();
     };
 
@@ -179,7 +206,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                                 <option value="">Semua Aksi</option>
                                 {availableActions.map((action) => (
                                     <option key={action} value={action}>
-                                        {action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        {getActionName(action)}
                                     </option>
                                 ))}
                             </select>
@@ -267,12 +294,12 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center space-x-2">
                                                     <h3 className="text-sm font-medium text-slate-900 dark:text-white">
-                                                        {activity.action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                        {getActionName(activity.action)}
                                                     </h3>
                                                     <div className="flex items-center space-x-1">
                                                         <TargetIcon className="h-4 w-4 text-slate-400" />
                                                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                                                            {activity.target_type}
+                                                            {getTargetTypeName(activity.target_type)}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -286,7 +313,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                                             <div className="mt-1 flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
                                                 <span className="flex items-center">
                                                     <User className="mr-1 h-3 w-3" />
-                                                    {activity.user.name}
+                                                    {activity.user?.name || 'Unknown User'}
                                                 </span>
                                                 <span className="flex items-center">
                                                     <Clock className="mr-1 h-3 w-3" />

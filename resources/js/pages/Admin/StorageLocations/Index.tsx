@@ -37,7 +37,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
     };
 
     const handleDelete = (id: number, name: string) => {
-        if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+        if (confirm(`Apakah Anda yakin ingin menghapus "${name}"? Tindakan ini tidak dapat dibatalkan.`)) {
             router.delete(`/admin/storage-locations/${id}`);
         }
     };

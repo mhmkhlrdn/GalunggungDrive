@@ -105,7 +105,7 @@ class StorageLocationController extends Controller
     public function destroy(StorageLocation $storageLocation): RedirectResponse
     {
         // Check if this storage location is being used by any files
-        $filesCount = \App\Models\File::where('storage_location_key', $storageLocation->key)->count();
+        $filesCount = \App\Models\File::where('disk', $storageLocation->key)->count();
         
         if ($filesCount > 0) {
             return redirect()->route('admin.storage-locations.index')
