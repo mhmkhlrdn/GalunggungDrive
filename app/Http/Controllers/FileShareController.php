@@ -19,11 +19,16 @@ class FileShareController extends Controller
         $user = auth()->user();
         
         try {
-            // Get files shared by the user
-            $sharedByMe = FileShare::with(['file', 'sharedWith'])
-                ->where('shared_by', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
+            // Get files shared by the user - group by file to avoid duplicates
+            $sharedByMeFiles = File::with(['shares' => function($query) use ($user) {
+                $query->where('shared_by', $user->id)
+                      ->with('sharedWith');
+            }])
+            ->whereHas('shares', function($query) use ($user) {
+                $query->where('shared_by', $user->id);
+            })
+            ->orderBy('updated_at', 'desc')
+            ->paginate(20);
             
             // Get files shared with the user
             $sharedWithMe = FileShare::with(['file', 'sharedBy'])
@@ -41,7 +46,7 @@ class FileShareController extends Controller
             
         } catch (\Exception $e) {
             // If there's an error, return empty paginated results
-            $sharedByMe = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+            $sharedByMeFiles = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
             $sharedWithMe = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
             $publicLinks = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
             
@@ -74,18 +79,18 @@ class FileShareController extends Controller
 
         return Inertia::render('shared/index', [
             'sharedByMe' => [
-                'data' => $sharedByMe->items(),
+                'data' => $sharedByMeFiles->items(),
                 'meta' => [
-                    'current_page' => $sharedByMe->currentPage(),
-                    'last_page' => $sharedByMe->lastPage(),
-                    'per_page' => $sharedByMe->perPage(),
-                    'total' => $sharedByMe->total(),
+                    'current_page' => $sharedByMeFiles->currentPage(),
+                    'last_page' => $sharedByMeFiles->lastPage(),
+                    'per_page' => $sharedByMeFiles->perPage(),
+                    'total' => $sharedByMeFiles->total(),
                 ],
                 'links' => [
-                    'first' => $sharedByMe->url(1),
-                    'last' => $sharedByMe->url($sharedByMe->lastPage()),
-                    'prev' => $sharedByMe->previousPageUrl(),
-                    'next' => $sharedByMe->nextPageUrl(),
+                    'first' => $sharedByMeFiles->url(1),
+                    'last' => $sharedByMeFiles->url($sharedByMeFiles->lastPage()),
+                    'prev' => $sharedByMeFiles->previousPageUrl(),
+                    'next' => $sharedByMeFiles->nextPageUrl(),
                 ],
             ],
             'sharedWithMe' => [

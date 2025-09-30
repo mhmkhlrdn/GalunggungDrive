@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import FilePreview from '@/components/file-preview';
+import ShareManagementModal from '@/components/share-management-modal';
 import { 
     Search, 
     Filter, 
@@ -30,6 +31,257 @@ import {
 import { useState } from 'react';
 import ShareModal from '@/components/share-modal';
 
+// SharedByMeView Component
+interface SharedByMeViewProps {
+    files: SharedFile[];
+    viewMode: 'grid' | 'list';
+    selectedFiles: number[];
+    toggleFileSelection: (fileId: number) => void;
+    copyToClipboard: (text: string, token: string) => void;
+    copiedTokens: Set<string>;
+    onManageShares: (file: any) => void;
+}
+
+function SharedByMeView({ files, viewMode, selectedFiles, toggleFileSelection, copyToClipboard, copiedTokens, onManageShares }: SharedByMeViewProps) {
+    const getPermissionColor = (permission: string) => {
+        switch (permission) {
+            case 'view': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+            case 'edit': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+            case 'download': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
+            default: return 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-300';
+        }
+    };
+
+    // Group files by sharing status
+    const groupedFiles = files.reduce((acc, file) => {
+        const publicShares = file.shares.filter(share => share.is_public_link);
+        const userShares = file.shares.filter(share => !share.is_public_link);
+        
+        if (publicShares.length > 0) {
+            if (!acc.public) acc.public = [];
+            acc.public.push({ ...file, shares: publicShares });
+        }
+        
+        if (userShares.length > 0) {
+            if (!acc.shared) acc.shared = [];
+            acc.shared.push({ ...file, shares: userShares });
+        }
+        
+        return acc;
+    }, {} as { public?: SharedFile[], shared?: SharedFile[] });
+
+    const renderFileCard = (file: SharedFile) => {
+        const isSelected = selectedFiles.includes(file.id);
+        const hasExpiredShares = file.shares.some(share => share.expires_at && new Date(share.expires_at) < new Date());
+        
+        return (
+            <div
+                key={file.id}
+                className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 min-w-0 ${
+                    isSelected 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
+                } ${hasExpiredShares ? 'opacity-60' : ''} ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
+            >
+                <div className="flex items-start space-x-3">
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleFileSelection(file.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
+                        <FilePreview 
+                            file={file} 
+                            size={viewMode === 'grid' ? 'lg' : 'md'}
+                        />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                                {file.name}
+                            </h3>
+                            <div className="flex items-center space-x-1">
+                                <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                    <Star className="h-4 w-4" />
+                                </button>
+                                <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {/* Status Berbagi */}
+                        <div className="mt-2 space-y-2">
+                            {file.shares.map((share, index) => {
+                                const isExpired = share.expires_at && new Date(share.expires_at) < new Date();
+                                
+                                return (
+                                    <div key={index} className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-700/50 p-2 min-w-0">
+                                        <div className="flex items-center space-x-2">
+                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getPermissionColor(share.permission)}`}>
+                                                {share.permission === 'view' ? 'Lihat' : share.permission === 'edit' ? 'Edit' : 'Download'}
+                                            </span>
+                                            {share.is_public_link && (
+                                                <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                                                    Link Publik
+                                                </span>
+                                            )}
+                                            {isExpired && (
+                                                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/20 dark:text-red-300">
+                                                    Kedaluwarsa
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex-1 min-w-0">
+                                                {share.is_public_link ? (
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                        Siapa saja dengan link
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400" title={(() => {
+                                                        if (share.shared_with_user?.name) return share.shared_with_user.name;
+                                                        if (share.sharedWith?.name) return share.sharedWith.name;
+                                                        if (share.shared_with && typeof share.shared_with === 'object' && 'name' in share.shared_with) {
+                                                            return share.shared_with.name;
+                                                        }
+                                                        if (share.shared_with && typeof share.shared_with === 'number') {
+                                                            return `ID Pengguna: ${share.shared_with}`;
+                                                        }
+                                                        return 'Tidak Diketahui';
+                                                    })()}>
+                                                        {(() => {
+                                                            if (share.shared_with_user?.name) return share.shared_with_user.name;
+                                                            if (share.sharedWith?.name) return share.sharedWith.name;
+                                                            if (share.shared_with && typeof share.shared_with === 'object' && 'name' in share.shared_with) {
+                                                                return share.shared_with.name;
+                                                            }
+                                                            if (share.shared_with && typeof share.shared_with === 'number') {
+                                                                return `ID Pengguna: ${share.shared_with}`;
+                                                            }
+                                                            return 'Tidak Diketahui';
+                                                        })()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {share.token && (
+                                                <button 
+                                                    onClick={() => copyToClipboard(`${window.location.origin}/public/file/${share.token}`, share.token!)}
+                                                    className="ml-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+                                                >
+                                                    {copiedTokens.has(share.token) ? (
+                                                        <Check className="h-3 w-3 text-green-600" />
+                                                    ) : (
+                                                        <Copy className="h-3 w-3" />
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            {file.size} • Diperbarui {new Date(file.updated_at).toLocaleDateString()}
+                        </p>
+                    </div>
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="flex items-center space-x-2">
+                        <button 
+                            onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                            className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                            title="Lihat file"
+                        >
+                            <Eye className="h-4 w-4" />
+                        </button>
+                        <button 
+                            onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                            className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                            title="Unduh file"
+                        >
+                            <Download className="h-4 w-4" />
+                        </button>
+                        <button 
+                            onClick={() => onManageShares(file)}
+                            className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                            title="Kelola berbagi"
+                        >
+                            <Settings className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Public Files Section */}
+            {groupedFiles.public && groupedFiles.public.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex w-full items-center justify-between rounded-lg bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-4">
+                        <div className="flex items-center space-x-3">
+                            <div className="rounded-full bg-orange-100 dark:bg-orange-900/30 p-2">
+                                <ExternalLink className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-100">
+                                    File Publik
+                                </h3>
+                                <p className="text-sm text-orange-700 dark:text-orange-300">
+                                    {groupedFiles.public.length} file dapat diakses oleh siapa saja dengan link
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <span className="rounded-full bg-orange-200 dark:bg-orange-800 px-2 py-1 text-xs font-medium text-orange-800 dark:text-orange-200">
+                                {groupedFiles.public.length}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className={viewMode === 'grid' 
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' 
+                        : 'space-y-2'
+                    }>
+                        {groupedFiles.public.map(renderFileCard)}
+                    </div>
+                </div>
+            )}
+
+            {/* Shared with Users Section */}
+            {groupedFiles.shared && groupedFiles.shared.length > 0 && (
+                <div className="space-y-3">
+                    <div className={viewMode === 'grid' 
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' 
+                        : 'space-y-2'
+                    }>
+                        {groupedFiles.shared.map(renderFileCard)}
+                    </div>
+                </div>
+            )}
+
+            {/* No files message */}
+            {(!groupedFiles.public || groupedFiles.public.length === 0) && (!groupedFiles.shared || groupedFiles.shared.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-12">
+                    <div className="rounded-full bg-slate-100 p-6 dark:bg-slate-800">
+                        <Share2 className="h-12 w-12 text-slate-400" />
+                    </div>
+                    <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Belum ada file yang dibagikan</h3>
+                    <p className="mt-1 text-slate-600 dark:text-slate-300">
+                        Mulai berbagi file Anda untuk melihatnya diorganisir di sini.
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface FileShare {
     id: number;
     file: {
@@ -43,6 +295,28 @@ interface FileShare {
         name: string;
         email: string;
     };
+    shared_with_user?: {
+        id: number;
+        name: string;
+        email: string;
+    };
+    shared_with?: number | {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        created_at: string;
+        updated_at: string;
+        last_login_at: string;
+        last_login_ip: string;
+        storage_limit: number;
+        storage_used: number;
+        current_session_id: string | null;
+        deleted_at: string | null;
+        two_factor_confirmed_at: string | null;
+        two_factor_recovery_codes: string | null;
+        two_factor_secret: string | null;
+    };
     sharedBy?: {
         id: number;
         name: string;
@@ -55,9 +329,23 @@ interface FileShare {
     created_at: string;
 }
 
+interface SharedFile {
+    id: number;
+    name: string;
+    size: string;
+    mime_type: string;
+    folder?: {
+        id: number;
+        name: string;
+    };
+    shares: FileShare[];
+    created_at: string;
+    updated_at: string;
+}
+
 interface Props {
     sharedByMe: {
-        data: FileShare[];
+        data: SharedFile[];
         links: {
             first: string;
             last: string;
@@ -125,6 +413,8 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
     const [activeTab, setActiveTab] = useState<'shared-by-me' | 'shared-with-me' | 'public-links'>('shared-by-me');
     const [copiedTokens, setCopiedTokens] = useState<Set<string>>(new Set());
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showShareManagementModal, setShowShareManagementModal] = useState(false);
+    const [selectedFileForManagement, setSelectedFileForManagement] = useState<any>(null);
 
     // Safety check to prevent crashes
     if (!sharedByMe || !sharedWithMe || !publicLinks) {
@@ -260,8 +550,8 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
 
     const getTabTitle = () => {
         switch (activeTab) {
-            // case 'shared-by-me':
-            //     return 'Dibagikan oleh Saya';
+            case 'shared-by-me':
+                return 'Dibagikan oleh Saya';
             case 'shared-with-me':
                 return 'Dibagikan dengan Saya';
             case 'public-links':
@@ -424,14 +714,33 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                         )}
                     </div>
                 ) : (
+                    activeTab === 'shared-by-me' ? (
+                        <SharedByMeView 
+                            files={getCurrentData().data as SharedFile[]}
+                            viewMode={viewMode}
+                            selectedFiles={selectedFiles}
+                            toggleFileSelection={toggleFileSelection}
+                            copyToClipboard={copyToClipboard}
+                            copiedTokens={copiedTokens}
+                            onManageShares={(file) => {
+                                setSelectedFileForManagement(file);
+                                setShowShareManagementModal(true);
+                            }}
+                        />
+                ) : (
                     <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' 
                         : 'space-y-2'
                     }>
                         {getCurrentData().data.map((share) => {
-                            const file = share.file;
-                            const isSelected = selectedFiles.includes(share.id);
-                            const isExpired = share.expires_at && new Date(share.expires_at) < new Date();
+                                // Handle different data structures for different tabs
+                                let file, isSelected, isExpired;
+                                
+                                // For other tabs (shared-with-me, public-links), we have FileShare objects
+                                const fileShare = share as FileShare;
+                                file = fileShare.file;
+                                isSelected = selectedFiles.includes(fileShare.id);
+                                isExpired = fileShare.expires_at && new Date(fileShare.expires_at) < new Date();
                             
                             return (
                                 <div
@@ -450,10 +759,10 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <FilePreview 
-                                                file={file} 
-                                                size={viewMode === 'grid' ? 'lg' : 'md'}
-                                            />
+                                                <FilePreview 
+                                                    file={file} 
+                                                    size={viewMode === 'grid' ? 'lg' : 'md'}
+                                                />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
@@ -470,10 +779,12 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                                 </div>
                                             </div>
                                             <div className="mt-1 flex items-center space-x-2">
+                                                    {'permission' in share && (
                                                 <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getPermissionColor(share.permission)}`}>
                                                     {share.permission}
                                                 </span>
-                                                {share.is_public_link && (
+                                                    )}
+                                                    {'is_public_link' in share && share.is_public_link && (
                                                     <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
                                                         Public
                                                     </span>
@@ -485,12 +796,12 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                                 )}
                                             </div>
                                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                {file.size} • {activeTab === 'shared-by-me' ? `Shared with ${share.sharedWith?.name || 'Public'}` : `Shared by ${share.sharedBy?.name}`}
+                                                    {file.size} • {activeTab === 'shared-with-me' ? `Shared by ${'sharedBy' in share ? share.sharedBy?.name : 'Unknown'}` : `Public link`}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {new Date(share.created_at).toLocaleDateString()}
                                             </p>
-                                            {share.expires_at && (
+                                                {'expires_at' in share && share.expires_at && (
                                                 <p className="text-xs text-slate-500 dark:text-slate-400">
                                                     Expires {new Date(share.expires_at).toLocaleDateString()}
                                                 </p>
@@ -501,16 +812,25 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                     {/* Quick Actions */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Lihat file"
+                                            >
                                                 <Eye className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Unduh file"
+                                            >
                                                 <Download className="h-4 w-4" />
                                             </button>
-                                            {share.token && (
+                                                {'token' in share && share.token && (
                                                 <button 
                                                     onClick={() => copyToClipboard(`${window.location.origin}/public/file/${share.token}`, share.token!)}
                                                     className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                    title="Salin link"
                                                 >
                                                     {copiedTokens.has(share.token) ? (
                                                         <Check className="h-4 w-4 text-green-600" />
@@ -519,7 +839,14 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                                     )}
                                                 </button>
                                             )}
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedFileForManagement(file);
+                                                    setShowShareManagementModal(true);
+                                                }}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Kelola berbagi"
+                                            >
                                                 <Settings className="h-4 w-4" />
                                             </button>
                                         </div>
@@ -528,6 +855,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                             );
                         })}
                     </div>
+                    )
                 )}
 
                 {/* Pagination */}
@@ -562,6 +890,16 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                 files={files}
                 users={users}
                 mode="file-selection"
+            />
+
+            {/* Share Management Modal */}
+            <ShareManagementModal
+                isOpen={showShareManagementModal}
+                onClose={() => {
+                    setShowShareManagementModal(false);
+                    setSelectedFileForManagement(null);
+                }}
+                file={selectedFileForManagement}
             />
         </AppLayout>
     );
