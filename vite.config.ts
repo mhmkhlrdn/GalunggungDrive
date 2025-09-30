@@ -5,7 +5,7 @@ import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    base: 'http://192.168.1.17:5173/',
+    // base: 'http://192.168.1.17:5173/',
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
@@ -21,17 +21,22 @@ export default defineConfig({
     esbuild: {
         jsx: 'automatic',
     },
+    optimizeDeps: {
+        force: true,
+        include: ['@radix-ui/react-switch', '@inertiajs/react']
+    },
+
   server: {
-//   host: '192.168.1.17',
+  host: '0.0.0.0',
   port: 5173,
   strictPort:true,
   cors: {
-    origin: 'http://192.168.1.17:8001', // Laravel's URL
+    origin: 'http://192.168.17.144:8000', // Laravel's URL
     credentials: true,
   },
   hmr: {
     protocol: 'ws',
-    // host: '192.168.1.17',
+    host: '192.168.17.144',
     port: 5173,
   },
 },

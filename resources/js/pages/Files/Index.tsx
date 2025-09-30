@@ -6,6 +6,7 @@ import CreateFolderModal from '@/components/create-folder-modal';
 import MoveFileModal from '@/components/move-file-modal';
 import FileEditModal from '@/components/file-edit-modal';
 import ShareModal from '@/components/share-modal';
+import FilePreview from '@/components/file-preview';
 import { 
     Upload, 
     FolderPlus, 
@@ -200,30 +201,42 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         window.open(`/files/${fileId}/preview`, '_blank');
     };
 
-    const handleShare = (fileIds: number[], userIds: number[], permission: string, expiresAt?: string, isPublicLink?: boolean) => {
-        // Create share for each file
-        fileIds.forEach(fileId => {
-            if (isPublicLink) {
-                // Create public link
-                router.post(`/files/${fileId}/share`, {
-                    is_public_link: true,
-                    permission,
-                    expires_at: expiresAt
-                });
+    const handleShare = async (fileIds: number[], userIds: number[], permission: string, expiresAt?: string, isPublicLink?: boolean) => {
+        try {
+            // Prepare batch update data
+            const updates = fileIds.map(fileId => {
+                const file = files.data.find(f => f.id === fileId);
+                if (!file) return null;
+
+                return {
+                    file_id: fileId,
+                    name: file.name,
+                    description: file.description || '',
+                    tags: file.tags ? file.tags.join(', ') : '',
+                    visibility: isPublicLink ? 'public' : (userIds.length > 0 ? 'shared' : 'private'),
+                    shared_with: userIds
+                };
+            }).filter(Boolean);
+
+            // Send batch update request
+            const response = await fetch('/api/files/batch-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ updates }),
+            });
+
+            if (response.ok) {
+                // Reload the page to show updated shares
+                window.location.reload();
             } else {
-                // Share with specific users
-                userIds.forEach(userId => {
-                    router.post(`/files/${fileId}/share`, {
-                        shared_with: userId,
-                        permission,
-                        expires_at: expiresAt
-                    });
-                });
+                console.error('Error updating files:', await response.text());
             }
-        });
-        
-        // Reload the page to show updated shares
-        router.reload();
+        } catch (error) {
+            console.error('Error updating files:', error);
+        }
     };
 
     // Bulk actions
@@ -261,6 +274,16 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     const handleEditFile = (file: File) => {
         setFileToEdit(file);
         setShowEditModal(true);
+    };
+
+    const handleToggleStar = (fileId: number) => {
+        router.post(`/files/${fileId}/toggle-star`, {}, {
+            preserveState: true,
+            onSuccess: () => {
+                // Update the local state to reflect the change immediately
+                // This will be handled by the server response
+            }
+        });
     };
 
     return (
@@ -400,11 +423,10 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                     </div>
                 ) : (
                     <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                        ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                         : 'space-y-2'
                     }>
                         {files.data.map((file) => {
-                            const IconComponent = getFileIcon(file.mime_type);
                             const isSelected = selectedFiles.includes(file.id);
                             
                             return (
@@ -416,29 +438,43 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
+                                    {/* Checkbox - always accessible */}
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => toggleFileSelection(file.id)}
+                                        className="absolute top-2 left-2 z-20 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    
+                                    {/* Star button - always accessible */}
+                                    <button 
+                                        onClick={() => handleToggleStar(file.id)}
+                                        className={`absolute top-2 right-2 z-20 p-1 rounded-full transition-colors ${
+                                            file.starred 
+                                                ? 'text-yellow-500 hover:text-yellow-600' 
+                                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                                        }`}
+                                        aria-label={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}
+                                        title={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}
+                                    >
+                                        <Star className={`h-4 w-4 ${file.starred ? 'fill-current' : ''}`} />
+                                    </button>
+
                                     <div className="flex items-start space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => toggleFileSelection(file.id)}
-                                            className="relative z-20 mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        />
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <IconComponent className={`h-8 w-8 ${getFileColor(file.mime_type)}`} />
+                                            <FilePreview 
+                                                file={file} 
+                                                size={viewMode === 'grid' ? 'lg' : 'md'}
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
                                                 <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">
                                                     {file.name}
                                                 </h3>
-                                                <div className="flex items-center space-x-1">
-                                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                                        <Star className="h-4 w-4" />
-                                                    </button>
-                                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                                                <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </button>
                                             </div>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {file.size} • {new Date(file.updated_at).toLocaleDateString()}
@@ -468,8 +504,8 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                         </div>
                                     </div>
                                     
-                                    {/* Quick Actions toolbar (top-right), does not cover checkbox */}
-                                    <div className="pointer-events-none absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
+                                    {/* Quick Actions toolbar (bottom-right), does not cover star button */}
+                                    <div className="pointer-events-none absolute bottom-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="pointer-events-auto flex items-center space-x-2">
                                             <button 
                                                 onClick={() => handleViewFile(file.id)}
@@ -589,6 +625,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                             setFileToEdit(null);
                         }}
                         file={fileToEdit}
+                        users={users}
                     />
                 )}
                 {shareSelection.length > 0 && (
@@ -599,7 +636,8 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                             setShareSelection([]);
                         }}
                         onShare={handleShare}
-                        files={shareSelection}
+                        files={files.data}
+                        selectedFiles={shareSelection}
                         users={users}
                         mode="user-selection"
                     />

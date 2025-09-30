@@ -68,7 +68,10 @@ class FileController extends Controller
         $query = File::with(['user', 'folder'])
             ->where(function ($q) {
                 $q->where('user_id', auth()->id())
-                  ->orWhere('visibility', 'public');
+                  ->orWhere('visibility', 'public')
+                  ->orWhereHas('shares', function ($shareQuery) {
+                      $shareQuery->where('shared_with', auth()->id());
+                  });
             });
 
         if ($folderId) {
@@ -219,13 +222,60 @@ class FileController extends Controller
             'description' => 'nullable|string|max:1000',
             'tags' => 'nullable|string',
             'visibility' => 'required|in:private,shared,public',
+            'shared_with' => 'nullable|array',
+            'shared_with.*' => 'integer|exists:users,id',
         ]);
+
+        $oldData = [
+            'name' => $file->name,
+            'description' => $file->description,
+            'tags' => $file->tags,
+            'visibility' => $file->visibility,
+        ];
 
         $file->update([
             'name' => $request->name,
             'description' => $request->description,
             'tags' => $request->tags ? explode(',', $request->tags) : null,
             'visibility' => $request->visibility,
+        ]);
+
+        // Handle sharing if visibility is 'shared' and users are selected
+        if ($request->visibility === 'shared' && $request->has('shared_with')) {
+            // Remove existing shares
+            $file->shares()->delete();
+            
+            // Create new shares
+            foreach ($request->shared_with as $userId) {
+                $file->shares()->create([
+                    'shared_with' => $userId,
+                    'permission' => 'view',
+                    'shared_by' => auth()->id(),
+                ]);
+            }
+        } elseif ($request->visibility !== 'shared') {
+            // Remove all shares if not shared
+            $file->shares()->delete();
+        }
+
+        // Log the activity
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'edit',
+            'target_type' => 'file',
+            'target_id' => $file->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'success' => true,
+            'details' => [
+                'file_name' => $file->name,
+                'changes' => array_diff_assoc([
+                    'name' => $file->name,
+                    'description' => $file->description,
+                    'tags' => $file->tags,
+                    'visibility' => $file->visibility,
+                ], $oldData),
+            ],
         ]);
 
         return redirect()->back()->with('success', 'File updated successfully.');
@@ -423,6 +473,86 @@ class FileController extends Controller
         }
 
         return $breadcrumbs;
+    }
+
+    public function toggleStar(File $file): RedirectResponse
+    {
+        $this->authorize('update', $file);
+
+        $file->update([
+            'starred' => !$file->starred,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => $file->starred ? 'star' : 'unstar',
+            'target_type' => 'file',
+            'target_id' => $file->id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'success' => true,
+            'details' => [
+                'file_name' => $file->name,
+            ],
+        ]);
+
+        return redirect()->back();
+    }
+
+    public function batchUpdate(Request $request)
+    {
+        $updates = $request->input('updates', []);
+        
+        foreach ($updates as $updateData) {
+            $file = File::find($updateData['file_id']);
+            if (!$file) continue;
+
+            $this->authorize('update', $file);
+
+            // Update file properties
+            $file->update([
+                'name' => $updateData['name'],
+                'description' => $updateData['description'],
+                'tags' => $updateData['tags'] ? explode(',', $updateData['tags']) : null,
+                'visibility' => $updateData['visibility'],
+            ]);
+
+            // Handle sharing
+            if ($updateData['visibility'] === 'shared' && isset($updateData['shared_with'])) {
+                // Remove existing shares
+                $file->shares()->delete();
+                
+                // Create new shares
+                foreach ($updateData['shared_with'] as $userId) {
+                    $file->shares()->create([
+                        'shared_with' => $userId,
+                        'permission' => 'view',
+                        'shared_by' => auth()->id(),
+                    ]);
+                }
+            } elseif ($updateData['visibility'] !== 'shared') {
+                // Remove all shares if not shared
+                $file->shares()->delete();
+            }
+
+            // Log the activity
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'edit',
+                'target_type' => 'file',
+                'target_id' => $file->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'success' => true,
+                'details' => [
+                    'file_name' => $file->name,
+                    'visibility' => $updateData['visibility'],
+                    'shared_with_count' => count($updateData['shared_with'] ?? [])
+                ],
+            ]);
+        }
+
+        return response()->json(['success' => true]);
     }
 }
 

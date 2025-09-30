@@ -37,6 +37,8 @@ class FileShareController extends Controller
                 ->where('is_public_link', true)
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
+            
+            
         } catch (\Exception $e) {
             // If there's an error, return empty paginated results
             $sharedByMe = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
@@ -69,12 +71,86 @@ class FileShareController extends Controller
             ->select('id', 'name', 'email')
             ->get();
 
+
         return Inertia::render('shared/index', [
-            'sharedByMe' => $sharedByMe,
-            'sharedWithMe' => $sharedWithMe,
-            'publicLinks' => $publicLinks,
+            'sharedByMe' => [
+                'data' => $sharedByMe->items(),
+                'meta' => [
+                    'current_page' => $sharedByMe->currentPage(),
+                    'last_page' => $sharedByMe->lastPage(),
+                    'per_page' => $sharedByMe->perPage(),
+                    'total' => $sharedByMe->total(),
+                ],
+                'links' => [
+                    'first' => $sharedByMe->url(1),
+                    'last' => $sharedByMe->url($sharedByMe->lastPage()),
+                    'prev' => $sharedByMe->previousPageUrl(),
+                    'next' => $sharedByMe->nextPageUrl(),
+                ],
+            ],
+            'sharedWithMe' => [
+                'data' => $sharedWithMe->items(),
+                'meta' => [
+                    'current_page' => $sharedWithMe->currentPage(),
+                    'last_page' => $sharedWithMe->lastPage(),
+                    'per_page' => $sharedWithMe->perPage(),
+                    'total' => $sharedWithMe->total(),
+                ],
+                'links' => [
+                    'first' => $sharedWithMe->url(1),
+                    'last' => $sharedWithMe->url($sharedWithMe->lastPage()),
+                    'prev' => $sharedWithMe->previousPageUrl(),
+                    'next' => $sharedWithMe->nextPageUrl(),
+                ],
+            ],
+            'publicLinks' => [
+                'data' => $publicLinks->items(),
+                'meta' => [
+                    'current_page' => $publicLinks->currentPage(),
+                    'last_page' => $publicLinks->lastPage(),
+                    'per_page' => $publicLinks->perPage(),
+                    'total' => $publicLinks->total(),
+                ],
+                'links' => [
+                    'first' => $publicLinks->url(1),
+                    'last' => $publicLinks->url($publicLinks->lastPage()),
+                    'prev' => $publicLinks->previousPageUrl(),
+                    'next' => $publicLinks->nextPageUrl(),
+                ],
+            ],
             'files' => $files,
             'users' => $users,
+        ]);
+    }
+
+    public function getExistingShares(Request $request)
+    {
+        $fileIds = $request->input('file_ids', []);
+        $user = auth()->user();
+        
+        $shares = FileShare::with(['sharedWith', 'sharedBy'])
+            ->whereIn('file_id', $fileIds)
+            ->where('shared_by', $user->id)
+            ->get()
+            ->map(function ($share) {
+                return [
+                    'id' => $share->id,
+                    'file_id' => $share->file_id,
+                    'shared_with' => $share->shared_with,
+                    'shared_by' => $share->shared_by,
+                    'permission' => $share->permission,
+                    'is_public_link' => $share->is_public_link,
+                    'expires_at' => $share->expires_at,
+                    'shared_with_user' => $share->sharedWith ? [
+                        'id' => $share->sharedWith->id,
+                        'name' => $share->sharedWith->name,
+                        'email' => $share->sharedWith->email,
+                    ] : null,
+                ];
+            });
+
+        return response()->json([
+            'shares' => $shares,
         ]);
     }
 

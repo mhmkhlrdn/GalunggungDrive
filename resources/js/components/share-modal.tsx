@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Search, User, FileText, Folder, Check, Share2, Image, Video, Music, File, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -46,19 +46,67 @@ export default function ShareModal({
     const [permission, setPermission] = useState<'view' | 'edit' | 'download'>('view');
     const [expiresAt, setExpiresAt] = useState('');
     const [isPublicLink, setIsPublicLink] = useState(false);
-    const [step, setStep] = useState<'files' | 'users' | 'settings'>('files');
+    const [step, setStep] = useState<'files' | 'users' | 'settings'>(
+        mode === 'user-selection' ? 'users' : 'files'
+    );
+    const loadedFileIdsRef = useRef<number[]>([]);
 
+    const loadExistingShares = useCallback(async (fileIds: number[]) => {
+        try {
+            const response = await fetch('/api/files/shares', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ file_ids: fileIds }),
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Extract unique user IDs from all shares
+                const existingUserIds = [...new Set(data.shares.map((share: any) => share.shared_with))];
+                setSelectedUserIds(existingUserIds);
+                
+                // Check if any file is public
+                const hasPublicFiles = data.shares.some((share: any) => share.is_public_link);
+                setIsPublicLink(hasPublicFiles);
+            }
+        } catch (error) {
+            console.error('Error loading existing shares:', error);
+        }
+    }, []);
+
+    // Effect to handle modal opening and selectedFiles changes
     useEffect(() => {
-        if (isOpen) {
-            if (mode === 'user-selection' && selectedFiles.length > 0) {
-                // Preselect file(s) passed in and jump to users step
-                setSelectedFileIds(selectedFiles.map(f => f.id));
-                setStep('users');
-            } else if (mode === 'file-selection') {
-                setStep('files');
+        if (isOpen && mode === 'user-selection' && selectedFiles.length > 0) {
+            const fileIds = selectedFiles.map(f => f.id);
+            
+            // Preselect file(s) passed in
+            setSelectedFileIds(fileIds);
+            
+            // Only load shares if we haven't loaded them for these file IDs yet
+            const fileIdsString = fileIds.sort().join(',');
+            const loadedFileIdsString = loadedFileIdsRef.current.sort().join(',');
+            
+            if (fileIdsString !== loadedFileIdsString) {
+                loadExistingShares(fileIds);
+                loadedFileIdsRef.current = fileIds;
             }
         }
-    }, [isOpen, mode, selectedFiles]);
+    }, [isOpen, mode, selectedFiles, loadExistingShares]);
+
+    // Effect to handle modal closing
+    useEffect(() => {
+        if (!isOpen) {
+            // Reset state when modal closes
+            setSelectedFileIds([]);
+            setSelectedUserIds([]);
+            setIsPublicLink(false);
+            loadedFileIdsRef.current = [];
+        }
+    }, [isOpen]);
+
 
     const filteredFiles = files.filter(file => 
         file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -111,6 +159,13 @@ export default function ShareModal({
     };
 
     const handleShare = () => {
+        console.log('handleShare called');
+        console.log('selectedFileIds:', selectedFileIds);
+        console.log('selectedUserIds:', selectedUserIds);
+        console.log('permission:', permission);
+        console.log('expiresAt:', expiresAt);
+        console.log('isPublicLink:', isPublicLink);
+        
         if (selectedFileIds.length === 0) {
             alert('Pilih setidaknya satu file');
             return;
@@ -120,6 +175,14 @@ export default function ShareModal({
             alert('Pilih setidaknya satu pengguna atau buat link publik');
             return;
         }
+
+        console.log('Calling onShare with data:', {
+            selectedFileIds, 
+            selectedUserIds, 
+            permission, 
+            expiresAt: expiresAt || undefined,
+            isPublicLink
+        });
 
         onShare(
             selectedFileIds, 

@@ -25,7 +25,10 @@ class FolderController extends Controller
         $query = Folder::with(['user', 'parent'])
             ->where(function ($q) {
                 $q->where('user_id', auth()->id())
-                  ->orWhere('visibility', 'public');
+                  ->orWhere('visibility', 'public')
+                  ->orWhereHas('shares', function ($shareQuery) {
+                      $shareQuery->where('shared_with', auth()->id());
+                  });
             });
 
         if ($parentId) {
@@ -315,6 +318,9 @@ class FolderController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'visibility' => 'required|in:private,shared,public',
+            'shared_with' => 'nullable|array',
+            'shared_with.*' => 'integer|exists:users,id',
         ]);
 
         // Check if folder with same name exists in parent
@@ -330,8 +336,50 @@ class FolderController extends Controller
             ]);
         }
 
+        $oldData = [
+            'name' => $folder->name,
+            'visibility' => $folder->visibility,
+        ];
+
         $folder->update([
             'name' => $request->name,
+            'visibility' => $request->visibility,
+        ]);
+
+        // Handle sharing if visibility is 'shared' and users are selected
+        if ($request->visibility === 'shared' && $request->has('shared_with')) {
+            // Remove existing shares
+            $folder->shares()->delete();
+            
+            // Create new shares
+            foreach ($request->shared_with as $userId) {
+                $folder->shares()->create([
+                    'shared_with' => $userId,
+                    'permission' => 'view',
+                    'shared_by' => auth()->id(),
+                ]);
+            }
+        } elseif ($request->visibility !== 'shared') {
+            // Remove all shares if not shared
+            $folder->shares()->delete();
+        }
+
+        // Log the activity
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'edit',
+            'target_type' => 'folder',
+            'target_id' => $folder->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'success' => true,
+            'details' => [
+                'folder_name' => $folder->name,
+                'changes' => array_diff_assoc([
+                    'name' => $folder->name,
+                    'visibility' => $folder->visibility,
+                ], $oldData),
+            ],
         ]);
 
         return redirect()->back()->with('success', 'Folder updated successfully.');

@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
+import FilePreview from '@/components/file-preview';
 import { 
     Search, 
     Filter, 
@@ -118,6 +119,7 @@ interface Props {
 }
 
 export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, files = [], users = [] }: Props) {
+    
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
     const [activeTab, setActiveTab] = useState<'shared-by-me' | 'shared-with-me' | 'public-links'>('shared-by-me');
@@ -428,7 +430,6 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                     }>
                         {getCurrentData().data.map((share) => {
                             const file = share.file;
-                            const IconComponent = getFileIcon(file.mime_type);
                             const isSelected = selectedFiles.includes(share.id);
                             const isExpired = share.expires_at && new Date(share.expires_at) < new Date();
                             
@@ -449,7 +450,10 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <IconComponent className={`h-8 w-8 ${getFileColor(file.mime_type)}`} />
+                                            <FilePreview 
+                                                file={file} 
+                                                size={viewMode === 'grid' ? 'lg' : 'md'}
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">

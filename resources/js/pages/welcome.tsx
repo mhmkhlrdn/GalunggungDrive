@@ -1,6 +1,7 @@
 import { dashboard, login, register } from '@/routes';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
+import GasnetLogo from '@/components/gasnet-logo';
 import {
     FolderOpen,
     Upload,
@@ -19,7 +20,7 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Galunggung Drive - File Sharing Internal">
+            <Head title="Galunggung Drive - Penyimpanan Cloud">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700"
@@ -31,13 +32,16 @@ export default function Welcome() {
                 <header className="relative z-50 border-b border-white/20 bg-white/80 backdrop-blur-md dark:bg-slate-900/80">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="flex h-16 items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-purple-500">
-                                    <FolderOpen className="h-6 w-6 text-white" />
+                            <div className="flex items-center space-x-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg">
+                                    <FolderOpen className="h-7 w-7 text-white" />
                                 </div>
-                                <span className="text-xl font-bold text-slate-900 dark:text-white">
-                                    Galunggung Drive
-                                </span>
+                                <GasnetLogo 
+                                    size="lg" 
+                                    showText={true} 
+                                    showSubtitle={true} 
+                                    variant="full"
+                                />
                             </div>
                             <nav className="flex items-center space-x-4">
                                 {auth.user ? (

@@ -13,22 +13,28 @@ class CloudController extends Controller
     {
         $userId = auth()->id();
 
-        // Top-level folders: owned by user or public, with no parent
+        // Top-level folders: owned by user, public, or shared with user, with no parent
         $folders = Folder::query()
             ->whereNull('parent_id')
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->orWhere('visibility', 'public');
+                  ->orWhere('visibility', 'public')
+                  ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                      $shareQuery->where('shared_with', $userId);
+                  });
             })
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id', 'updated_at']);
 
-        // Root files: owned by user or public, with no folder
+        // Root files: owned by user, public, or shared with user, with no folder
         $files = File::query()
             ->whereNull('folder_id')
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->orWhere('visibility', 'public');
+                  ->orWhere('visibility', 'public')
+                  ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                      $shareQuery->where('shared_with', $userId);
+                  });
             })
             ->orderBy('updated_at', 'desc')
             ->paginate(20);

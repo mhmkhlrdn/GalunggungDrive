@@ -26,6 +26,9 @@ class User extends Authenticatable
         'role',
         'storage_limit',
         'storage_used',
+        'current_session_id',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     /**
@@ -48,6 +51,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'last_login_at' => 'datetime',
         ];
     }
 

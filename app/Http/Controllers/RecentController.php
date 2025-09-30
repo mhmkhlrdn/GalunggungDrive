@@ -18,7 +18,12 @@ class RecentController extends Controller
         $sortOrder = $request->get('sort_order', 'desc');
         
         $query = File::with(['user', 'folder'])
-            ->where('user_id', $user->id)
+            ->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                      $shareQuery->where('shared_with', $user->id);
+                  });
+            })
             ->where('updated_at', '>=', now()->subDays(30)); // Last 30 days
         
         if ($search) {

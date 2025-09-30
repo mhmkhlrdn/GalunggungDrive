@@ -137,7 +137,6 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
 
     return (
         <div className="space-y-4">
-            {/* Quick Actions */}
             <div className="px-2 py-2">
                         <div className="grid grid-cols-2 gap-2 mb-4">
                     <Link
@@ -261,14 +260,6 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
 
-                    <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                            <Link href="/activity" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                <Activity className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                                <span className="text-sm font-medium">Aktivitas</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
 
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild>
@@ -302,6 +293,15 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                 <Link href="/admin/users" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                     <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                     <span className="text-sm font-medium">Pengguna</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem>
+                            <SidebarMenuButton asChild>
+                                <Link href="/activity" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                    <Activity className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    <span className="text-sm font-medium">Aktivitas</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>

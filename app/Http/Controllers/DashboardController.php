@@ -26,8 +26,9 @@ class DashboardController extends Controller
             'sharedFiles' => FileShare::count(),
         ];
 
-        // Get recent files from all users globally
+        // Get recent files from all users globally (only public files)
         $recentFiles = File::with(['folder', 'user'])
+            ->where('visibility', 'public')
             ->orderBy('updated_at', 'desc')
             ->limit(5)
             ->get()
@@ -52,8 +53,9 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get recent folders from all users globally
+        // Get recent folders from all users globally (only public folders)
         $recentFolders = Folder::with('user')
+            ->where('visibility', 'public')
             ->orderBy('updated_at', 'desc')
             ->limit(4)
             ->get()

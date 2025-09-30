@@ -21,7 +21,7 @@ Route::get('public/file/{token}', [App\Http\Controllers\FileShareController::cla
 Route::get('public/file/{token}/download', [App\Http\Controllers\FileShareController::class, 'publicDownload'])->name('public.file.download');
 Route::get('public/folder/{token}', [App\Http\Controllers\FolderShareController::class, 'publicAccess'])->name('public.folder');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('home', [\App\Http\Controllers\HomeController::class, 'index'])->name('home.index');
 
@@ -31,6 +31,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('files/{file}/preview', [FileController::class, 'preview'])->name('files.preview');
         Route::post('files/{file}/restore', [FileController::class, 'restore'])->name('files.restore');
         Route::post('files/{file}/move', [FileController::class, 'move'])->name('files.move');
+        Route::post('files/{file}/toggle-star', [FileController::class, 'toggleStar'])->name('files.toggle-star');
+        Route::post('api/files/batch-update', [FileController::class, 'batchUpdate'])->name('files.batch-update');
 
         // File Sharing Routes
         Route::get('files/{file}/share', [App\Http\Controllers\FileShareController::class, 'create'])->name('files.share');
@@ -60,6 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Shared Files Routes
     Route::get('shared', [App\Http\Controllers\FileShareController::class, 'index'])->name('shared.index');
+    Route::post('api/files/shares', [App\Http\Controllers\FileShareController::class, 'getExistingShares'])->name('files.shares.get');
     Route::get('shares', function () {
         return redirect()->route('shared.index');
     })->name('shares.redirect');
@@ -76,8 +79,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Cloud (All Files and Folders) Route
     Route::get('cloud', [CloudController::class, 'index'])->name('cloud.index');
 
-    // Activity Log Route
-    Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
+    // Activity Log Route (Admin only)
+    Route::middleware('admin')->group(function () {
+        Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
+    });
 
     // Trash Route
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');

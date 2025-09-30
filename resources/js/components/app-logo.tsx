@@ -1,4 +1,5 @@
 import { Cloud } from 'lucide-react';
+import GasnetLogo from './gasnet-logo';
 
 export default function AppLogo() {
     return (
@@ -7,12 +8,7 @@ export default function AppLogo() {
                 <Cloud className="size-6" />
             </div>
             <div className="ml-3 grid flex-1 text-left">
-                <span className="truncate leading-tight font-bold text-md bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Galunggung Drive
-                </span>
-                <span className="text-xs text-muted-foreground truncate">
-                    Penyimpanan Cloud
-                </span>
+                <GasnetLogo size="md" showText={true} />
             </div>
         </>
     );

@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import FilePreview from '@/components/file-preview';
 import { 
     Search, 
     Filter, 
@@ -203,7 +204,6 @@ export default function StarredIndex({ files, filters }: Props) {
                         : 'space-y-2'
                     }>
                         {files.data.map((file) => {
-                            const IconComponent = getFileIcon(file.mime_type);
                             const isSelected = selectedFiles.includes(file.id);
                             
                             return (
@@ -223,7 +223,10 @@ export default function StarredIndex({ files, filters }: Props) {
                                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <IconComponent className={`h-8 w-8 ${getFileColor(file.mime_type)}`} />
+                                            <FilePreview 
+                                                file={file} 
+                                                size={viewMode === 'grid' ? 'lg' : 'md'}
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
