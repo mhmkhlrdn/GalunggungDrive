@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\FileShare;
+use App\Models\FileVersion;
 use App\Models\ActivityLog;
+use App\Models\StorageLocation;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Crypt;
@@ -16,12 +18,39 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         
+        // Calculate real storage statistics - include both files and file versions
+        $totalUsedSpace = File::sum('size') + FileVersion::sum('size');
+        
+        // Calculate total free space from all active storage locations
+        $totalStorageSpace = 0;
+        $locations = StorageLocation::where('is_active', true)->get();
+        foreach ($locations as $location) {
+            if ($location->driver === 'local' && $location->root && @is_dir($location->root)) {
+                try {
+                    $diskFreeSpace = @disk_free_space($location->root);
+                    if ($diskFreeSpace !== false) {
+                        $totalStorageSpace += $diskFreeSpace;
+                    }
+                } catch (\Throwable $e) {
+                    // Skip this location if we can't read it
+                    continue;
+                }
+            }
+        }
+        
+        // Fallback to 100GB if no storage locations found
+        if ($totalStorageSpace === 0) {
+            $totalStorageSpace = 100 * 1024 * 1024 * 1024; // 100GB
+        }
+        
         // Get real statistics - Global stats for all users
         $stats = [
             'totalFiles' => File::count(),
             'totalFolders' => Folder::count(),
-            'storageUsed' => $user->formatted_storage_used,
-            'storageLimit' => '100 GB', // You can make this configurable
+            'storageUsed' => $this->formatFileSize($totalUsedSpace),
+            'storageLimit' => $this->formatFileSize($totalStorageSpace),
+            'totalStorageSpace' => $totalStorageSpace,
+            'totalUsedSpace' => $totalUsedSpace,
             'recentActivity' => ActivityLog::count(),
             'sharedFiles' => FileShare::count(),
         ];
@@ -32,7 +61,7 @@ class DashboardController extends Controller
             ->orderBy('updated_at', 'desc')
             ->limit(5)
             ->get()
-            ->map(function ($file) {
+            ->map(function ($file) use ($user) {
                 return [
                     'id' => $file->id,
                     'name' => $file->name,
@@ -43,7 +72,7 @@ class DashboardController extends Controller
                     'created_at' => $file->created_at->toISOString(),
                     'description' => $file->description,
                     'tags' => $file->tags,
-                    'starred' => false, // You can add a starred field to files table
+                    'starred' => $file->isStarredBy($user),
                     'folder_id' => $file->folder_id,
                     'uploader' => [
                         'id' => $file->user->id,
@@ -91,6 +120,15 @@ class DashboardController extends Controller
         ]);
     }
 
+    private function formatFileSize($bytes)
+    {
+        if ($bytes === 0) return '0 Bytes';
+        $k = 1024;
+        $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes) / log($k));
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+    }
+
     private function getFileType($mimeType)
     {
         if (str_starts_with($mimeType, 'image/')) return 'image';
@@ -103,14 +141,4 @@ class DashboardController extends Controller
         return 'file';
     }
 
-    private function formatFileSize($bytes)
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
-            $bytes /= 1024;
-        }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
-    }
 }

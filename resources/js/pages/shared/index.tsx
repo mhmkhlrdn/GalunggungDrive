@@ -3,6 +3,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import FilePreview from '@/components/file-preview';
 import ShareManagementModal from '@/components/share-management-modal';
+import FileEditModal from '@/components/file-edit-modal';
 import { 
     Search, 
     Filter, 
@@ -415,6 +416,8 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
     const [showShareModal, setShowShareModal] = useState(false);
     const [showShareManagementModal, setShowShareManagementModal] = useState(false);
     const [selectedFileForManagement, setSelectedFileForManagement] = useState<any>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [fileToEdit, setFileToEdit] = useState<any>(null);
 
     // Safety check to prevent crashes
     if (!sharedByMe || !sharedWithMe || !publicLinks) {
@@ -506,6 +509,11 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
         
         // Reload the page to show updated shares
         router.reload();
+    };
+
+    const handleEditFile = (file: any) => {
+        setFileToEdit(file);
+        setShowEditModal(true);
     };
 
     const getCurrentData = () => {
@@ -826,6 +834,13 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                             >
                                                 <Download className="h-4 w-4" />
                                             </button>
+                                            <button 
+                                                onClick={() => handleEditFile(file)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Edit file"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </button>
                                                 {'token' in share && share.token && (
                                                 <button 
                                                     onClick={() => copyToClipboard(`${window.location.origin}/public/file/${share.token}`, share.token!)}
@@ -900,6 +915,17 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                     setSelectedFileForManagement(null);
                 }}
                 file={selectedFileForManagement}
+            />
+
+            {/* File Edit Modal */}
+            <FileEditModal
+                isOpen={showEditModal}
+                onClose={() => {
+                    setShowEditModal(false);
+                    setFileToEdit(null);
+                }}
+                file={fileToEdit}
+                users={users}
             />
         </AppLayout>
     );

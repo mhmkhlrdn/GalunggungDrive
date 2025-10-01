@@ -35,6 +35,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
+import AppearanceToggleTab from './appearance-tabs';
 
 const mainNavItems: NavItem[] = [
     {
@@ -115,6 +116,14 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         </div>
 
                                         <div className="flex flex-col space-y-4">
+                                            {/* Theme Toggle for Mobile */}
+                                            <div className="sm:hidden">
+                                                <div className="flex items-center space-x-2 font-medium">
+                                                    <span className="text-sm text-neutral-500">Tema:</span>
+                                                    <AppearanceToggleTab className="scale-90" />
+                                                </div>
+                                            </div>
+                                            
                                             {rightNavItems.map((item) => (
                                                 <a
                                                     key={item.title}
@@ -192,6 +201,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </div>
 
                     <div className="ml-auto flex items-center space-x-2">
+                        {/* Theme Toggle - Always visible */}
+                        <div className="flex items-center">
+                            <AppearanceToggleTab className="scale-90" />
+                        </div>
+                        
                         <div className="relative flex items-center space-x-1">
                             <Button
                                 variant="ghost"
@@ -238,6 +252,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 ))}
                             </div>
                         </div>
+                        
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
@@ -264,8 +279,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </div>
             {breadcrumbs.length > 1 && (
                 <div className="flex w-full border-b border-sidebar-border/70">
-                    <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
+                    <div className="mx-auto flex h-12 w-full items-center justify-between px-4 text-neutral-500 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
+                        <div className="flex items-center">
+                            <AppearanceToggleTab className="scale-90" />
+                        </div>
                     </div>
                 </div>
             )}

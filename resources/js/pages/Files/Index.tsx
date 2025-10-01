@@ -278,10 +278,12 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
 
     const handleToggleStar = (fileId: number) => {
         router.post(`/files/${fileId}/toggle-star`, {}, {
-            preserveState: true,
             onSuccess: () => {
-                // Update the local state to reflect the change immediately
-                // This will be handled by the server response
+                // Force a complete page reload to ensure the star status is updated
+                window.location.reload();
+            },
+            onError: (errors) => {
+                console.error('Star toggle error:', errors);
             }
         });
     };

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class File extends Model
@@ -23,14 +24,12 @@ class File extends Model
         'checksum',
         'description',
         'visibility',
-        'starred',
         'tags',
     ];
 
     protected $casts = [
         'tags' => 'array',
         'size' => 'integer',
-        'starred' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -51,6 +50,20 @@ class File extends Model
     public function shares(): HasMany
     {
         return $this->hasMany(FileShare::class);
+    }
+
+    public function starredBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_starred', 'file_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if this file is starred by a specific user
+     */
+    public function isStarredBy(User $user): bool
+    {
+        return $this->starredBy()->where('user_id', $user->id)->exists();
     }
 
     public function getFormattedSizeAttribute(): string

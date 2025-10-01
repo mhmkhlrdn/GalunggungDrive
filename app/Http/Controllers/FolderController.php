@@ -140,7 +140,7 @@ class FolderController extends Controller
                     'created_at' => $file->created_at->toISOString(),
                     'updated_at' => $file->updated_at->toISOString(),
                     'folder_id' => $file->folder_id,
-                    'starred' => $file->starred ?? false,
+                    'starred' => $file->isStarredBy(auth()->user()),
                     'description' => $file->description,
                     'tags' => $file->tags ?? [],
                 ];

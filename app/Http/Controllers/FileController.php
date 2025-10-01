@@ -90,6 +90,12 @@ class FileController extends Controller
 
         $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
+        // Add starred status to each file
+        $files->getCollection()->transform(function ($file) {
+            $file->starred = $file->isStarredBy(auth()->user());
+            return $file;
+        });
+
         $currentFolder = $folderId ? Folder::find($folderId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
 
@@ -451,7 +457,7 @@ class FileController extends Controller
     private function getBreadcrumbs(?Folder $folder): array
     {
         $breadcrumbs = [
-            ['title' => 'My Files', 'href' => route('files.index')],
+            ['title' => 'File Saya', 'href' => route('files.index')],
         ];
 
         if ($folder) {
@@ -477,15 +483,24 @@ class FileController extends Controller
 
     public function toggleStar(File $file): RedirectResponse
     {
-        $this->authorize('update', $file);
+        $this->authorize('view', $file);
+        
+        $user = auth()->user();
+        $isStarred = $file->isStarredBy($user);
 
-        $file->update([
-            'starred' => !$file->starred,
-        ]);
+        if ($isStarred) {
+            // Remove from starred
+            $user->starredFiles()->detach($file->id);
+            $action = 'unstar';
+        } else {
+            // Add to starred
+            $user->starredFiles()->attach($file->id);
+            $action = 'star';
+        }
 
         ActivityLog::create([
             'user_id' => auth()->id(),
-            'action' => $file->starred ? 'star' : 'unstar',
+            'action' => $action,
             'target_type' => 'file',
             'target_id' => $file->id,
             'ip_address' => request()->ip(),

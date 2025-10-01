@@ -1,7 +1,9 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import FilePreview from '@/components/file-preview';
+import FileEditModal from '@/components/file-edit-modal';
+import ShareModal from '@/components/share-modal';
 import { 
     Search, 
     Filter, 
@@ -49,6 +51,11 @@ interface Props {
         per_page: number;
         total: number;
     };
+    users: Array<{
+        id: number;
+        name: string;
+        email: string;
+    }>;
     filters: {
         search: string;
         sort_by: string;
@@ -56,9 +63,13 @@ interface Props {
     };
 }
 
-export default function StarredIndex({ files, filters }: Props) {
+export default function StarredIndex({ files, users, filters }: Props) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [fileToEdit, setFileToEdit] = useState<File | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [shareSelection, setShareSelection] = useState<File[]>([]);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -88,6 +99,54 @@ export default function StarredIndex({ files, filters }: Props) {
 
     const clearSelection = () => {
         setSelectedFiles([]);
+    };
+
+    const handleViewFile = (fileId: number) => {
+        window.open(`/files/${fileId}/preview`, '_blank');
+    };
+
+    const handleDownloadFile = (fileId: number) => {
+        window.open(`/files/${fileId}/download`, '_blank');
+    };
+
+    const handleEditFile = (file: File) => {
+        setFileToEdit(file);
+        setShowEditModal(true);
+    };
+
+    const handleShareFile = (file: File) => {
+        setShareSelection([file]);
+        setShowShareModal(true);
+    };
+
+    const handleShare = async (fileIds: number[], userIds: number[], permission: string, expiresAt?: string, isPublicLink?: boolean) => {
+        try {
+            // Create share for each file
+            fileIds.forEach(fileId => {
+                if (isPublicLink) {
+                    // Create public link
+                    router.post(`/files/${fileId}/share`, {
+                        is_public_link: true,
+                        permission,
+                        expires_at: expiresAt
+                    });
+                } else {
+                    // Share with specific users
+                    userIds.forEach(userId => {
+                        router.post(`/files/${fileId}/share`, {
+                            shared_with: userId,
+                            permission,
+                            expires_at: expiresAt
+                        });
+                    });
+                }
+            });
+            
+            // Reload the page to show updated shares
+            router.reload();
+        } catch (error) {
+            console.error('Share error:', error);
+        }
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -254,16 +313,32 @@ export default function StarredIndex({ files, filters }: Props) {
                                     {/* Quick Actions */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => handleViewFile(file.id)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="View file"
+                                            >
                                                 <Eye className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => handleDownloadFile(file.id)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Download file"
+                                            >
                                                 <Download className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => handleShareFile(file)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Share file"
+                                            >
                                                 <Share2 className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <button 
+                                                onClick={() => handleEditFile(file)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                                title="Edit file"
+                                            >
                                                 <Edit className="h-4 w-4" />
                                             </button>
                                         </div>
@@ -297,6 +372,27 @@ export default function StarredIndex({ files, filters }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* File Edit Modal */}
+            <FileEditModal
+                isOpen={showEditModal}
+                onClose={() => {
+                    setShowEditModal(false);
+                    setFileToEdit(null);
+                }}
+                file={fileToEdit}
+                users={users}
+            />
+
+            {/* Share Modal */}
+            <ShareModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                onShare={handleShare}
+                files={files.data}
+                users={users}
+                mode="file-selection"
+            />
         </AppLayout>
     );
 }

@@ -24,7 +24,9 @@ class StarredController extends Controller
                       $shareQuery->where('shared_with', $user->id);
                   });
             })
-            ->where('starred', true); // Assuming you have a starred column
+            ->whereHas('starredBy', function ($starQuery) use ($user) {
+                $starQuery->where('user_id', $user->id);
+            });
         
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -36,8 +38,14 @@ class StarredController extends Controller
         
         $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
         
+        // Get all users for sharing functionality
+        $users = \App\Models\User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->get();
+        
         return Inertia::render('starred/index', [
             'files' => $files,
+            'users' => $users,
             'filters' => [
                 'search' => $search,
                 'sort_by' => $sortBy,

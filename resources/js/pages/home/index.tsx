@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/react';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
 import { useEffect, useRef, useState } from 'react';
-import { Upload, FolderPlus, Grid3X3, List, Search, Download, Share2, Trash2, Eye, Move, Folder, FileText } from 'lucide-react';
+import { Upload, FolderPlus, Grid3X3, List, Search, Download, Share2, Trash2, Eye, Move, Folder, FileText, Star } from 'lucide-react';
 
 interface FileItem { id: number; name: string; size: string; mime_type: string; updated_at: string; folder?: { id: number; name: string } }
 interface FolderItem { id: number; name: string; updated_at: string }
@@ -47,6 +47,17 @@ export default function HomeIndex({ files, folders, filters }: Props) {
 
   const handleMoveFileToFolder = (fileId: number, folderId: number) => {
     router.post(`/files/${fileId}/move`, { folder_id: folderId }, { preserveScroll: true });
+  };
+
+  const handleToggleStar = (fileId: number) => {
+    router.post(`/files/${fileId}/toggle-star`, {}, {
+      onSuccess: () => {
+        window.location.reload();
+      },
+      onError: (errors) => {
+        console.error('Star toggle error:', errors);
+      }
+    });
   };
 
   // minimal drag-drop: start dragging file id; drop on folder tile
@@ -128,11 +139,26 @@ export default function HomeIndex({ files, folders, filters }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">{file.name}</h3>
-                    <div className="pointer-events-none absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                      <div className="pointer-events-auto flex items-center space-x-2">
-                        <button onClick={() => window.open(`/files/${file.id}/preview`, '_blank')} className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50" title="View"><Eye className="h-4 w-4" /></button>
-                        <button onClick={() => window.open(`/files/${file.id}/download`, '_blank')} className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50" title="Download"><Download className="h-4 w-4" /></button>
-                        <button onClick={() => router.delete(`/files/${file.id}`)} className="rounded-full bg-white p-2 text-red-600 shadow-sm hover:bg-red-50" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    <div className="flex items-center space-x-2">
+                      {/* Star button - always visible */}
+                      <button 
+                        onClick={() => handleToggleStar(file.id)}
+                        className={`p-1 rounded-full transition-colors ${
+                          file.starred 
+                            ? 'text-yellow-500 hover:text-yellow-600' 
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                        }`}
+                        aria-label={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}
+                        title={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}
+                      >
+                        <Star className={`h-4 w-4 ${file.starred ? 'fill-current' : ''}`} />
+                      </button>
+                      <div className="pointer-events-none absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="pointer-events-auto flex items-center space-x-2">
+                          <button onClick={() => window.open(`/files/${file.id}/preview`, '_blank')} className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50" title="View"><Eye className="h-4 w-4" /></button>
+                          <button onClick={() => window.open(`/files/${file.id}/download`, '_blank')} className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50" title="Download"><Download className="h-4 w-4" /></button>
+                          <button onClick={() => router.delete(`/files/${file.id}`)} className="rounded-full bg-white p-2 text-red-600 shadow-sm hover:bg-red-50" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                        </div>
                       </div>
                     </div>
                   </div>

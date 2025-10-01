@@ -24,7 +24,29 @@ class StorageController extends Controller
         
         // Calculate storage usage based on user's capacity
         $usedSpace = File::where('user_id', $user->id)->sum('size');
-        $totalSpace = (int) ($user->storage_limit ?? (100 * 1024 * 1024 * 1024));
+        
+        // Calculate total free space from all active storage locations
+        $totalSpace = 0;
+        $locations = StorageLocation::where('is_active', true)->get();
+        foreach ($locations as $location) {
+            if ($location->driver === 'local' && $location->root && @is_dir($location->root)) {
+                try {
+                    $diskFreeSpace = @disk_free_space($location->root);
+                    if ($diskFreeSpace !== false) {
+                        $totalSpace += $diskFreeSpace;
+                    }
+                } catch (\Throwable $e) {
+                    // Skip this location if we can't read it
+                    continue;
+                }
+            }
+        }
+        
+        // Fallback to user's storage limit if no storage locations found
+        if ($totalSpace === 0) {
+            $totalSpace = (int) ($user->storage_limit ?? (100 * 1024 * 1024 * 1024));
+        }
+        
         $availableSpace = max(0, $totalSpace - $usedSpace);
         
         $stats = [

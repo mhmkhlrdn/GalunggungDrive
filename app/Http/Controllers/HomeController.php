@@ -28,6 +28,12 @@ class HomeController extends Controller
         }
         $files = $filesQuery->orderBy($sortBy, $sortOrder)->paginate(20);
 
+        // Add starred status to each file
+        $files->getCollection()->transform(function ($file) {
+            $file->starred = $file->isStarredBy(auth()->user());
+            return $file;
+        });
+
         $foldersQuery = Folder::query()->where('user_id', $userId);
         if ($search) {
             $foldersQuery->where('name', 'like', "%{$search}%");

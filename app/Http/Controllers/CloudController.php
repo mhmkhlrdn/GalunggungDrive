@@ -56,6 +56,7 @@ class CloudController extends Controller
                         'mime_type' => $file->mime_type,
                         'updated_at' => $file->updated_at->toISOString(),
                         'visibility' => $file->visibility,
+                        'starred' => $file->isStarredBy(auth()->user()),
                     ];
                 }),
                 'current_page' => $files->currentPage(),
