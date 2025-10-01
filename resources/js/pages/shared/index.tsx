@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import FilePreview from '@/components/file-preview';
 import ShareManagementModal from '@/components/share-management-modal';
 import FileEditModal from '@/components/file-edit-modal';
@@ -185,7 +186,7 @@ function SharedByMeView({ files, viewMode, selectedFiles, toggleFileSelection, c
                         </div>
                         
                         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                            {file.size} • Diperbarui {new Date(file.updated_at).toLocaleDateString()}
+                            {formatFileSize(file.size)} • Diperbarui {new Date(file.updated_at).toLocaleDateString()}
                         </p>
                     </div>
                 </div>
@@ -804,7 +805,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                                 )}
                                             </div>
                                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                    {file.size} • {activeTab === 'shared-with-me' ? `Shared by ${'sharedBy' in share ? share.sharedBy?.name : 'Unknown'}` : `Public link`}
+                                                    {formatFileSize(file.size)} • {activeTab === 'shared-with-me' ? `Shared by ${'sharedBy' in share ? share.sharedBy?.name : 'Unknown'}` : `Public link`}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {new Date(share.created_at).toLocaleDateString()}

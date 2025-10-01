@@ -20,7 +20,11 @@ class CloudController extends Controller
                 $q->where('user_id', $userId)
                   ->orWhere('visibility', 'public')
                   ->orWhereHas('shares', function ($shareQuery) use ($userId) {
-                      $shareQuery->where('shared_with', $userId);
+                      $shareQuery->where('shared_with', $userId)
+                                 ->where(function ($expireQuery) {
+                                     $expireQuery->whereNull('expires_at')
+                                                ->orWhere('expires_at', '>', now());
+                                 });
                   });
             })
             ->orderBy('name')
@@ -33,7 +37,11 @@ class CloudController extends Controller
                 $q->where('user_id', $userId)
                   ->orWhere('visibility', 'public')
                   ->orWhereHas('shares', function ($shareQuery) use ($userId) {
-                      $shareQuery->where('shared_with', $userId);
+                      $shareQuery->where('shared_with', $userId)
+                                 ->where(function ($expireQuery) {
+                                     $expireQuery->whereNull('expires_at')
+                                                ->orWhere('expires_at', '>', now());
+                                 });
                   });
             })
             ->orderBy('updated_at', 'desc')

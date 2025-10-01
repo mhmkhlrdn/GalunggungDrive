@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
 import MoveFileModal from '@/components/move-file-modal';
@@ -27,7 +28,10 @@ import {
     Music,
     Archive,
     File,
-    Move
+    Move,
+    Lock,
+    Globe,
+    Users
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -201,42 +205,35 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         window.open(`/files/${fileId}/preview`, '_blank');
     };
 
-    const handleShare = async (fileIds: number[], userIds: number[], permission: string, expiresAt?: string, isPublicLink?: boolean) => {
-        try {
-            // Prepare batch update data
-            const updates = fileIds.map(fileId => {
-                const file = files.data.find(f => f.id === fileId);
-                if (!file) return null;
-
-                return {
-                    file_id: fileId,
-                    name: file.name,
-                    description: file.description || '',
-                    tags: file.tags ? file.tags.join(', ') : '',
-                    visibility: isPublicLink ? 'public' : (userIds.length > 0 ? 'shared' : 'private'),
-                    shared_with: userIds
-                };
-            }).filter(Boolean);
-
-            // Send batch update request
-            const response = await fetch('/api/files/batch-update', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({ updates }),
-            });
-
-            if (response.ok) {
-                // Reload the page to show updated shares
-                window.location.reload();
+    // Wire ShareModal -> backend
+    const handleShare = (
+        fileIds: number[], 
+        userIds: number[], 
+        permission: 'view' | 'edit' | 'download', 
+        expiresAt?: string, 
+        isPublicLink?: boolean
+    ) => {
+        // Create share for each file
+        fileIds.forEach((fileId) => {
+            if (isPublicLink) {
+                router.post(`/files/${fileId}/share`, {
+                    is_public_link: true,
+                    permission,
+                    expires_at: expiresAt
+                }, { preserveScroll: true });
             } else {
-                console.error('Error updating files:', await response.text());
+                userIds.forEach((userId) => {
+                    router.post(`/files/${fileId}/share`, {
+                        shared_with: userId,
+                        permission,
+                        expires_at: expiresAt
+                    }, { preserveScroll: true });
+                });
             }
-        } catch (error) {
-            console.error('Error updating files:', error);
-        }
+        });
+
+        // Refresh to reflect changes
+        router.reload({ preserveScroll: true });
     };
 
     // Bulk actions
@@ -478,8 +475,31 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </button>
                                             </div>
+                                            
+                                            {/* Visibility Indicator */}
+                                            <div className="mt-1 flex items-center space-x-2">
+                                                {file.visibility === 'private' && (
+                                                    <div className="flex items-center space-x-1">
+                                                        <Lock className="h-3 w-3 text-red-500" />
+                                                        <span className="text-xs text-red-600 dark:text-red-400">Pribadi</span>
+                                                    </div>
+                                                )}
+                                                {file.visibility === 'public' && (
+                                                    <div className="flex items-center space-x-1">
+                                                        <Globe className="h-3 w-3 text-green-500" />
+                                                        <span className="text-xs text-green-600 dark:text-green-400">Publik</span>
+                                                    </div>
+                                                )}
+                                                {file.visibility === 'shared' && (
+                                                    <div className="flex items-center space-x-1">
+                                                        <Users className="h-3 w-3 text-blue-500" />
+                                                        <span className="text-xs text-blue-600 dark:text-blue-400">Dibagikan</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                {file.size} • {new Date(file.updated_at).toLocaleDateString()}
+                                                {formatFileSize(file.size)} • {new Date(file.updated_at).toLocaleDateString()}
                                             </p>
                                             {file.description && (
                                                 <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">

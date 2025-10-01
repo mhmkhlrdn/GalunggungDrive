@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import FilePreview from '@/components/file-preview';
 import { 
     Search, 
@@ -240,7 +241,7 @@ export default function RecentIndex({ files, filters }: Props) {
                                                 </div>
                                             </div>
                                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                {file.size} • {file.folder?.name || 'Root'}
+                                                {formatFileSize(file.size)} • {file.folder?.name || 'Root'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 Modified {new Date(file.updated_at).toLocaleDateString()}

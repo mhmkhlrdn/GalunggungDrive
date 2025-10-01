@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import {
     Search,
     Filter,
@@ -341,7 +342,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                                 </div>
                                             </div>
                                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                {file.size} • {file.folder?.name || 'Root'}
+                                                {formatFileSize(file.size)} • {file.folder?.name || 'Root'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 Dihapus {new Date(file.deleted_at).toLocaleDateString()}

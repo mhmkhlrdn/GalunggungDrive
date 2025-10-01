@@ -70,7 +70,11 @@ class FileController extends Controller
                 $q->where('user_id', auth()->id())
                   ->orWhere('visibility', 'public')
                   ->orWhereHas('shares', function ($shareQuery) {
-                      $shareQuery->where('shared_with', auth()->id());
+                      $shareQuery->where('shared_with', auth()->id())
+                                 ->where(function ($expireQuery) {
+                                     $expireQuery->whereNull('expires_at')
+                                                ->orWhere('expires_at', '>', now());
+                                 });
                   });
             });
 
@@ -313,7 +317,7 @@ class FileController extends Controller
 
     public function download(File $file)
     {
-        $this->authorize('view', $file);
+        $this->authorize('download', $file);
 
         // Log download activity
         ActivityLog::create([

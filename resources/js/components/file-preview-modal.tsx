@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatFileSize } from '@/lib/utils';
 import { X, Download, Share2, Eye, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -222,7 +223,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                     <h4 className="font-medium text-slate-900 dark:text-white mb-2">File Information</h4>
                                     <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
                                         <p><strong>Nama:</strong> {file.name}</p>
-                                        <p><strong>Ukuran:</strong> {file.size}</p>
+                                        <p><strong>Ukuran:</strong> {formatFileSize(file.size)}</p>
                                         <p><strong>Jenis File:</strong> {file.mime_type}</p>
                                         <p><strong>Dibuat pada:</strong> {new Date(file.created_at).toLocaleDateString()}</p>
                                         {file.uploader && (

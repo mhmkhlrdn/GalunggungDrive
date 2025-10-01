@@ -6,6 +6,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,5 +31,46 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (Throwable $e, $request) {
+            if ($e instanceof HttpException) {
+                $status = $e->getStatusCode();
+                
+                // Check if the request expects JSON
+                if ($request->expectsJson()) {
+                    $message = $e->getMessage() ?: match ($status) {
+                        403 => 'Akses Ditolak',
+                        404 => 'Halaman Tidak Ditemukan',
+                        500 => 'Kesalahan Server',
+                        default => 'Terjadi Kesalahan'
+                    };
+                    return response()->json([
+                        'message' => $message,
+                        'status' => $status
+                    ], $status);
+                }
+                
+                // Render custom error pages for web requests
+                switch ($status) {
+                    case 403:
+                        return Inertia::render('errors/403')->toResponse($request)->setStatusCode(403);
+                    case 404:
+                        return Inertia::render('errors/404')->toResponse($request)->setStatusCode(404);
+                    case 500:
+                        return Inertia::render('errors/500')->toResponse($request)->setStatusCode(500);
+                    default:
+                        return null; // Let Laravel handle other cases
+                }
+            }
+            
+            // Handle other exceptions
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Server Error',
+                    'status' => 500
+                ], 500);
+            }
+            
+            // For web requests, render the 500 error page
+            return Inertia::render('errors/500')->toResponse($request)->setStatusCode(500);
+        });
     })->create();

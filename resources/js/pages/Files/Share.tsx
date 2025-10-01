@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,7 +94,7 @@ export default function FileShare({ file, users }: Props) {
                             </div>
                             <div>
                                 <Label className="text-sm font-medium text-slate-500">Ukuran</Label>
-                                <p className="text-slate-900 dark:text-white">{file.size}</p>
+                                <p className="text-slate-900 dark:text-white">{formatFileSize(file.size)}</p>
                             </div>
                             <div>
                                 <Label className="text-sm font-medium text-slate-500">Tipe File</Label>

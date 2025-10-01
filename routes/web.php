@@ -16,6 +16,32 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+// Error Pages
+Route::get('/403', function () {
+    return Inertia::render('errors/403');
+})->name('errors.403');
+
+Route::get('/404', function () {
+    return Inertia::render('errors/404');
+})->name('errors.404');
+
+Route::get('/500', function () {
+    return Inertia::render('errors/500');
+})->name('errors.500');
+
+// Test routes for error pages (remove in production)
+Route::get('/test-403', function () {
+    abort(403, 'Test 403 error');
+})->name('test.403');
+
+Route::get('/test-404', function () {
+    abort(404, 'Test 404 error');
+})->name('test.404');
+
+Route::get('/test-500', function () {
+    abort(500, 'Test 500 error');
+})->name('test.500');
+
 // Public file access routes (no authentication required)
 Route::get('public/file/{token}', [App\Http\Controllers\FileShareController::class, 'publicAccess'])->name('public.file');
 Route::get('public/file/{token}/download', [App\Http\Controllers\FileShareController::class, 'publicDownload'])->name('public.file.download');

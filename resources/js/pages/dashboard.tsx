@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage, router } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
 import FilePreviewModal from '@/components/file-preview-modal';
@@ -255,7 +256,7 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                             {file.starred && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
                                         </div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {file.size} • {file.modified} • oleh {file.uploader.name}
+                                            {formatFileSize(file.size)} • {file.modified} • oleh {file.uploader.name}
                                         </p>
                                     </button>
                                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">

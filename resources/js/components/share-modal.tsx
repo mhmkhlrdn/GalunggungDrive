@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { formatFileSize } from '@/lib/utils';
 import { X, Search, User, FileText, Folder, Check, Share2, Image, Video, Music, File, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -282,7 +283,7 @@ export default function ShareModal({
                                             {file.name}
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {file.size} • {file.folder?.name || 'Akar'}
+                                            {formatFileSize(file.size)} • {file.folder?.name || 'Akar'}
                                         </p>
                                     </div>
                                 </div>

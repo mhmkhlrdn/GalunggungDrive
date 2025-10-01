@@ -116,7 +116,7 @@ class FileVersionController extends Controller
 
     public function download(File $file, FileVersion $version)
     {
-        $this->authorize('view', $file);
+        $this->authorize('download', $file);
 
         // Log download
         ActivityLog::create([

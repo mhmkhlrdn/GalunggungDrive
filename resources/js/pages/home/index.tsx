@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
 import { useEffect, useRef, useState } from 'react';
@@ -162,7 +163,7 @@ export default function HomeIndex({ files, folders, filters }: Props) {
                       </div>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{file.size} • {new Date(file.updated_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{formatFileSize(file.size)} • {new Date(file.updated_at).toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
