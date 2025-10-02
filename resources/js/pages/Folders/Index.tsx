@@ -1,12 +1,12 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, router } from '@inertiajs/react';
-import { 
-    FolderPlus, 
-    Search, 
-    Filter, 
-    Grid3X3, 
-    List, 
+import {
+    FolderPlus,
+    Search,
+    Filter,
+    Grid3X3,
+    List,
     MoreHorizontal,
     Star,
     Share2,
@@ -18,7 +18,9 @@ import {
     FileText,
     Clock,
     Users,
-    Download
+    Download,
+    Calendar,
+    HardDrive
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -98,8 +100,8 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
     });
 
     const toggleFolderSelection = (folderId: number) => {
-        setSelectedFolders(prev => 
-            prev.includes(folderId) 
+        setSelectedFolders(prev =>
+            prev.includes(folderId)
                 ? prev.filter(id => id !== folderId)
                 : [...prev, folderId]
         );
@@ -130,7 +132,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
         const now = new Date();
         const diffTime = Math.abs(now.getTime() - date.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 1) return 'Kemarin';
         if (diffDays < 7) return `${diffDays} hari lalu`;
         if (diffDays < 30) return `${Math.ceil(diffDays / 7)} minggu lalu`;
@@ -152,7 +154,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <button 
+                        <button
                             onClick={() => setShowCreateFolderModal(true)}
                             className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl">
                             <FolderPlus className="mr-2 h-4 w-4" />
@@ -255,7 +257,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                             {filters.search ? 'Coba sesuaikan kata kunci pencarian Anda.' : 'Buat folder pertama Anda untuk memulai.'}
                         </p>
                         {!filters.search && (
-                            <button 
+                            <button
                                 onClick={() => setShowCreateFolderModal(true)}
                                 className="mt-4 inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-blue-700 hover:to-indigo-700">
                                 <FolderPlus className="mr-2 h-4 w-4" />
@@ -264,19 +266,19 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                         )}
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    <div className={viewMode === 'grid'
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
                         {folders.data.map((folder) => {
                             const isSelected = selectedFolders.includes(folder.id);
-                            
+
                             return (
                                 <div
                                     key={folder.id}
                                     className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
@@ -304,19 +306,23 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div className="mt-1 flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
-                                                <span className="flex items-center">
-                                                    <FileText className="mr-1 h-3 w-3" />
-                                                    {folder.files_count} files
-                                                </span>
-                                                <span>{folder.total_size}</span>
+                                            <div className="mt-1 flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400">
+                                                <div className="flex items-center gap-1">
+                                                    <FileText className="h-3 w-3" />
+                                                    <span>{folder.files_count}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <HardDrive className="h-3 w-3" />
+                                                    <span>{folder.total_size}</span>
+                                                </div>
                                             </div>
-                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                Modified {formatDate(folder.updated_at)}
-                                            </p>
+                                            <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                                                <Calendar className="h-3 w-3" />
+                                                <span>{formatDate(folder.updated_at)}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Quick Actions */}
                                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="pointer-events-auto flex items-center space-x-2">

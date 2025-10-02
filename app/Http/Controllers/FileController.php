@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use App\Models\StorageLocation;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,23 +58,12 @@ class FileController extends Controller
         $sortOrder = $request->get('sort_order', 'asc');
 
         $query = File::with(['user', 'folder'])
-            ->where(function ($q) {
-                $q->where('user_id', auth()->id())
-                  ->orWhere('visibility', 'public')
-                  ->orWhereHas('shares', function ($shareQuery) {
-                      $shareQuery->where('shared_with', auth()->id())
-                                 ->where(function ($expireQuery) {
-                                     $expireQuery->whereNull('expires_at')
-                                                ->orWhere('expires_at', '>', now());
-                                 });
-                  });
-            });
+            ->where('user_id', Auth::id());
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
-        } else {
-            $query->whereNull('folder_id');
         }
+        // If no specific folder is requested, show all user's files (don't filter by folder_id)
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -86,18 +76,18 @@ class FileController extends Controller
         $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
         $files->getCollection()->transform(function ($file) {
-            $file->starred = $file->isStarredBy(auth()->user());
+            $file->starred = $file->isStarredBy(Auth::user());
             return $file;
         });
 
         $currentFolder = $folderId ? Folder::find($folderId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
 
-        $allFolders = Folder::where('user_id', auth()->id())
+        $allFolders = Folder::where('user_id', Auth::id())
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id']);
 
-        $users = \App\Models\User::where('id', '!=', auth()->id())
+        $users = \App\Models\User::where('id', '!=', Auth::id())
             ->select('id', 'name', 'email')
             ->get();
 
@@ -118,7 +108,7 @@ class FileController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $uploadConfig = config('upload', []);
-        
+
         $validationRules = [
             'files' => 'required|array|min:1',
             'files.*' => 'file',
@@ -127,12 +117,12 @@ class FileController extends Controller
             'tags' => 'nullable|string',
             'visibility' => 'required|in:private,shared,public',
         ];
-        
-        
+
+
         if (!empty($uploadConfig['allowed_mime_types'])) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }
-        
+
         $request->validate($validationRules);
 
         $storageDisk = $this->pickStorageDisk();
@@ -145,7 +135,7 @@ class FileController extends Controller
             $checksum = hash_file('sha256', $uploadedFile->getRealPath());
 
             $file = File::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'folder_id' => $request->folder_id,
                 'name' => $uploadedFile->getClientOriginalName(),
                 'path' => $path,
@@ -164,11 +154,11 @@ class FileController extends Controller
                 'size' => $uploadedFile->getSize(),
                 'mime_type' => $uploadedFile->getMimeType(),
                 'checksum' => $checksum,
-                'uploaded_by' => auth()->id(),
+                'uploaded_by' => Auth::id(),
             ]);
 
             ActivityLog::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'action' => 'upload',
                 'target_type' => 'file',
                 'target_id' => $file->id,
@@ -235,12 +225,12 @@ class FileController extends Controller
 
         if ($request->visibility === 'shared' && $request->has('shared_with')) {
             $file->shares()->delete();
-            
+
             foreach ($request->shared_with as $userId) {
                 $file->shares()->create([
                     'shared_with' => $userId,
                     'permission' => 'view',
-                    'shared_by' => auth()->id(),
+                    'shared_by' => Auth::id(),
                 ]);
             }
         } elseif ($request->visibility !== 'shared') {
@@ -248,7 +238,7 @@ class FileController extends Controller
         }
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'edit',
             'target_type' => 'file',
             'target_id' => $file->id,
@@ -274,7 +264,7 @@ class FileController extends Controller
         $this->authorize('delete', $file);
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'delete',
             'target_type' => 'file',
             'target_id' => $file->id,
@@ -297,7 +287,7 @@ class FileController extends Controller
         $this->authorize('download', $file);
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'download',
             'target_type' => 'file',
             'target_id' => $file->id,
@@ -309,6 +299,10 @@ class FileController extends Controller
                 'file_size' => $file->size,
             ],
         ]);
+
+        if (!Storage::disk($file->disk)->exists($file->path)) {
+            abort(404, 'File not found');
+        }
 
         return Storage::disk($file->disk)->download($file->path, $file->name);
     }
@@ -323,7 +317,7 @@ class FileController extends Controller
             }
 
             ActivityLog::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'action' => 'preview',
                 'target_type' => 'file',
                 'target_id' => $file->id,
@@ -337,7 +331,7 @@ class FileController extends Controller
             ]);
 
             $fileContent = Storage::disk($file->disk)->get($file->path);
-            
+
             return response($fileContent)
                 ->header('Content-Type', $file->mime_type)
                 ->header('Content-Disposition', 'inline; filename="' . $file->name . '"')
@@ -345,7 +339,7 @@ class FileController extends Controller
                 ->header('Cache-Control', 'public, max-age=3600');
         } catch (\Exception $e) {
             ActivityLog::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'action' => 'preview',
                 'target_type' => 'file',
                 'target_id' => $file->id,
@@ -370,7 +364,7 @@ class FileController extends Controller
         $file->restore();
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'restore',
             'target_type' => 'file',
             'target_id' => $file->id,
@@ -396,9 +390,9 @@ class FileController extends Controller
         // Check if the target folder belongs to the user
         if ($request->folder_id) {
             $folder = Folder::where('id', $request->folder_id)
-                ->where('user_id', auth()->id())
+                ->where('user_id', Auth::id())
                 ->first();
-            
+
             if (!$folder) {
                 return redirect()->back()->withErrors([
                     'folder_id' => 'Invalid folder selected.'
@@ -412,7 +406,7 @@ class FileController extends Controller
         ]);
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'move',
             'target_type' => 'file',
             'target_id' => $file->id,
@@ -459,8 +453,8 @@ class FileController extends Controller
     public function toggleStar(File $file): RedirectResponse
     {
         $this->authorize('view', $file);
-        
-        $user = auth()->user();
+
+        $user = Auth::user();
         $isStarred = $file->isStarredBy($user);
 
         if ($isStarred) {
@@ -472,7 +466,7 @@ class FileController extends Controller
         }
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => $action,
             'target_type' => 'file',
             'target_id' => $file->id,
@@ -490,7 +484,7 @@ class FileController extends Controller
     public function batchUpdate(Request $request)
     {
         $updates = $request->input('updates', []);
-        
+
         foreach ($updates as $updateData) {
             $file = File::find($updateData['file_id']);
             if (!$file) continue;
@@ -505,24 +499,24 @@ class FileController extends Controller
             ]);
 
             if ($updateData['visibility'] === 'shared' && isset($updateData['shared_with'])) {
-                
+
                 $file->shares()->delete();
-                
+
                 foreach ($updateData['shared_with'] as $userId) {
                     $file->shares()->create([
                         'shared_with' => $userId,
                         'permission' => 'view',
-                        'shared_by' => auth()->id(),
+                        'shared_by' => Auth::id(),
                     ]);
                 }
             } elseif ($updateData['visibility'] !== 'shared') {
-                
+
                 $file->shares()->delete();
             }
 
-            
+
             ActivityLog::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'action' => 'edit',
                 'target_type' => 'file',
                 'target_id' => $file->id,

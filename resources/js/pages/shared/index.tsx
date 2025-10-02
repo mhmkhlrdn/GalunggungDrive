@@ -805,7 +805,7 @@ export default function SharedIndex({ sharedByMe, sharedWithMe, publicLinks, fil
                                                 )}
                                             </div>
                                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                    {formatFileSize(file.size)} • {activeTab === 'shared-with-me' ? `Shared by ${'sharedBy' in share ? share.sharedBy?.name : 'Unknown'}` : `Public link`}
+                                                    {formatFileSize(file.size)} • {activeTab === 'shared-with-me' ? `Dibagikan oleh ${share.sharedBy?.name || 'Tidak diketahui'}` : `Link publik`}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {new Date(share.created_at).toLocaleDateString()}

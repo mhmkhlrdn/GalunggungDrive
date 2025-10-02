@@ -13,7 +13,6 @@ class StorageLocation extends Model
     protected $fillable = [
         'name',
         'root',
-        'visibility',
         'is_active',
     ];
 

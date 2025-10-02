@@ -21,6 +21,7 @@ import {
     XCircle
 } from 'lucide-react';
 import { useState } from 'react';
+import { fuzzyFilter } from '@/lib/utils';
 
 interface ActivityLog {
     id: number;
@@ -58,6 +59,32 @@ interface Props {
 
 export default function ActivityIndex({ activities, availableActions, filters }: Props) {
     const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
+    const [search, setSearch] = useState(filters.search || '');
+    const [actionFilter, setActionFilter] = useState(filters.action || '');
+
+    // Client-side fuzzy filtering for activities
+    const filteredActivities = fuzzyFilter(
+        activities.data,
+        search,
+        (activity) => {
+            // Create searchable text from activity details
+            const searchableText = [
+                activity.details?.file_name || '',
+                activity.details?.folder_name || '',
+                activity.details?.target_name || '',
+                activity.user?.name || '',
+                activity.action || '',
+                activity.target_type || ''
+            ].filter(Boolean).join(' ');
+            return searchableText;
+        },
+        0.2
+    );
+
+    // Apply action filter if selected
+    const finalFilteredActivities = actionFilter 
+        ? filteredActivities.filter(activity => activity.action === actionFilter)
+        : filteredActivities;
 
     const getActionIcon = (action: string) => {
         switch (action) {
@@ -167,7 +194,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                             Log Aktivitas
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {activities.total} aktivitas • Pantau semua aktivitas file dan sistem
+                            {search || actionFilter ? `${finalFilteredActivities.length} dari ${activities.total}` : activities.total} aktivitas • Pantau semua aktivitas file dan sistem
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -189,8 +216,9 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Cari aktivitas..."
-                                    defaultValue={filters.search}
+                                    placeholder="Cari aktivitas, nama file, atau folder..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
                                     className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
                                 />
                             </div>
@@ -200,7 +228,8 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                                 Aksi
                             </label>
                             <select
-                                defaultValue={filters.action}
+                                value={actionFilter}
+                                onChange={(e) => setActionFilter(e.target.value)}
                                 className="w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             >
                                 <option value="">Semua Aksi</option>
@@ -249,19 +278,24 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                 </div>
 
                 {/* Activities List */}
-                {activities.data.length === 0 ? (
+                {finalFilteredActivities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12">
                         <div className="rounded-full bg-slate-100 p-6 dark:bg-slate-800">
                             <Activity className="h-12 w-12 text-slate-400" />
                         </div>
-                        <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Tidak ada aktivitas ditemukan</h3>
+                        <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">
+                            {search || actionFilter ? 'Tidak ada aktivitas yang cocok' : 'Tidak ada aktivitas ditemukan'}
+                        </h3>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            Aktivitas akan muncul di sini saat Anda menggunakan sistem.
+                            {search || actionFilter 
+                                ? `Tidak ada aktivitas yang cocok dengan filter "${search || actionFilter}".`
+                                : 'Aktivitas akan muncul di sini saat Anda menggunakan sistem.'
+                            }
                         </p>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {activities.data.map((activity) => {
+                        {finalFilteredActivities.map((activity) => {
                             const ActionIcon = getActionIcon(activity.action);
                             const TargetIcon = getTargetIcon(activity.target_type);
                             const SuccessIcon = getSuccessIcon(activity.success);

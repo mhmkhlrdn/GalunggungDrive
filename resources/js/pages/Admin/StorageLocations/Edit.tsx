@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, Folder, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
@@ -13,7 +12,6 @@ interface StorageLocation {
     id: number;
     name: string;
     root: string | null;
-    visibility: 'private' | 'public';
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -27,7 +25,6 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
     const { data, setData, put, processing, errors } = useForm({
         name: storageLocation.name,
         root: storageLocation.root || '',
-        visibility: storageLocation.visibility,
         is_active: storageLocation.is_active,
     });
 
@@ -147,22 +144,7 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
                                     </p>
                                 </div>
 
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="visibility">Visibilitas *</Label>
-                                        <Select value={data.visibility} onValueChange={(value: 'private' | 'public') => setData('visibility', value)}>
-                                            <SelectTrigger className={errors.visibility ? 'border-destructive' : ''}>
-                                                <SelectValue placeholder="Pilih visibilitas" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="private">Pribadi</SelectItem>
-                                                <SelectItem value="public">Publik</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.visibility && (
-                                            <p className="text-sm text-destructive">{errors.visibility}</p>
-                                        )}
-                                    </div>
+                                <div className="grid gap-4 md:grid-cols-1">
 
                                     <div className="flex items-center space-x-2">
                                         <Switch

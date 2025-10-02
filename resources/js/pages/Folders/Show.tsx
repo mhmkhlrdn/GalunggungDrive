@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, Image, Video, Music, File, FileText, FileSpreadsheet, Presentation, Archive } from 'lucide-react';
+import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, Image, Video, Music, File, FileText, FileSpreadsheet, Presentation, Archive, Eye, Calendar, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ interface File {
     starred: boolean;
     description?: string;
     tags?: string[];
+    visibility: 'private' | 'shared' | 'public';
 }
 
 interface Folder {
@@ -39,6 +40,8 @@ interface Breadcrumb {
     id: number;
     name: string;
     link: string;
+    title: string;
+    href: string;
 }
 
 interface Props {
@@ -46,13 +49,11 @@ interface Props {
     files: File[];
     folders: Folder[];
     breadcrumbs: Breadcrumb[];
-    currentFolderId?: number;
     allFolders: Folder[];
-    disks?: Array<{ key: string; label: string }>;
     from?: string;
 }
 
-export default function FolderShow({ folder, files, folders, breadcrumbs, currentFolderId, allFolders, disks = [], from }: Props) {
+export default function FolderShow({ folder, files, folders, breadcrumbs, allFolders, from }: Props) {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [fileToMove, setFileToMove] = useState<{ id: number; name: string } | null>(null);
@@ -65,7 +66,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
         setShowMoveModal(true);
     };
 
-    const handleFileMove = (folderId: number | null) => {
+    const handleFileMove = () => {
         window.location.reload();
     };
 
@@ -99,7 +100,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs as any}>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${folder.name} - Folders`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
@@ -174,62 +175,75 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Folders</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {folders.map((subfolder) => (
-                                <Card key={subfolder.id} className="hover:shadow-md transition-shadow">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-center justify-between">
-                                            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                                                <Folder className="h-4 w-4 text-blue-600" />
-                                                {subfolder.name}
-                                            </CardTitle>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/folders/${subfolder.id}`}>
-                                                            <Folder className="h-4 w-4 mr-2" />
-                                                            Open
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Download className="h-4 w-4 mr-2" />
-                                                        Download
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Share2 className="h-4 w-4 mr-2" />
-                                                        Share
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Edit className="h-4 w-4 mr-2" />
-                                                        Rename
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="text-red-600"
-                                                        onClick={() => {
-                                                            if (confirm('Are you sure you want to delete this folder and its contents?')) {
-                                                                router.delete(`/folders/${subfolder.id}`);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            {subfolder.files_count} files • {subfolder.folders_count} folders
-                                        </div>
-                                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                            {formatDate(subfolder.created_at)}
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                <div key={subfolder.id} className="relative group">
+                                    <Link href={`/folders/${subfolder.id}`}>
+                                        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                                            <CardHeader className="pb-3">
+                                                <CardTitle className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                                    <Folder className="h-4 w-4 text-blue-600" />
+                                                    {subfolder.name}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="pt-0">
+                                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                                    <div className="flex items-center gap-1">
+                                                        <FileText className="h-3 w-3" />
+                                                        <span>{subfolder.files_count}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <FolderOpen className="h-3 w-3" />
+                                                        <span>{subfolder.folders_count}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    <span>{formatDate(subfolder.created_at)}</span>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-sm"
+                                                    onClick={(e) => e.preventDefault()}
+                                                >
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem
+                                                    onClick={() => window.open(`/folders/${subfolder.id}/download`, '_blank')}
+                                                >
+                                                    <Download className="h-4 w-4 mr-2" />
+                                                    Download
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem>
+                                                    <Share2 className="h-4 w-4 mr-2" />
+                                                    Share
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem>
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Rename
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-red-600"
+                                                    onClick={() => {
+                                                        if (confirm('Are you sure you want to delete this folder and its contents?')) {
+                                                            router.delete(`/folders/${subfolder.id}`);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -269,9 +283,13 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                                                         <span className="text-2xl mr-3">{getFileIcon(file.mime_type)}</span>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                                                <button
+                                                                    onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                                    className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate text-left"
+                                                                    title="Click to preview file"
+                                                                >
                                                                     {file.name}
-                                                                </span>
+                                                                </button>
                                                                 {file.starred && (
                                                                     <Star className="h-4 w-4 text-yellow-500 fill-current" />
                                                                 )}
@@ -297,6 +315,15 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0"
+                                                            title="Preview"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
                                                         <Button
                                                             onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
                                                             variant="ghost"
@@ -386,7 +413,6 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                 currentFolderId={folder.id}
                 currentFolderName={folder.name}
                 onUpload={() => window.location.reload()}
-                disks={disks}
             />
 
             {/* Move File Modal */}

@@ -1,7 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import { FolderOpen, FileText, Download, Trash2, Search, Grid3X3, List } from 'lucide-react';
+import { FolderOpen, FileText, Download, Trash2, Search, Grid3X3, List, Eye, User, Calendar, HardDrive } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { fuzzyFilter } from '@/lib/utils';
 
 interface CloudFile {
     id: number;
@@ -10,12 +11,24 @@ interface CloudFile {
     mime_type: string;
     updated_at: string;
     visibility: 'private' | 'shared' | 'public';
+    user: {
+        id: number;
+        name: string;
+    };
+    folder?: {
+        id: number;
+        name: string;
+    } | null;
 }
 
 interface CloudFolder {
     id: number;
     name: string;
     updated_at: string;
+    user: {
+        id: number;
+        name: string;
+    };
 }
 
 interface Props {
@@ -27,11 +40,12 @@ interface Props {
         per_page: number;
         total: number;
     };
+    allFiles: CloudFile[];
     breadcrumbs: Array<{ title: string; href: string }>;
     filters?: { search?: string; sort_by?: string; sort_order?: 'asc' | 'desc' };
 }
 
-export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }: Props) {
+export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filters = {} }: Props) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [search, setSearch] = useState(filters.search || '');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
@@ -40,13 +54,22 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
     const [hoverFolderId, setHoverFolderId] = useState<number | null>(null);
 
     const searchDebounceRef = useRef<number | null>(null);
-    useEffect(() => {
-        if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current);
-        searchDebounceRef.current = window.setTimeout(() => {
-            router.get('/cloud', { search, sort_by: sortBy, sort_order: sortOrder }, { preserveState: true, replace: true });
-        }, 300);
-        return () => { if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current); };
-    }, [search, sortBy, sortOrder]);
+    // Client-side fuzzy filtering for folders and files
+    const filteredFolders = fuzzyFilter(
+        folders,
+        search,
+        (folder) => folder.name,
+        0.2
+    );
+
+    // Use allFiles for search to include files from all folders, otherwise use root files
+    const filesToSearch = search.trim() ? allFiles : files.data;
+    const filteredFiles = fuzzyFilter(
+        filesToSearch,
+        search,
+        (file) => `${file.name} ${file.user.name} ${file.folder?.name || ''}`,
+        0.2
+    );
 
     const formatFileSize = (bytes: number) => {
         const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -68,7 +91,7 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                     <div className="flex items-center space-x-2">
                         <div className="relative flex-1 max-w-md">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari..." className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari file dan folder (termasuk dalam subfolder)..." className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
                         </div>
                         <label className="text-sm text-slate-600 dark:text-slate-300">Urutkan</label>
                         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white">
@@ -90,11 +113,11 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                 {/* Folders */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Folder</h2>
-                    {folders.length === 0 ? (
+                    {filteredFolders.length === 0 ? (
                         <p className="text-slate-500 dark:text-slate-400">Tidak ada folder.</p>
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {folders.map((folder) => (
+                            {filteredFolders.map((folder) => (
                                 <Link
                                     key={folder.id}
                                     href={`/folders/${folder.id}?from=cloud`}
@@ -113,9 +136,18 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                                 >
                                     <div className="flex items-center gap-3">
                                         <FolderOpen className="h-6 w-6 text-blue-600" />
-                                        <div>
-                                            <div className="text-sm font-medium text-slate-900 dark:text-white">{folder.name}</div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-400">Diperbarui {new Date(folder.updated_at).toLocaleString()}</div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{folder.name}</div>
+                                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                <div className="flex items-center gap-1">
+                                                    <User className="h-3 w-3" />
+                                                    <span>{folder.user.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    <span>{new Date(folder.updated_at).toLocaleDateString('id-ID')}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </Link>
@@ -127,11 +159,11 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                 {/* Files */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-slate-900 dark:text-white">File</h2>
-                    {files.data.length === 0 ? (
+                    {filteredFiles.length === 0 ? (
                         <p className="text-slate-500 dark:text-slate-400">Tidak ada file.</p>
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {files.data.map((file) => (
+                            {filteredFiles.map((file) => (
                                 <div
                                     key={file.id}
                                     className={`group rounded-lg border p-4 dark:border-slate-700 ${draggingFileId === file.id ? 'opacity-60' : ''}`}
@@ -146,10 +178,42 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                                     <div className="flex items-center gap-3">
                                         <FileText className="h-6 w-6 text-slate-600" />
                                         <div className="min-w-0 flex-1">
-                                            <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{file.name}</div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-400">{formatFileSize(file.size)} • {new Date(file.updated_at).toLocaleString()}</div>
+                                            <button
+                                                onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate text-left w-full"
+                                                title="Click to preview file"
+                                            >
+                                                {file.name}
+                                            </button>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                {file.folder && (
+                                                    <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                                        <FolderOpen className="h-3 w-3" />
+                                                        <span>{file.folder.name}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-1">
+                                                    <User className="h-3 w-3" />
+                                                    <span>{file.user.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <HardDrive className="h-3 w-3" />
+                                                    <span>{formatFileSize(file.size)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    <span>{new Date(file.updated_at).toLocaleDateString('id-ID')}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center space-x-1">
+                                        <div className="flex flex-col items-center space-y-1">
+                                            <button
+                                                onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                className="rounded bg-white p-2 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                                title="Preview file"
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </button>
                                             <button
                                                 onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
                                                 className="rounded bg-white p-2 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"

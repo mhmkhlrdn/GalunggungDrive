@@ -12,7 +12,6 @@ interface StorageLocation {
     id: number;
     name: string;
     root: string | null;
-    visibility: 'private' | 'public';
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -88,7 +87,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {storageLocations.filter(loc => loc.visibility === 'public').length}
+                                    {storageLocations.filter(loc => loc.is_active).length}
                                 </div>
                             </CardContent>
                         </Card>
@@ -107,7 +106,6 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                     <TableRow>
                                         <TableHead>Nama</TableHead>
                                         <TableHead>Root</TableHead>
-                                        <TableHead>Visibilitas</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Dibuat</TableHead>
                                         <TableHead className="w-[50px]">Aksi</TableHead>
@@ -120,11 +118,6 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                                 {location.name}
                                             </TableCell>
                                             <TableCell>{location.root || '-'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={location.visibility === 'public' ? 'default' : 'secondary'}>
-                                                    {location.visibility === 'public' ? 'publik' : 'pribadi'}
-                                                </Badge>
-                                            </TableCell>
                                             <TableCell>
                                                 <Badge variant={location.is_active ? 'default' : 'destructive'}>
                                                     {location.is_active ? 'Aktif' : 'Nonaktif'}

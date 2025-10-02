@@ -8,13 +8,13 @@ import MoveFileModal from '@/components/move-file-modal';
 import FileEditModal from '@/components/file-edit-modal';
 import ShareModal from '@/components/share-modal';
 import FilePreview from '@/components/file-preview';
-import { 
-    Upload, 
-    FolderPlus, 
-    Search, 
-    Filter, 
-    Grid3X3, 
-    List, 
+import {
+    Upload,
+    FolderPlus,
+    Search,
+    Filter,
+    Grid3X3,
+    List,
     MoreHorizontal,
     Star,
     Download,
@@ -31,9 +31,12 @@ import {
     Move,
     Lock,
     Globe,
-    Users
+    Users,
+    FolderOpen,
+    Home
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface File {
     id: number;
@@ -45,6 +48,7 @@ interface File {
     description?: string;
     tags?: string[];
     visibility: 'private' | 'shared' | 'public';
+    starred: boolean;
     folder?: {
         id: number;
         name: string;
@@ -103,7 +107,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
-        
+
         if (action === 'upload') {
             setShowUploadModal(true);
             // Clean up the URL by removing the action parameter
@@ -132,8 +136,8 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     };
 
     const toggleFileSelection = (fileId: number) => {
-        setSelectedFiles(prev => 
-            prev.includes(fileId) 
+        setSelectedFiles(prev =>
+            prev.includes(fileId)
                 ? prev.filter(id => id !== fileId)
                 : [...prev, fileId]
         );
@@ -163,7 +167,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         if (urlParams.has('action')) {
             return;
         }
-        
+
         if (searchDebounceRef.current) {
             window.clearTimeout(searchDebounceRef.current);
         }
@@ -207,10 +211,10 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
 
     // Wire ShareModal -> backend
     const handleShare = (
-        fileIds: number[], 
-        userIds: number[], 
-        permission: 'view' | 'edit' | 'download', 
-        expiresAt?: string, 
+        fileIds: number[],
+        userIds: number[],
+        permission: 'view' | 'edit' | 'download',
+        expiresAt?: string,
         isPublicLink?: boolean
     ) => {
         // Create share for each file
@@ -300,14 +304,14 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <button 
+                        <button
                             onClick={() => setShowUploadModal(true)}
                             className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl"
                         >
                             <Upload className="mr-2 h-4 w-4" />
                             {currentFolder ? `Upload to ${currentFolder.name}` : 'Upload File'}
                         </button>
-                        <button 
+                        <button
                             onClick={() => setShowCreateFolderModal(true)}
                             className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
@@ -406,12 +410,12 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                         </div>
                         <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Tidak ada file ditemukan</h3>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {filters.search ? 'Coba sesuaikan kata kunci pencarian Anda.' : 
-                             currentFolder ? `Upload file ke folder "${currentFolder.name}" untuk memulai.` : 
+                            {filters.search ? 'Coba sesuaikan kata kunci pencarian Anda.' :
+                             currentFolder ? `Upload file ke folder "${currentFolder.name}" untuk memulai.` :
                              'Upload file pertama Anda untuk memulai.'}
                         </p>
                         {!filters.search && (
-                            <button 
+                            <button
                                 onClick={() => setShowUploadModal(true)}
                                 className="mt-4 inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-blue-700 hover:to-indigo-700"
                             >
@@ -421,19 +425,19 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                         )}
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    <div className={viewMode === 'grid'
+                        ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
                         {files.data.map((file) => {
                             const isSelected = selectedFiles.includes(file.id);
-                            
+
                             return (
                                 <div
                                     key={file.id}
                                     className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
@@ -444,38 +448,73 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                         onChange={() => toggleFileSelection(file.id)}
                                         className="absolute top-2 left-2 z-20 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                     />
-                                    
+
                                     {/* Star button - always accessible */}
-                                    <button 
-                                        onClick={() => handleToggleStar(file.id)}
-                                        className={`absolute top-2 right-2 z-20 p-1 rounded-full transition-colors ${
-                                            file.starred 
-                                                ? 'text-yellow-500 hover:text-yellow-600' 
-                                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                                        }`}
-                                        aria-label={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}
-                                        title={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}
-                                    >
-                                        <Star className={`h-4 w-4 ${file.starred ? 'fill-current' : ''}`} />
-                                    </button>
 
                                     <div className="flex items-start space-x-3">
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <FilePreview 
-                                                file={file} 
+                                            <FilePreview
+                                                file={file}
                                                 size={viewMode === 'grid' ? 'lg' : 'md'}
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
-                                                <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                                    {file.name}
-                                                </h3>
-                                                <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                    <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                                                        {file.name}
+                                                    </h3>
+                                                    {file.starred && (
+                                                        <Star className="h-3 w-3 text-yellow-500 fill-current flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => handleViewFile(file.id)}
+                                                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                                        title="Tampilkan file"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
+                                                                <Star className={`h-4 w-4 mr-2 ${file.starred ? 'text-yellow-500 fill-current' : ''}`} />
+                                                                {file.starred ? 'Hapus dari favorit' : 'Tambahkan ke favorit'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => window.open(`/files/${file.id}/download`, '_blank')}>
+                                                                <Download className="h-4 w-4 mr-2" />
+                                                                Download
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleMoveFile(file.id, file.name)}>
+                                                                <Move className="h-4 w-4 mr-2" />
+                                                                Move
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleEditFile(file)}>
+                                                                <Edit className="h-4 w-4 mr-2" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleShareFile(file)}>
+                                                                <Share2 className="h-4 w-4 mr-2" />
+                                                                Share
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteFile(file.id)}
+                                                                className="text-red-600"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
                                             </div>
-                                            
+
                                             {/* Visibility Indicator */}
                                             <div className="mt-1 flex items-center space-x-2">
                                                 {file.visibility === 'private' && (
@@ -497,6 +536,24 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                                     </div>
                                                 )}
                                             </div>
+                                            
+                                            {/* Location Information */}
+                                            {file.folder && (
+                                                <div className="mt-1 flex items-center gap-1">
+                                                    <FolderOpen className="h-3 w-3 text-blue-500" />
+                                                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                                                        {file.folder.name}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {!file.folder && (
+                                                <div className="mt-1 flex items-center gap-1">
+                                                    <Home className="h-3 w-3 text-slate-500" />
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                        Root
+                                                    </span>
+                                                </div>
+                                            )}
                                             
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {formatFileSize(file.size)} • {new Date(file.updated_at).toLocaleDateString()}
@@ -525,60 +582,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                             )}
                                         </div>
                                     </div>
-                                    
-                                    {/* Quick Actions toolbar (bottom-right), does not cover star button */}
-                                    <div className="pointer-events-none absolute bottom-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <div className="pointer-events-auto flex items-center space-x-2">
-                                            <button 
-                                                onClick={() => handleViewFile(file.id)}
-                                                className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
-                                                aria-label="Lihat file"
-                                                title="View file"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
-                                                className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
-                                                aria-label="Unduh file"
-                                                title="Download file"
-                                            >
-                                                <Download className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleMoveFile(file.id, file.name)}
-                                                className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
-                                                aria-label="Pindahkan file"
-                                                title="Move file"
-                                            >
-                                                <Move className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleEditFile(file)}
-                                                className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
-                                                aria-label="Edit file"
-                                                title="Edit file"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleShareFile(file)}
-                                                className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
-                                                aria-label="Bagikan file"
-                                                title="Share file"
-                                            >
-                                                <Share2 className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteFile(file.id)}
-                                                className="rounded-full bg-white p-2 text-red-600 shadow-sm hover:bg-red-50"
-                                                aria-label="Hapus file"
-                                                title="Delete file"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </div>
+
                                 </div>
                             );
                         })}

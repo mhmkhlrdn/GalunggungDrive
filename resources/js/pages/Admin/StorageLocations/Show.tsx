@@ -10,7 +10,6 @@ interface StorageLocation {
     id: number;
     name: string;
     root: string | null;
-    visibility: 'private' | 'public';
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -136,12 +135,6 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Visibilitas</h4>
-                                    <Badge variant={storageLocation.visibility === 'public' ? 'default' : 'secondary'}>
-                                        {storageLocation.visibility}
-                                    </Badge>
-                                </div>
 
                                 {storageLocation.root && (
                                     <div>

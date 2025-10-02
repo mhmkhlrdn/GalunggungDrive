@@ -31,7 +31,6 @@ class StorageLocationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'root' => 'nullable|string|max:500',
-            'visibility' => 'required|string|in:private,public',
             'is_active' => 'boolean',
         ]);
 
@@ -79,7 +78,6 @@ class StorageLocationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'root' => 'nullable|string|max:500',
-            'visibility' => 'required|string|in:private,public',
             'is_active' => 'boolean',
         ]);
 

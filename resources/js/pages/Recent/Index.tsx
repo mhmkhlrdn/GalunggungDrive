@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { formatFileSize } from '@/lib/utils';
+import { formatFileSize, fuzzyFilter } from '@/lib/utils';
 import FilePreview from '@/components/file-preview';
 import {
     Search,
@@ -22,7 +22,10 @@ import {
     Archive,
     File,
     Clock,
-    Calendar
+    Calendar,
+    User,
+    HardDrive,
+    FolderOpen
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { router } from '@inertiajs/react';
@@ -68,13 +71,42 @@ export default function RecentIndex({ files, filters }: Props) {
 
     const searchDebounceRef = useRef<number | null>(null);
 
-    useEffect(() => {
-        if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current);
-        searchDebounceRef.current = window.setTimeout(() => {
-            router.get('/recent', { search, sort_by: sortBy, sort_order: sortOrder }, { preserveState: true, replace: true });
-        }, 300);
-        return () => { if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current); };
-    }, [search, sortBy, sortOrder]);
+    // Client-side fuzzy filtering
+    const filteredFiles = fuzzyFilter(
+        files.data,
+        search,
+        (file) => `${file.name} ${file.user.name} ${file.folder?.name || ''}`,
+        0.2
+    );
+
+    // Apply sorting to filtered results
+    const sortedFiles = [...filteredFiles].sort((a, b) => {
+        let aValue: any, bValue: any;
+
+        switch (sortBy) {
+            case 'name':
+                aValue = a.name.toLowerCase();
+                bValue = b.name.toLowerCase();
+                break;
+            case 'size':
+                aValue = parseInt(a.size);
+                bValue = parseInt(b.size);
+                break;
+            case 'created_at':
+                aValue = new Date(a.updated_at);
+                bValue = new Date(b.updated_at);
+                break;
+            default: // updated_at
+                aValue = new Date(a.updated_at);
+                bValue = new Date(b.updated_at);
+        }
+
+        if (sortOrder === 'asc') {
+            return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+            return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        }
+    });
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -155,7 +187,7 @@ export default function RecentIndex({ files, filters }: Props) {
                             File Terbaru
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {files.total} file • 30 hari terakhir
+                            {search ? `${sortedFiles.length} dari ${files.total}` : files.total} file • 30 hari terakhir
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -255,14 +287,19 @@ export default function RecentIndex({ files, filters }: Props) {
                 )}
 
                 {/* Files Grid/List */}
-                {files.data.length === 0 ? (
+                {sortedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12">
                         <div className="rounded-full bg-slate-100 p-6 dark:bg-slate-800">
                             <Clock className="h-12 w-12 text-slate-400" />
                         </div>
-                        <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">Tidak ada file terbaru</h3>
+                        <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-white">
+                            {search ? 'Tidak ada file yang cocok' : 'Tidak ada file terbaru'}
+                        </h3>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            Tidak ada file yang dimodifikasi dalam 30 hari terakhir.
+                            {search
+                                ? `Tidak ada file yang cocok dengan pencarian "${search}".`
+                                : 'Tidak ada file yang dimodifikasi dalam 30 hari terakhir.'
+                            }
                         </p>
                     </div>
                 ) : (
@@ -270,7 +307,7 @@ export default function RecentIndex({ files, filters }: Props) {
                         ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
-                        {files.data.map((file) => {
+                        {sortedFiles.map((file) => {
                             const isSelected = selectedFiles.includes(file.id);
 
                             return (
@@ -312,12 +349,26 @@ export default function RecentIndex({ files, filters }: Props) {
                                                     </button>
                                                 </div>
                                             </div>
-                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                {formatFileSize(file.size)} • {file.folder?.name || 'Root'}
-                                            </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Diupload oleh {file.user.name} • Diubah {new Date(file.updated_at).toLocaleDateString('id-ID')}
-                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                <div className="flex items-center gap-1">
+                                                    <HardDrive className="h-3 w-3" />
+                                                    <span>{formatFileSize(file.size)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <FolderOpen className="h-3 w-3" />
+                                                    <span>{file.folder?.name || 'Root'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                <div className="flex items-center gap-1">
+                                                    <User className="h-3 w-3" />
+                                                    <span>{file.user.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    <span>{new Date(file.updated_at).toLocaleDateString('id-ID')}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
