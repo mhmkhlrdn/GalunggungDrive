@@ -5,19 +5,9 @@ import {
     HardDrive,
     FileText,
     Folder,
-    Upload,
-    Download,
     Trash2,
-    TrendingUp,
-    TrendingDown,
-    Calendar,
-    BarChart3,
-    PieChart,
     Activity,
     AlertTriangle,
-    CheckCircle,
-    Clock,
-    Users,
     Share2
 } from 'lucide-react';
 import { useState } from 'react';
@@ -299,39 +289,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                     </div>
                 )}
 
-                {locations.length > 0 && (
-                    <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                            Lokasi Penyimpanan
-                        </h3>
-                        <div className="space-y-3">
-                            {locations.map((loc) => (
-                                <div key={loc.id} className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                            {loc.name} <span className="text-xs text-slate-500">({loc.key})</span>
-                                        </p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            Driver: {loc.driver}{loc.root ? ` • Root: ${loc.root}` : ''}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        {loc.total !== null && loc.free !== null ? (
-                                            <>
-                                                <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                    Kosong: {formatBytes(loc.free)} / Total: {formatBytes(loc.total)}
-                                                </p>
-                                            </>
-                                        ) : (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">Tidak tersedia</p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
+                
 
             </div>
         </AppLayout>

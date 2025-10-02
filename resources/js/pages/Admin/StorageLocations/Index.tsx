@@ -62,7 +62,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                         </Button>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Total Lokasi</CardTitle>
@@ -81,16 +81,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Lokasi Publik</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {storageLocations.filter(loc => loc.is_active).length}
-                                </div>
-                            </CardContent>
-                        </Card>
+                        
                     </div>
 
                     <Card>

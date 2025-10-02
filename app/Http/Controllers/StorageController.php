@@ -66,14 +66,14 @@ class StorageController extends Controller
         $fileTypeStats = File::where('user_id', $user->id)
             ->selectRaw('
                 CASE 
-                    WHEN mime_type LIKE "image/%" THEN "Images"
-                    WHEN mime_type LIKE "video/%" THEN "Videos"
-                    WHEN mime_type LIKE "audio/%" THEN "Audio"
-                    WHEN mime_type = "application/pdf" THEN "PDFs"
-                    WHEN mime_type LIKE "%word%" THEN "Documents"
-                    WHEN mime_type LIKE "%excel%" OR mime_type LIKE "%spreadsheet%" THEN "Spreadsheets"
-                    WHEN mime_type LIKE "%zip%" OR mime_type LIKE "%rar%" OR mime_type LIKE "%7z%" THEN "Archives"
-                    ELSE "Other"
+                    WHEN mime_type LIKE "image/%" THEN "Foto"
+                    WHEN mime_type LIKE "video/%" THEN "Video"
+                    WHEN mime_type LIKE "audio/%" THEN "Suara"
+                    WHEN mime_type = "application/pdf" THEN "PDF"
+                    WHEN mime_type LIKE "%word%" THEN "Dokumen"
+                    WHEN mime_type LIKE "%excel%" OR mime_type LIKE "%spreadsheet%" THEN "Spreadsheet"
+                    WHEN mime_type LIKE "%zip%" OR mime_type LIKE "%rar%" OR mime_type LIKE "%7z%" THEN "Arsip"
+                    ELSE "Lain-lain"
                 END as type,
                 COUNT(*) as count,
                 SUM(size) as size
