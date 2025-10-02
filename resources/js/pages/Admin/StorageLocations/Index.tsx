@@ -11,12 +11,8 @@ import { useState } from 'react';
 interface StorageLocation {
     id: number;
     name: string;
-    key: string;
-    driver: string;
     root: string | null;
-    url: string | null;
     visibility: 'private' | 'public';
-    serve: boolean;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -110,8 +106,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Nama</TableHead>
-                                        <TableHead>Kunci</TableHead>
-                                        <TableHead>Driver</TableHead>
+                                        <TableHead>Root</TableHead>
                                         <TableHead>Visibilitas</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Dibuat</TableHead>
@@ -124,14 +119,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                             <TableCell className="font-medium">
                                                 {location.name}
                                             </TableCell>
-                                            <TableCell>
-                                                <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                                                    {location.key}
-                                                </code>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">{location.driver}</Badge>
-                                            </TableCell>
+                                            <TableCell>{location.root || '-'}</TableCell>
                                             <TableCell>
                                                 <Badge variant={location.visibility === 'public' ? 'default' : 'secondary'}>
                                                     {location.visibility === 'public' ? 'publik' : 'pribadi'}

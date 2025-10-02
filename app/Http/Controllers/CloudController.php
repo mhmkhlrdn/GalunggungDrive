@@ -13,7 +13,7 @@ class CloudController extends Controller
     {
         $userId = auth()->id();
 
-        // Top-level folders: owned by user, public, or shared with user, with no parent
+
         $folders = Folder::query()
             ->whereNull('parent_id')
             ->where(function ($q) use ($userId) {
@@ -30,7 +30,7 @@ class CloudController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id', 'updated_at']);
 
-        // Root files: owned by user, public, or shared with user, with no folder
+
         $files = File::query()
             ->whereNull('folder_id')
             ->where(function ($q) use ($userId) {
@@ -73,7 +73,7 @@ class CloudController extends Controller
                 'total' => $files->total(),
             ],
             'breadcrumbs' => [
-                ['title' => 'Cloud', 'href' => route('cloud.index')],
+                ['title' => 'Awan', 'href' => route('cloud.index')],
             ],
         ]);
     }

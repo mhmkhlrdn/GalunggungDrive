@@ -9,12 +9,8 @@ import { useState } from 'react';
 interface StorageLocation {
     id: number;
     name: string;
-    key: string;
-    driver: string;
     root: string | null;
-    url: string | null;
     visibility: 'private' | 'public';
-    serve: boolean;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -122,16 +118,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                     <h4 className="text-sm font-medium text-muted-foreground">Nama</h4>
                                     <p className="text-lg">{storageLocation.name}</p>
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Kunci</h4>
-                                    <code className="text-sm bg-muted px-2 py-1 rounded">
-                                        {storageLocation.key}
-                                    </code>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Driver</h4>
-                                    <Badge variant="outline">{storageLocation.driver}</Badge>
-                                </div>
+
                                 <div>
                                     <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
                                     <Badge variant={storageLocation.is_active ? 'default' : 'destructive'}>
@@ -155,12 +142,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                         {storageLocation.visibility}
                                     </Badge>
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground">Dapat Menyajikan File</h4>
-                                    <Badge variant={storageLocation.serve ? 'default' : 'secondary'}>
-                                        {storageLocation.serve ? 'Yes' : 'No'}
-                                    </Badge>
-                                </div>
+
                                 {storageLocation.root && (
                                     <div>
                                         <h4 className="text-sm font-medium text-muted-foreground">Path Root</h4>
@@ -169,19 +151,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                         </code>
                                     </div>
                                 )}
-                                {storageLocation.url && (
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground">URL Publik</h4>
-                                        <a
-                                            href={storageLocation.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline break-all"
-                                        >
-                                            {storageLocation.url}
-                                        </a>
-                                    </div>
-                                )}
+
                             </CardContent>
                         </Card>
                     </div>
@@ -211,7 +181,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">Disk stats not available for this driver.</p>
+                                    <p className="text-sm text-muted-foreground">Statistik disk tidak tersedia untuk lokasi ini.</p>
                                 )}
                             </CardContent>
                         </Card>

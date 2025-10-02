@@ -17,10 +17,6 @@ use Inertia\Response;
 
 class FileController extends Controller
 {
-    /**
-     * Pick a storage disk from active storage locations based on free space.
-     * Falls back to 'private' if none can be determined.
-     */
     private function pickStorageDisk(): string
     {
         try {
@@ -30,32 +26,27 @@ class FileController extends Controller
 
             $candidates = [];
             foreach ($locations as $loc) {
-                // Only local driver free-space detection implemented
-                if ($loc->driver === 'local' && $loc->root) {
+                if ($loc->root) {
                     try {
                         $freeBytes = @disk_free_space($loc->root);
                         if ($freeBytes !== false) {
                             $candidates[] = [
-                                'key' => $loc->key,
+                                'key' => $loc->diskKey(),
                                 'free' => (int) $freeBytes,
                             ];
                         }
                     } catch (\Throwable $e) {
-                        // ignore unreadable paths
                     }
                 }
             }
 
             if (!empty($candidates)) {
-                // choose disk with most free space
                 usort($candidates, function ($a, $b) { return $b['free'] <=> $a['free']; });
                 return $candidates[0]['key'];
             }
         } catch (\Throwable $e) {
-            // ignore and fall back
         }
 
-        // fallback to configured or private
         return config('upload.storage_disk') ?? 'private';
     }
     public function index(Request $request): Response
@@ -94,7 +85,6 @@ class FileController extends Controller
 
         $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
-        // Add starred status to each file
         $files->getCollection()->transform(function ($file) {
             $file->starred = $file->isStarredBy(auth()->user());
             return $file;
@@ -103,12 +93,10 @@ class FileController extends Controller
         $currentFolder = $folderId ? Folder::find($folderId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
 
-        // Get all folders for move functionality
         $allFolders = Folder::where('user_id', auth()->id())
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id']);
 
-        // Get all users for sharing
         $users = \App\Models\User::where('id', '!=', auth()->id())
             ->select('id', 'name', 'email')
             ->get();
@@ -140,15 +128,13 @@ class FileController extends Controller
             'visibility' => 'required|in:private,shared,public',
         ];
         
-        // Add MIME type validation if configured
+        
         if (!empty($uploadConfig['allowed_mime_types'])) {
-            // Use mimetypes rule to validate against actual MIME types from config
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }
         
         $request->validate($validationRules);
 
-        // Auto-select storage disk based on available free space
         $storageDisk = $this->pickStorageDisk();
 
         $uploadedFiles = [];
@@ -172,7 +158,6 @@ class FileController extends Controller
                 'tags' => $request->tags ? explode(',', $request->tags) : null,
             ]);
 
-            // Create initial version
             $file->versions()->create([
                 'version_number' => 1,
                 'path' => $path,
@@ -182,7 +167,6 @@ class FileController extends Controller
                 'uploaded_by' => auth()->id(),
             ]);
 
-            // Log activity
             ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'upload',
@@ -212,7 +196,6 @@ class FileController extends Controller
 
         $file->load(['user', 'folder', 'versions.uploadedBy', 'shares.sharedWith', 'shares.sharedBy']);
 
-        // Get sharing information
         $shares = FileShare::where('file_id', $file->id)
             ->with(['sharedWith', 'sharedBy'])
             ->get();
@@ -250,12 +233,9 @@ class FileController extends Controller
             'visibility' => $request->visibility,
         ]);
 
-        // Handle sharing if visibility is 'shared' and users are selected
         if ($request->visibility === 'shared' && $request->has('shared_with')) {
-            // Remove existing shares
             $file->shares()->delete();
             
-            // Create new shares
             foreach ($request->shared_with as $userId) {
                 $file->shares()->create([
                     'shared_with' => $userId,
@@ -264,11 +244,9 @@ class FileController extends Controller
                 ]);
             }
         } elseif ($request->visibility !== 'shared') {
-            // Remove all shares if not shared
             $file->shares()->delete();
         }
 
-        // Log the activity
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'edit',
@@ -295,7 +273,6 @@ class FileController extends Controller
     {
         $this->authorize('delete', $file);
 
-        // Log activity before deletion
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'delete',
@@ -319,7 +296,6 @@ class FileController extends Controller
     {
         $this->authorize('download', $file);
 
-        // Log download activity
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'download',
@@ -342,12 +318,10 @@ class FileController extends Controller
         try {
             $this->authorize('view', $file);
 
-            // Check if file exists
             if (!Storage::disk($file->disk)->exists($file->path)) {
                 abort(404, 'File not found');
             }
 
-            // Log preview activity
             ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'preview',
@@ -362,17 +336,14 @@ class FileController extends Controller
                 ],
             ]);
 
-            // Get file content
             $fileContent = Storage::disk($file->disk)->get($file->path);
             
-            // Return the file for preview (inline display)
             return response($fileContent)
                 ->header('Content-Type', $file->mime_type)
                 ->header('Content-Disposition', 'inline; filename="' . $file->name . '"')
                 ->header('Content-Length', strlen($fileContent))
                 ->header('Cache-Control', 'public, max-age=3600');
         } catch (\Exception $e) {
-            // Log the error
             ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'preview',
@@ -493,11 +464,9 @@ class FileController extends Controller
         $isStarred = $file->isStarredBy($user);
 
         if ($isStarred) {
-            // Remove from starred
             $user->starredFiles()->detach($file->id);
             $action = 'unstar';
         } else {
-            // Add to starred
             $user->starredFiles()->attach($file->id);
             $action = 'star';
         }
@@ -528,7 +497,6 @@ class FileController extends Controller
 
             $this->authorize('update', $file);
 
-            // Update file properties
             $file->update([
                 'name' => $updateData['name'],
                 'description' => $updateData['description'],
@@ -536,12 +504,10 @@ class FileController extends Controller
                 'visibility' => $updateData['visibility'],
             ]);
 
-            // Handle sharing
             if ($updateData['visibility'] === 'shared' && isset($updateData['shared_with'])) {
-                // Remove existing shares
+                
                 $file->shares()->delete();
                 
-                // Create new shares
                 foreach ($updateData['shared_with'] as $userId) {
                     $file->shares()->create([
                         'shared_with' => $userId,
@@ -550,11 +516,11 @@ class FileController extends Controller
                     ]);
                 }
             } elseif ($updateData['visibility'] !== 'shared') {
-                // Remove all shares if not shared
+                
                 $file->shares()->delete();
             }
 
-            // Log the activity
+            
             ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'edit',

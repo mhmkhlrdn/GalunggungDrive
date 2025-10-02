@@ -3,11 +3,11 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { formatFileSize } from '@/lib/utils';
 import FilePreview from '@/components/file-preview';
-import { 
-    Search, 
-    Filter, 
-    Grid3X3, 
-    List, 
+import {
+    Search,
+    Filter,
+    Grid3X3,
+    List,
     MoreHorizontal,
     Star,
     Download,
@@ -24,7 +24,8 @@ import {
     Clock,
     Calendar
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { router } from '@inertiajs/react';
 
 interface File {
     id: number;
@@ -61,6 +62,19 @@ interface Props {
 export default function RecentIndex({ files, filters }: Props) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+    const [search, setSearch] = useState(filters.search || '');
+    const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order as 'asc' | 'desc' || 'desc');
+
+    const searchDebounceRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = window.setTimeout(() => {
+            router.get('/recent', { search, sort_by: sortBy, sort_order: sortOrder }, { preserveState: true, replace: true });
+        }, 300);
+        return () => { if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current); };
+    }, [search, sortBy, sortOrder]);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -81,8 +95,8 @@ export default function RecentIndex({ files, filters }: Props) {
     };
 
     const toggleFileSelection = (fileId: number) => {
-        setSelectedFiles(prev => 
-            prev.includes(fileId) 
+        setSelectedFiles(prev =>
+            prev.includes(fileId)
                 ? prev.filter(id => id !== fileId)
                 : [...prev, fileId]
         );
@@ -92,22 +106,56 @@ export default function RecentIndex({ files, filters }: Props) {
         setSelectedFiles([]);
     };
 
+    const handleStarToggle = (fileId: number) => {
+        router.post(`/files/${fileId}/star`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Optionally show a success message
+            }
+        });
+    };
+
+    const handleDownload = (fileId: number) => {
+        window.open(`/files/${fileId}/download`, '_blank');
+    };
+
+    const handleBulkDownload = () => {
+        if (selectedFiles.length === 0) return;
+
+        selectedFiles.forEach(fileId => {
+            window.open(`/files/${fileId}/download`, '_blank');
+        });
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedFiles.length === 0) return;
+
+        if (confirm(`Apakah Anda yakin ingin menghapus ${selectedFiles.length} file?`)) {
+            selectedFiles.forEach(fileId => {
+                router.delete(`/files/${fileId}`, {
+                    preserveScroll: true,
+                });
+            });
+            setSelectedFiles([]);
+        }
+    };
+
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Recent Files', href: '/recent' },
+        { title: 'File Terbaru', href: '/recent' },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Recent Files" />
+            <Head title="File Terbaru" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                            Recent Files
+                            File Terbaru
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {files.total} files • Last 30 days
+                            {files.total} file • 30 hari terakhir
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -125,7 +173,8 @@ export default function RecentIndex({ files, filters }: Props) {
                         <input
                             type="text"
                             placeholder="Cari file terbaru..."
-                            defaultValue={filters.search}
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                             className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
                         />
                     </div>
@@ -143,10 +192,24 @@ export default function RecentIndex({ files, filters }: Props) {
                                 </button>
                             </div>
                         )}
-                        <button className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
-                            <Filter className="mr-2 h-4 w-4" />
-                            Filter
-                        </button>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
+                            <option value="updated_at">Tanggal Diubah</option>
+                            <option value="name">Nama</option>
+                            <option value="size">Ukuran</option>
+                            <option value="created_at">Tanggal Dibuat</option>
+                        </select>
+                        <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
+                            <option value="desc">Terbaru</option>
+                            <option value="asc">Terlama</option>
+                        </select>
                         <div className="flex rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800">
                             <button
                                 onClick={() => setViewMode('grid')}
@@ -172,11 +235,17 @@ export default function RecentIndex({ files, filters }: Props) {
                                 {selectedFiles.length} file dipilih
                             </span>
                             <div className="flex items-center space-x-2">
-                                <button className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+                                <button
+                                    onClick={handleBulkDownload}
+                                    className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                                >
                                     <Download className="mr-1 h-3 w-3" />
                                     Download
                                 </button>
-                                <button className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                                <button
+                                    onClick={handleBulkDelete}
+                                    className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                                >
                                     <Trash2 className="mr-1 h-3 w-3" />
                                     Hapus
                                 </button>
@@ -197,19 +266,19 @@ export default function RecentIndex({ files, filters }: Props) {
                         </p>
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    <div className={viewMode === 'grid'
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
                         {files.data.map((file) => {
                             const isSelected = selectedFiles.includes(file.id);
-                            
+
                             return (
                                 <div
                                     key={file.id}
                                     className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
@@ -221,8 +290,8 @@ export default function RecentIndex({ files, filters }: Props) {
                                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <FilePreview 
-                                                file={file} 
+                                            <FilePreview
+                                                file={file}
                                                 size={viewMode === 'grid' ? 'lg' : 'md'}
                                             />
                                         </div>
@@ -232,7 +301,10 @@ export default function RecentIndex({ files, filters }: Props) {
                                                     {file.name}
                                                 </h3>
                                                 <div className="flex items-center space-x-1">
-                                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                                    <button
+                                                        onClick={() => handleStarToggle(file.id)}
+                                                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                                    >
                                                         <Star className={`h-4 w-4 ${file.starred ? 'text-yellow-500 fill-current' : ''}`} />
                                                     </button>
                                                     <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
@@ -244,26 +316,38 @@ export default function RecentIndex({ files, filters }: Props) {
                                                 {formatFileSize(file.size)} • {file.folder?.name || 'Root'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Modified {new Date(file.updated_at).toLocaleDateString()}
+                                                Diubah {new Date(file.updated_at).toLocaleDateString('id-ID')}
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Quick Actions */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <Link
+                                                href={`/files/${file.id}`}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                            >
                                                 <Eye className="h-4 w-4" />
-                                            </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDownload(file.id)}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                            >
                                                 <Download className="h-4 w-4" />
                                             </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            <Link
+                                                href={`/files/${file.id}/share`}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                            >
                                                 <Share2 className="h-4 w-4" />
-                                            </button>
-                                            <button className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
+                                            </Link>
+                                            <Link
+                                                href={`/files/${file.id}/edit`}
+                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
+                                            >
                                                 <Edit className="h-4 w-4" />
-                                            </button>
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>
@@ -281,12 +365,17 @@ export default function RecentIndex({ files, filters }: Props) {
                         <div className="flex items-center space-x-2">
                             <button
                                 disabled={files.current_page === 1}
+                                onClick={() => router.get('/recent', { ...filters, page: files.current_page - 1 })}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Sebelumnya
                             </button>
+                            <span className="text-sm text-slate-600 dark:text-slate-300">
+                                Halaman {files.current_page} dari {files.last_page}
+                            </span>
                             <button
                                 disabled={files.current_page === files.last_page}
+                                onClick={() => router.get('/recent', { ...filters, page: files.current_page + 1 })}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Selanjutnya

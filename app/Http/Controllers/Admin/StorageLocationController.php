@@ -30,12 +30,8 @@ class StorageLocationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'key' => 'required|string|max:255|unique:storage_locations,key',
-            'driver' => 'required|string|in:local,s3,ftp',
             'root' => 'nullable|string|max:500',
-            'url' => 'nullable|string|max:500|url',
             'visibility' => 'required|string|in:private,public',
-            'serve' => 'boolean',
             'is_active' => 'boolean',
         ]);
 
@@ -47,13 +43,13 @@ class StorageLocationController extends Controller
 
     public function show(StorageLocation $storageLocation): Response
     {
-        // attempt to compute disk stats similar to /storage page for local drivers
+        // attempt to compute disk stats for local roots
         $diskStats = [
             'total' => null,
             'free' => null,
             'available' => null,
         ];
-        if ($storageLocation->driver === 'local' && $storageLocation->root) {
+        if ($storageLocation->root) {
             try {
                 $diskStats['total'] = @disk_total_space($storageLocation->root) ?: null;
                 $diskStats['free'] = @disk_free_space($storageLocation->root) ?: null;
@@ -82,17 +78,8 @@ class StorageLocationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'key' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('storage_locations', 'key')->ignore($storageLocation->id),
-            ],
-            'driver' => 'required|string|in:local,s3,ftp',
             'root' => 'nullable|string|max:500',
-            'url' => 'nullable|string|max:500|url',
             'visibility' => 'required|string|in:private,public',
-            'serve' => 'boolean',
             'is_active' => 'boolean',
         ]);
 
@@ -105,8 +92,8 @@ class StorageLocationController extends Controller
     public function destroy(StorageLocation $storageLocation): RedirectResponse
     {
         // Check if this storage location is being used by any files
-        $filesCount = \App\Models\File::where('disk', $storageLocation->key)->count();
-        
+        $filesCount = \App\Models\File::where('disk', $storageLocation->diskKey())->count();
+
         if ($filesCount > 0) {
             return redirect()->route('admin.storage-locations.index')
                 ->with('error', "Cannot delete storage location. It is being used by {$filesCount} file(s).");
@@ -123,8 +110,52 @@ class StorageLocationController extends Controller
         $storageLocation->update(['is_active' => !$storageLocation->is_active]);
 
         $status = $storageLocation->is_active ? 'activated' : 'deactivated';
-        
+
         return redirect()->route('admin.storage-locations.index')
             ->with('success', "Storage location {$status} successfully.");
+    }
+
+    /**
+     * Browse server directories for picking a root path.
+     */
+    public function browse(Request $request)
+    {
+        // Route already protected by admin middleware
+
+        $path = $request->query('path', DIRECTORY_SEPARATOR);
+        $path = rtrim($path, DIRECTORY_SEPARATOR);
+        if ($path === '') { $path = DIRECTORY_SEPARATOR; }
+
+        $response = [
+            'path' => $path,
+            'parent' => null,
+            'directories' => [],
+        ];
+
+        try {
+            $real = @realpath($path) ?: $path;
+            if (!@is_dir($real)) {
+                return response()->json(['error' => 'Path is not a directory'], 400);
+            }
+
+            // Compute parent path if possible
+            $parent = dirname($real);
+            if ($parent && $parent !== $real) {
+                $response['parent'] = $parent;
+            }
+
+            $items = @scandir($real) ?: [];
+            foreach ($items as $item) {
+                if ($item === '.' || $item === '..') continue;
+                $full = $real . DIRECTORY_SEPARATOR . $item;
+                if (@is_dir($full) && @is_readable($full)) {
+                    $response['directories'][] = $full;
+                }
+            }
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Unable to read directory'], 500);
+        }
+
+        return response()->json($response);
     }
 }

@@ -36,6 +36,8 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
     const [search, setSearch] = useState(filters.search || '');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order || 'desc');
+    const [draggingFileId, setDraggingFileId] = useState<number | null>(null);
+    const [hoverFolderId, setHoverFolderId] = useState<number | null>(null);
 
     const searchDebounceRef = useRef<number | null>(null);
     useEffect(() => {
@@ -93,7 +95,22 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {folders.map((folder) => (
-                                <Link key={folder.id} href={`/folders/${folder.id}`} className="group rounded-lg border p-4 hover:shadow-md dark:border-slate-700">
+                                <Link
+                                    key={folder.id}
+                                    href={`/folders/${folder.id}`}
+                                    className={`group rounded-lg border p-4 hover:shadow-md dark:border-slate-700 transition-colors ${hoverFolderId === folder.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setHoverFolderId(folder.id); }}
+                                    onDragEnter={(e) => { e.preventDefault(); setHoverFolderId(folder.id); }}
+                                    onDragLeave={(e) => { if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) return; setHoverFolderId((prev) => (prev === folder.id ? null : prev)); }}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        const fileId = e.dataTransfer.getData('text/plain');
+                                        setHoverFolderId(null);
+                                        setDraggingFileId(null);
+                                        if (!fileId) return;
+                                        router.post(`/files/${fileId}/move`, { folder_id: folder.id }, { preserveScroll: true });
+                                    }}
+                                >
                                     <div className="flex items-center gap-3">
                                         <FolderOpen className="h-6 w-6 text-blue-600" />
                                         <div>
@@ -115,7 +132,17 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {files.data.map((file) => (
-                                <div key={file.id} className="group rounded-lg border p-4 dark:border-slate-700">
+                                <div
+                                    key={file.id}
+                                    className={`group rounded-lg border p-4 dark:border-slate-700 ${draggingFileId === file.id ? 'opacity-60' : ''}`}
+                                    draggable
+                                    onDragStart={(e) => {
+                                        e.dataTransfer.setData('text/plain', String(file.id));
+                                        e.dataTransfer.effectAllowed = 'move';
+                                        setDraggingFileId(file.id);
+                                    }}
+                                    onDragEnd={() => { setDraggingFileId(null); setHoverFolderId(null); }}
+                                >
                                     <div className="flex items-center gap-3">
                                         <FileText className="h-6 w-6 text-slate-600" />
                                         <div className="min-w-0 flex-1">

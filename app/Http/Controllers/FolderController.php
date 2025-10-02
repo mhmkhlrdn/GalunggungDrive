@@ -162,7 +162,7 @@ class FolderController extends Controller
                     })
                     ->count();
                 $foldersCount = Folder::where('parent_id', $subfolder->id)->count();
-                
+
                 return [
                     'id' => $subfolder->id,
                     'name' => $subfolder->name,
@@ -236,7 +236,7 @@ class FolderController extends Controller
 
         // Get all files in this folder and subfolders
         $files = $this->getAllFilesInFolder($folder);
-        
+
         if ($files->isEmpty()) {
             return redirect()->back()->with('error', 'Folder is empty.');
         }
@@ -244,7 +244,7 @@ class FolderController extends Controller
         // Create a temporary ZIP file
         $zipFileName = 'folder_' . $folder->name . '_' . time() . '.zip';
         $zipPath = storage_path('app/temp/' . $zipFileName);
-        
+
         // Ensure temp directory exists
         if (!file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
@@ -287,7 +287,7 @@ class FolderController extends Controller
     private function getAllFilesInFolder(Folder $folder)
     {
         $files = collect();
-        
+
         // Get files directly in this folder
         $directFiles = File::where('folder_id', $folder->id)
             ->where(function ($q) {
@@ -296,7 +296,7 @@ class FolderController extends Controller
             })
             ->get();
         $files = $files->merge($directFiles);
-        
+
         // Get files from subfolders recursively
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
@@ -304,11 +304,11 @@ class FolderController extends Controller
                   ->orWhere('visibility', 'public');
             })
             ->get();
-            
+
         foreach ($subfolders as $subfolder) {
             $files = $files->merge($this->getAllFilesInFolder($subfolder));
         }
-        
+
         return $files;
     }
 
@@ -350,7 +350,7 @@ class FolderController extends Controller
         if ($request->visibility === 'shared' && $request->has('shared_with')) {
             // Remove existing shares
             $folder->shares()->delete();
-            
+
             // Create new shares
             foreach ($request->shared_with as $userId) {
                 $folder->shares()->create([
@@ -439,7 +439,7 @@ class FolderController extends Controller
     private function getBreadcrumbs(?Folder $folder): array
     {
         $breadcrumbs = [
-            ['id' => 0, 'name' => 'All Folders', 'link' => route('folders.index')],
+            ['id' => 0, 'name' => 'Semua Folder', 'link' => route('folders.index')],
         ];
 
         if ($folder) {

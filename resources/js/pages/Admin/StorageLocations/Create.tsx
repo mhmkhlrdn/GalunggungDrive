@@ -6,23 +6,59 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Folder, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 
 export default function CreateStorageLocation() {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
-        key: '',
-        driver: 'local',
         root: '',
-        url: '',
         visibility: 'private' as 'private' | 'public',
-        serve: true,
         is_active: true,
     });
+
+    const [showBrowser, setShowBrowser] = useState(false);
+    const [currentPath, setCurrentPath] = useState('/');
+    const [directories, setDirectories] = useState<string[]>([]);
+    const [parentPath, setParentPath] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/admin/storage-locations');
+    };
+
+    const loadDirs = async (path: string) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/admin/storage-locations/browse?path=${encodeURIComponent(path)}`);
+            if (!response.ok) {
+                throw new Error('Gagal memuat direktori');
+            }
+            const data = await response.json();
+            setCurrentPath(data.path);
+            setDirectories(data.directories);
+            setParentPath(data.parent);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Gagal memuat direktori');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBrowse = () => {
+        setShowBrowser(true);
+        loadDirs(currentPath);
+    };
+
+    const handleSelectPath = (path: string) => {
+        setData('root', path);
+        setShowBrowser(false);
+    };
+
+    const handleNavigate = (path: string) => {
+        loadDirs(path);
     };
 
     return (
@@ -60,84 +96,40 @@ export default function CreateStorageLocation() {
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="name">Nama *</Label>
-                                        <Input
-                                            id="name"
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="contoh: Penyimpanan Publik"
-                                            className={errors.name ? 'border-destructive' : ''}
-                                        />
-                                        {errors.name && (
-                                            <p className="text-sm text-destructive">{errors.name}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="key">Kunci *</Label>
-                                        <Input
-                                            id="key"
-                                            value={data.key}
-                                            onChange={(e) => setData('key', e.target.value)}
-                                            placeholder="contoh: penyimpanan_publik"
-                                            className={errors.key ? 'border-destructive' : ''}
-                                        />
-                                        {errors.key && (
-                                            <p className="text-sm text-destructive">{errors.key}</p>
-                                        )}
-                                    </div>
-                                </div>
-
                                 <div className="space-y-2">
-                                    <Label htmlFor="driver">Driver *</Label>
-                                    <Select value={data.driver} onValueChange={(value) => setData('driver', value)}>
-                                        <SelectTrigger className={errors.driver ? 'border-destructive' : ''}>
-                                            <SelectValue placeholder="Pilih driver" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="local">Local</SelectItem>
-                                            <SelectItem value="s3">Amazon S3</SelectItem>
-                                            <SelectItem value="ftp">FTP</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.driver && (
-                                        <p className="text-sm text-destructive">{errors.driver}</p>
+                                    <Label htmlFor="name">Nama *</Label>
+                                    <Input
+                                        id="name"
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="contoh: Penyimpanan Publik"
+                                        className={errors.name ? 'border-destructive' : ''}
+                                    />
+                                    {errors.name && (
+                                        <p className="text-sm text-destructive">{errors.name}</p>
                                     )}
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="root">Path Root</Label>
-                                    <Input
-                                        id="root"
-                                        value={data.root}
-                                        onChange={(e) => setData('root', e.target.value)}
-                                        placeholder="contoh: /var/www/storage/public"
-                                        className={errors.root ? 'border-destructive' : ''}
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="root"
+                                            value={data.root}
+                                            onChange={(e) => setData('root', e.target.value)}
+                                            placeholder="contoh: /var/www/storage/public"
+                                            className={errors.root ? 'border-destructive' : ''}
+                                        />
+                                        <Button type="button" variant="outline" onClick={handleBrowse}>
+                                            <Folder className="h-4 w-4 mr-2" />
+                                            Jelajahi
+                                        </Button>
+                                    </div>
                                     {errors.root && (
                                         <p className="text-sm text-destructive">{errors.root}</p>
                                     )}
                                     <p className="text-sm text-muted-foreground">
                                         Path direktori root untuk penyimpanan lokal
-                                    </p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="url">URL Publik</Label>
-                                    <Input
-                                        id="url"
-                                        value={data.url}
-                                        onChange={(e) => setData('url', e.target.value)}
-                                        placeholder="contoh: https://yourapp.com/storage"
-                                        className={errors.url ? 'border-destructive' : ''}
-                                    />
-                                    {errors.url && (
-                                        <p className="text-sm text-destructive">{errors.url}</p>
-                                    )}
-                                    <p className="text-sm text-muted-foreground">
-                                        URL publik opsional untuk mengakses file
                                     </p>
                                 </div>
 
@@ -156,17 +148,6 @@ export default function CreateStorageLocation() {
                                         {errors.visibility && (
                                             <p className="text-sm text-destructive">{errors.visibility}</p>
                                         )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="flex items-center space-x-2">
-                                        <Switch
-                                            id="serve"
-                                            checked={data.serve}
-                                            onCheckedChange={(checked) => setData('serve', checked)}
-                                        />
-                                        <Label htmlFor="serve">Dapat melayani file</Label>
                                     </div>
 
                                     <div className="flex items-center space-x-2">
@@ -191,6 +172,69 @@ export default function CreateStorageLocation() {
                             </form>
                         </CardContent>
                     </Card>
+
+                    {/* Directory Browser Modal */}
+                    {showBrowser && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-hidden">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold">Pilih Direktori</h3>
+                                    <Button variant="outline" size="sm" onClick={() => setShowBrowser(false)}>
+                                        Tutup
+                                    </Button>
+                                </div>
+
+                                <div className="mb-4">
+                                    <p className="text-sm text-muted-foreground mb-2">Path saat ini:</p>
+                                    <div className="flex items-center gap-2">
+                                        <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm flex-1">
+                                            {currentPath}
+                                        </code>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleSelectPath(currentPath)}
+                                            className="whitespace-nowrap"
+                                        >
+                                            Pilih Path Ini
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="border rounded-lg max-h-96 overflow-y-auto">
+                                    {loading ? (
+                                        <div className="p-4 text-center">Memuat...</div>
+                                    ) : (
+                                        <div className="divide-y">
+                                            {parentPath && (
+                                                <button
+                                                    onClick={() => handleNavigate(parentPath)}
+                                                    className="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                >
+                                                    <ChevronUp className="h-4 w-4" />
+                                                    <span>.. (Parent Directory)</span>
+                                                </button>
+                                            )}
+                                            {directories.map((dir, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => handleNavigate(dir)}
+                                                    className="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                >
+                                                    <Folder className="h-4 w-4 text-blue-500" />
+                                                    <span className="truncate">{dir}</span>
+                                                </button>
+                                            ))}
+                                            {directories.length === 0 && !parentPath && (
+                                                <div className="p-4 text-center text-muted-foreground">
+                                                    Tidak ada direktori yang dapat diakses
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
             </div>
         </AppSidebarLayout>
     );

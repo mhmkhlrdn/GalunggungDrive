@@ -120,9 +120,11 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
 
     // Admin Routes
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        // Place browse BEFORE resource to avoid conflicting with {storageLocation} show route
+        Route::get('storage-locations/browse', [\App\Http\Controllers\Admin\StorageLocationController::class, 'browse'])->name('storage-locations.browse');
         Route::resource('storage-locations', \App\Http\Controllers\Admin\StorageLocationController::class);
         Route::post('storage-locations/{storageLocation}/toggle', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggle'])->name('storage-locations.toggle');
-        
+
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
         Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
     });

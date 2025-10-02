@@ -12,14 +12,15 @@ class StorageLocation extends Model
 
     protected $fillable = [
         'name',
-        'key',
-        'driver',
         'root',
-        'url',
         'visibility',
-        'serve',
         'is_active',
     ];
+
+    public function diskKey(): string
+    {
+        return 'storage_location_' . $this->id;
+    }
 }
 
 

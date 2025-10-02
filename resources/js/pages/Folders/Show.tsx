@@ -139,7 +139,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                 {/* Breadcrumbs */}
                 <nav className="flex items-center space-x-2 text-sm">
                     <Link href="/folders" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                        All Folders
+                        Semua Folder
                     </Link>
                     {breadcrumbs.map((crumb, index) => (
                         <div key={crumb.id} className="flex items-center space-x-2">
@@ -196,7 +196,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                                                         <Edit className="h-4 w-4 mr-2" />
                                                         Rename
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem 
+                                                    <DropdownMenuItem
                                                         className="text-red-600"
                                                         onClick={() => {
                                                             if (confirm('Are you sure you want to delete this folder and its contents?')) {
@@ -320,7 +320,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                                                                     <Edit className="h-4 w-4 mr-2" />
                                                                     Edit
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem 
+                                                                <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => {
                                                                         if (confirm('Are you sure you want to delete this file?')) {

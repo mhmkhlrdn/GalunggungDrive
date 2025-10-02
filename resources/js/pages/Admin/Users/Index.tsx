@@ -144,7 +144,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Users', href: '/admin/users' },
+                { title: 'Pengguna', href: '/admin/users' },
             ]}
         >
             <Head title="User Management" />

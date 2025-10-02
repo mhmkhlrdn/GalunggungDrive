@@ -10,12 +10,11 @@ return new class extends Migration {
         Schema::create('storage_locations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('key')->unique();
-            $table->string('driver')->default('local'); // local, s3, etc.
+            // Deprecated: key, driver removed
             $table->string('root')->nullable(); // for local
-            $table->string('url')->nullable(); // optional public URL
+            // Deprecated: public URL removed
             $table->string('visibility')->default('private'); // private/public
-            $table->boolean('serve')->default(true);
+            // Deprecated: serve flag removed
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

@@ -28,7 +28,7 @@ export default function HomeIndex({ files, folders, filters }: Props) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
 
-  const breadcrumbs: BreadcrumbItem[] = [{ title: 'Home', href: '/home' }];
+  const breadcrumbs: BreadcrumbItem[] = [{ title: 'Beranda', href: '/home' }];
 
   // search debounce
   const searchDebounceRef = useRef<number | null>(null);
@@ -66,12 +66,12 @@ export default function HomeIndex({ files, folders, filters }: Props) {
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Home" />
+      <Head title="Beranda" />
       <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Home</h1>
-            <p className="mt-1 text-slate-600 dark:text-slate-300">Your files and folders</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Beranda</h1>
+            <p className="mt-1 text-slate-600 dark:text-slate-300">File dan folder Anda</p>
           </div>
           <div className="flex items-center space-x-3">
             <button onClick={() => setShowUploadModal(true)} className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
@@ -142,11 +142,11 @@ export default function HomeIndex({ files, folders, filters }: Props) {
                     <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">{file.name}</h3>
                     <div className="flex items-center space-x-2">
                       {/* Star button - always visible */}
-                      <button 
+                      <button
                         onClick={() => handleToggleStar(file.id)}
                         className={`p-1 rounded-full transition-colors ${
-                          file.starred 
-                            ? 'text-yellow-500 hover:text-yellow-600' 
+                          file.starred
+                            ? 'text-yellow-500 hover:text-yellow-600'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                         }`}
                         aria-label={file.starred ? "Hapus dari favorit" : "Tambah ke favorit"}

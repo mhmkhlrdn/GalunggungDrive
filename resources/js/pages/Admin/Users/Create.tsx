@@ -44,8 +44,8 @@ export default function UserCreate() {
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Users', href: '/admin/users' },
-                { title: 'Create', href: '/admin/users/create' },
+                { title: 'Pengguna', href: '/admin/users' },
+                { title: 'Buat Baru', href: '/admin/users/create' },
             ]}
         >
             <Head title="Create User" />

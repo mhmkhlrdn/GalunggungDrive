@@ -31,7 +31,7 @@ export default defineConfig({
   port: 5173,
   strictPort:true,
   cors: {
-    origin: 'http://172.1.1.13', // Laravel's URL
+    origin: 'http://172.1.1.13',
     credentials: true,
   },
   hmr: {

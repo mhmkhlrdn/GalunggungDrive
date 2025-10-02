@@ -17,45 +17,44 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
-        // Calculate real storage statistics - include both files and file versions
+
+
         $totalUsedSpace = File::sum('size') + FileVersion::sum('size');
-        
-        // Calculate total free space from all active storage locations
-        $totalStorageSpace = 0;
+
+        $totalStorageSpace = 0; // total capacity
+        $totalFreeSpace = 0; // free space
         $locations = StorageLocation::where('is_active', true)->get();
         foreach ($locations as $location) {
-            if ($location->driver === 'local' && $location->root && @is_dir($location->root)) {
+            if ($location->root && @is_dir($location->root)) {
                 try {
-                    $diskFreeSpace = @disk_free_space($location->root);
-                    if ($diskFreeSpace !== false) {
-                        $totalStorageSpace += $diskFreeSpace;
-                    }
+                    $diskTotal = @disk_total_space($location->root);
+                    $diskFree = @disk_free_space($location->root);
+                    if ($diskTotal !== false) { $totalStorageSpace += $diskTotal; }
+                    if ($diskFree !== false) { $totalFreeSpace += $diskFree; }
                 } catch (\Throwable $e) {
-                    // Skip this location if we can't read it
                     continue;
                 }
             }
         }
-        
-        // Fallback to 100GB if no storage locations found
+
+
         if ($totalStorageSpace === 0) {
             $totalStorageSpace = 100 * 1024 * 1024 * 1024; // 100GB
         }
-        
-        // Get real statistics - Global stats for all users
+
+
         $stats = [
             'totalFiles' => File::count(),
             'totalFolders' => Folder::count(),
             'storageUsed' => $this->formatFileSize($totalUsedSpace),
-            'storageLimit' => $this->formatFileSize($totalStorageSpace),
+            'storageLimit' => $this->formatFileSize($totalFreeSpace),
             'totalStorageSpace' => $totalStorageSpace,
             'totalUsedSpace' => $totalUsedSpace,
             'recentActivity' => ActivityLog::count(),
             'sharedFiles' => FileShare::count(),
         ];
 
-        // Get recent files from all users globally (only public files)
+
         $recentFiles = File::with(['folder', 'user'])
             ->where('visibility', 'public')
             ->orderBy('updated_at', 'desc')
@@ -82,7 +81,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get recent folders from all users globally (only public folders)
+
         $recentFolders = Folder::with('user')
             ->where('visibility', 'public')
             ->orderBy('updated_at', 'desc')

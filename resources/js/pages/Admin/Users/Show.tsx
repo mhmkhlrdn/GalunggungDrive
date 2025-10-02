@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-    ArrowLeft, 
-    Edit, 
-    Trash2, 
+import {
+    ArrowLeft,
+    Edit,
+    Trash2,
     MoreHorizontal,
     User,
     Mail,
@@ -117,7 +117,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Users', href: '/admin/users' },
+                { title: 'Pengguna', href: '/admin/users' },
                 { title: user.name, href: `/admin/users/${user.id}` },
             ]}
         >
@@ -151,7 +151,7 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                                     Edit Pengguna
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={handleDelete}
                             >

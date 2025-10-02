@@ -5,11 +5,11 @@ import { formatFileSize } from '@/lib/utils';
 import FilePreview from '@/components/file-preview';
 import FileEditModal from '@/components/file-edit-modal';
 import ShareModal from '@/components/share-modal';
-import { 
-    Search, 
-    Filter, 
-    Grid3X3, 
-    List, 
+import {
+    Search,
+    Filter,
+    Grid3X3,
+    List,
     MoreHorizontal,
     Star,
     Download,
@@ -91,8 +91,8 @@ export default function StarredIndex({ files, users, filters }: Props) {
     };
 
     const toggleFileSelection = (fileId: number) => {
-        setSelectedFiles(prev => 
-            prev.includes(fileId) 
+        setSelectedFiles(prev =>
+            prev.includes(fileId)
                 ? prev.filter(id => id !== fileId)
                 : [...prev, fileId]
         );
@@ -142,7 +142,7 @@ export default function StarredIndex({ files, users, filters }: Props) {
                     });
                 }
             });
-            
+
             // Reload the page to show updated shares
             router.reload();
         } catch (error) {
@@ -151,7 +151,7 @@ export default function StarredIndex({ files, users, filters }: Props) {
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Starred Files', href: '/starred' },
+        { title: 'File Favorit', href: '/starred' },
     ];
 
     return (
@@ -259,19 +259,19 @@ export default function StarredIndex({ files, users, filters }: Props) {
                         </p>
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' 
-                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    <div className={viewMode === 'grid'
+                        ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
                         {files.data.map((file) => {
                             const isSelected = selectedFiles.includes(file.id);
-                            
+
                             return (
                                 <div
                                     key={file.id}
                                     className={`group relative rounded-lg border-2 p-4 transition-all hover:shadow-lg dark:border-slate-700 ${
-                                        isSelected 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        isSelected
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                             : 'border-slate-200 bg-white hover:border-slate-300 dark:bg-slate-800 dark:hover:border-slate-600'
                                     } ${viewMode === 'list' ? 'flex items-center space-x-4' : ''}`}
                                 >
@@ -283,8 +283,8 @@ export default function StarredIndex({ files, users, filters }: Props) {
                                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <div className={`flex-shrink-0 ${viewMode === 'list' ? 'mt-0' : 'mt-1'}`}>
-                                            <FilePreview 
-                                                file={file} 
+                                            <FilePreview
+                                                file={file}
                                                 size={viewMode === 'grid' ? 'lg' : 'md'}
                                             />
                                         </div>
@@ -310,32 +310,32 @@ export default function StarredIndex({ files, users, filters }: Props) {
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Quick Actions */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <button 
+                                            <button
                                                 onClick={() => handleViewFile(file.id)}
                                                 className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
                                                 title="View file"
                                             >
                                                 <Eye className="h-4 w-4" />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleDownloadFile(file.id)}
                                                 className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
                                                 title="Download file"
                                             >
                                                 <Download className="h-4 w-4" />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleShareFile(file)}
                                                 className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
                                                 title="Share file"
                                             >
                                                 <Share2 className="h-4 w-4" />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleEditFile(file)}
                                                 className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
                                                 title="Edit file"

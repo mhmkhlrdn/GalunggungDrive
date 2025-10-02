@@ -60,7 +60,7 @@ export default function UserEdit({ user }: Props) {
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Users', href: '/admin/users' },
+                { title: 'Pengguna', href: '/admin/users' },
                 { title: user.name, href: `/admin/users/${user.id}/edit` },
             ]}
         >
