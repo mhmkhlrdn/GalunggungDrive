@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from '@inertiajs/react';
+import { useInertiaOperations } from '@/hooks/use-inertia-operations';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/lib/messages';
 
 interface CreateFolderModalProps {
     isOpen: boolean;
@@ -15,6 +17,7 @@ interface CreateFolderModalProps {
 }
 
 export default function CreateFolderModal({ isOpen, onClose, onCreate, parentId }: CreateFolderModalProps) {
+    const { post: inertiaPost } = useInertiaOperations();
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         parent_id: parentId || null,
@@ -28,7 +31,9 @@ export default function CreateFolderModal({ isOpen, onClose, onCreate, parentId 
             return;
         }
 
-        post('/folders', {
+        inertiaPost('/folders', data, {
+            successMessage: SUCCESS_MESSAGES.FOLDER_CREATED,
+            errorMessage: ERROR_MESSAGES.FOLDER_CREATE_FAILED,
             onSuccess: () => {
                 onCreate(data.name.trim(), parentId);
                 reset();
@@ -36,7 +41,7 @@ export default function CreateFolderModal({ isOpen, onClose, onCreate, parentId 
             },
             onError: (errors) => {
                 console.error('Create folder error:', errors);
-            },
+            }
         });
     };
 

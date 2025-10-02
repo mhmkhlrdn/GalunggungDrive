@@ -37,6 +37,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useInertiaOperations } from '@/hooks/use-inertia-operations';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/lib/messages';
 
 interface File {
     id: number;
@@ -89,6 +91,7 @@ interface Props {
 }
 
 export default function FilesIndex({ files, currentFolder, breadcrumbs, filters, folders, users = [], disks = [] }: Props) {
+    const { destroy, post } = useInertiaOperations();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -200,8 +203,14 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     };
 
     const handleDeleteFile = (fileId: number) => {
-        if (confirm('Are you sure you want to delete this file?')) {
-            router.delete(`/files/${fileId}`);
+        if (confirm('Apakah Anda yakin ingin menghapus file ini?')) {
+            destroy(`/files/${fileId}`, {
+                successMessage: SUCCESS_MESSAGES.FILE_DELETED,
+                errorMessage: ERROR_MESSAGES.FILE_DELETE_FAILED,
+                onSuccess: () => {
+                    router.reload();
+                }
+            });
         }
     };
 
@@ -220,18 +229,24 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         // Create share for each file
         fileIds.forEach((fileId) => {
             if (isPublicLink) {
-                router.post(`/files/${fileId}/share`, {
+                post(`/files/${fileId}/share`, {
                     is_public_link: true,
                     permission,
                     expires_at: expiresAt
-                }, { preserveScroll: true });
+                }, {
+                    successMessage: SUCCESS_MESSAGES.FILE_SHARED,
+                    errorMessage: ERROR_MESSAGES.FILE_SHARE_FAILED
+                });
             } else {
                 userIds.forEach((userId) => {
-                    router.post(`/files/${fileId}/share`, {
+                    post(`/files/${fileId}/share`, {
                         shared_with: userId,
                         permission,
                         expires_at: expiresAt
-                    }, { preserveScroll: true });
+                    }, {
+                        successMessage: SUCCESS_MESSAGES.FILE_SHARED,
+                        errorMessage: ERROR_MESSAGES.FILE_SHARE_FAILED
+                    });
                 });
             }
         });
@@ -278,13 +293,12 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     };
 
     const handleToggleStar = (fileId: number) => {
-        router.post(`/files/${fileId}/toggle-star`, {}, {
+        post(`/files/${fileId}/toggle-star`, {}, {
+            successMessage: SUCCESS_MESSAGES.FILE_STARRED,
+            errorMessage: ERROR_MESSAGES.FILE_STAR_FAILED,
             onSuccess: () => {
                 // Force a complete page reload to ensure the star status is updated
                 window.location.reload();
-            },
-            onError: (errors) => {
-                console.error('Star toggle error:', errors);
             }
         });
     };

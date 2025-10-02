@@ -200,9 +200,11 @@ class FolderController extends Controller
         // Get breadcrumbs
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
-        // Get all folders for move functionality
-        $allFolders = Folder::where('user_id', Auth::id())
-            ->where('id', '!=', $folder->id) // Exclude current folder
+        // Get all folders for move functionality (include current folder to show its subfolders)
+        $allFolders = Folder::where(function ($q) {
+                $q->where('user_id', Auth::id())
+                  ->orWhere('visibility', 'public');
+            })
             ->orderBy('name')
             ->get()
             ->map(function ($folder) {

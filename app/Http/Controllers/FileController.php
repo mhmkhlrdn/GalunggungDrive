@@ -83,7 +83,10 @@ class FileController extends Controller
         $currentFolder = $folderId ? Folder::find($folderId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
 
-        $allFolders = Folder::where('user_id', Auth::id())
+        $allFolders = Folder::where(function ($q) {
+                $q->where('user_id', Auth::id())
+                  ->orWhere('visibility', 'public');
+            })
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id']);
 
@@ -387,10 +390,13 @@ class FileController extends Controller
             'folder_id' => 'nullable|exists:folders,id',
         ]);
 
-        // Check if the target folder belongs to the user
+        // Check if the target folder is accessible to the user (owned by user or public)
         if ($request->folder_id) {
             $folder = Folder::where('id', $request->folder_id)
-                ->where('user_id', Auth::id())
+                ->where(function ($q) {
+                    $q->where('user_id', Auth::id())
+                      ->orWhere('visibility', 'public');
+                })
                 ->first();
 
             if (!$folder) {
@@ -398,6 +404,13 @@ class FileController extends Controller
                     'folder_id' => 'Invalid folder selected.'
                 ]);
             }
+        }
+
+        // Check if trying to move to the same folder
+        if ($file->folder_id == $request->folder_id) {
+            return redirect()->back()->withErrors([
+                'folder_id' => 'File is already in this folder.'
+            ]);
         }
 
         $oldFolderId = $file->folder_id;
