@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Zip;
@@ -24,10 +25,10 @@ class FolderController extends Controller
 
         $query = Folder::with(['user', 'parent'])
             ->where(function ($q) {
-                $q->where('user_id', auth()->id())
+                $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public')
                   ->orWhereHas('shares', function ($shareQuery) {
-                      $shareQuery->where('shared_with', auth()->id());
+                      $shareQuery->where('shared_with', Auth::id());
                   });
             });
 
@@ -44,7 +45,7 @@ class FolderController extends Controller
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
         // Users list for share modal
-        $users = \App\Models\User::where('id', '!=', auth()->id())
+        $users = \App\Models\User::where('id', '!=', Auth::id())
             ->select('id', 'name', 'email')
             ->orderBy('name')
             ->get();
@@ -84,7 +85,7 @@ class FolderController extends Controller
         ]);
 
         // Check if folder with same name exists in parent
-        $existingFolder = Folder::where('user_id', auth()->id())
+        $existingFolder = Folder::where('user_id', Auth::id())
             ->where('parent_id', $request->parent_id)
             ->where('name', $request->name)
             ->first();
@@ -96,14 +97,14 @@ class FolderController extends Controller
         }
 
         $folder = Folder::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'parent_id' => $request->parent_id,
             'name' => $request->name,
             'visibility' => $request->input('visibility', 'private'),
         ]);
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'create_folder',
             'target_type' => 'folder',
             'target_id' => $folder->id,
@@ -119,14 +120,14 @@ class FolderController extends Controller
         return redirect()->back()->with('success', 'Folder created successfully.');
     }
 
-    public function show(Folder $folder)
+    public function show(Request $request, Folder $folder)
     {
         $this->authorize('view', $folder);
 
         // Get files in this folder
         $files = File::where('folder_id', $folder->id)
             ->where(function ($q) {
-                $q->where('user_id', auth()->id())
+                $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public');
             })
             ->orderBy('updated_at', 'desc')
@@ -140,7 +141,7 @@ class FolderController extends Controller
                     'created_at' => $file->created_at->toISOString(),
                     'updated_at' => $file->updated_at->toISOString(),
                     'folder_id' => $file->folder_id,
-                    'starred' => $file->isStarredBy(auth()->user()),
+                    'starred' => $file->isStarredBy(Auth::user()),
                     'description' => $file->description,
                     'tags' => $file->tags ?? [],
                 ];
@@ -149,7 +150,7 @@ class FolderController extends Controller
         // Get subfolders
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
-                $q->where('user_id', auth()->id())
+                $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public');
             })
             ->orderBy('name')
@@ -157,7 +158,7 @@ class FolderController extends Controller
             ->map(function ($subfolder) {
                 $filesCount = File::where('folder_id', $subfolder->id)
                     ->where(function ($q) {
-                        $q->where('user_id', auth()->id())
+                        $q->where('user_id', Auth::id())
                           ->orWhere('visibility', 'public');
                     })
                     ->count();
@@ -178,7 +179,7 @@ class FolderController extends Controller
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
         // Get all folders for move functionality
-        $allFolders = Folder::where('user_id', auth()->id())
+        $allFolders = Folder::where('user_id', Auth::id())
             ->where('id', '!=', $folder->id) // Exclude current folder
             ->orderBy('name')
             ->get()
@@ -215,6 +216,7 @@ class FolderController extends Controller
             'currentFolderId' => $folder->id,
             'allFolders' => $allFolders,
             'disks' => $availableDisks,
+            'from' => $request->query('from'),
         ]);
     }
 
@@ -267,7 +269,7 @@ class FolderController extends Controller
 
         // Log download activity
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'download',
             'target_type' => 'folder',
             'target_id' => $folder->id,
@@ -291,7 +293,7 @@ class FolderController extends Controller
         // Get files directly in this folder
         $directFiles = File::where('folder_id', $folder->id)
             ->where(function ($q) {
-                $q->where('user_id', auth()->id())
+                $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public');
             })
             ->get();
@@ -300,7 +302,7 @@ class FolderController extends Controller
         // Get files from subfolders recursively
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
-                $q->where('user_id', auth()->id())
+                $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public');
             })
             ->get();
@@ -324,7 +326,7 @@ class FolderController extends Controller
         ]);
 
         // Check if folder with same name exists in parent
-        $existingFolder = Folder::where('user_id', auth()->id())
+        $existingFolder = Folder::where('user_id', Auth::id())
             ->where('parent_id', $folder->parent_id)
             ->where('name', $request->name)
             ->where('id', '!=', $folder->id)
@@ -356,7 +358,7 @@ class FolderController extends Controller
                 $folder->shares()->create([
                     'shared_with' => $userId,
                     'permission' => 'view',
-                    'shared_by' => auth()->id(),
+                    'shared_by' => Auth::id(),
                 ]);
             }
         } elseif ($request->visibility !== 'shared') {
@@ -366,7 +368,7 @@ class FolderController extends Controller
 
         // Log the activity
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'edit',
             'target_type' => 'folder',
             'target_id' => $folder->id,
@@ -397,7 +399,7 @@ class FolderController extends Controller
         }
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'delete',
             'target_type' => 'folder',
             'target_id' => $folder->id,
@@ -421,7 +423,7 @@ class FolderController extends Controller
         $folder->restore();
 
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'restore',
             'target_type' => 'folder',
             'target_id' => $folder->id,

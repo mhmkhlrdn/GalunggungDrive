@@ -299,7 +299,6 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                     </div>
                 )}
 
-                {/* Admin: Storage Locations (disk space) */}
                 {locations.length > 0 && (
                     <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">

@@ -73,7 +73,7 @@ class CloudController extends Controller
                 'total' => $files->total(),
             ],
             'breadcrumbs' => [
-                ['title' => 'Awan', 'href' => route('cloud.index')],
+                ['title' => 'Cloud', 'href' => route('cloud.index')],
             ],
         ]);
     }

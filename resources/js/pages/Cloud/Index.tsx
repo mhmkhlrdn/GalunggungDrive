@@ -97,7 +97,7 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                             {folders.map((folder) => (
                                 <Link
                                     key={folder.id}
-                                    href={`/folders/${folder.id}`}
+                                    href={`/folders/${folder.id}?from=cloud`}
                                     className={`group rounded-lg border p-4 hover:shadow-md dark:border-slate-700 transition-colors ${hoverFolderId === folder.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
                                     onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setHoverFolderId(folder.id); }}
                                     onDragEnter={(e) => { e.preventDefault(); setHoverFolderId(folder.id); }}

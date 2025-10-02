@@ -49,7 +49,7 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Storage Locations', href: '/admin/storage-locations' },
+                { title: 'Lokasi Penyimpanan', href: '/admin/storage-locations' },
                 { title: storageLocation.name, href: `/admin/storage-locations/${storageLocation.id}` },
             ]}
         >

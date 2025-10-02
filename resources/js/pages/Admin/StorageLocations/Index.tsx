@@ -42,7 +42,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Storage Locations', href: '/admin/storage-locations' },
+                { title: 'Lokasi Penyimpanan', href: '/admin/storage-locations' },
             ]}
         >
             <Head title="Lokasi Penyimpanan" />

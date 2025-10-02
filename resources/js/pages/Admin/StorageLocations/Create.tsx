@@ -65,8 +65,8 @@ export default function CreateStorageLocation() {
         <AppSidebarLayout
             breadcrumbs={[
                 { title: 'Admin', href: '#' },
-                { title: 'Storage Locations', href: '/admin/storage-locations' },
-                { title: 'Create', href: '/admin/storage-locations/create' },
+                { title: 'Lokasi Penyimpanan', href: '/admin/storage-locations' },
+                { title: 'Buat', href: '/admin/storage-locations/create' },
             ]}
         >
             <Head title="Buat Lokasi Penyimpanan" />

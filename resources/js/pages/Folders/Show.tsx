@@ -49,9 +49,10 @@ interface Props {
     currentFolderId?: number;
     allFolders: Folder[];
     disks?: Array<{ key: string; label: string }>;
+    from?: string;
 }
 
-export default function FolderShow({ folder, files, folders, breadcrumbs, currentFolderId, allFolders, disks = [] }: Props) {
+export default function FolderShow({ folder, files, folders, breadcrumbs, currentFolderId, allFolders, disks = [], from }: Props) {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [fileToMove, setFileToMove] = useState<{ id: number; name: string } | null>(null);
@@ -106,7 +107,13 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                         <Link
-                            href={breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].link : '/folders'}
+                            href={
+                                from === 'cloud'
+                                    ? '/cloud'
+                                    : breadcrumbs.length > 1
+                                        ? breadcrumbs[breadcrumbs.length - 2].link
+                                        : '/folders'
+                            }
                             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                         >
                             <ArrowLeft className="h-5 w-5" />
@@ -138,8 +145,11 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, curren
 
                 {/* Breadcrumbs */}
                 <nav className="flex items-center space-x-2 text-sm">
-                    <Link href="/folders" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                        Semua Folder
+                    <Link
+                        href={from === 'cloud' ? '/cloud' : '/folders'}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                        {from === 'cloud' ? 'Cloud' : 'Semua Folder'}
                     </Link>
                     {breadcrumbs.map((crumb, index) => (
                         <div key={crumb.id} className="flex items-center space-x-2">

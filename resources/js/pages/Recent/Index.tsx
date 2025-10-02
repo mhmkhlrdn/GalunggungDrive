@@ -316,7 +316,7 @@ export default function RecentIndex({ files, filters }: Props) {
                                                 {formatFileSize(file.size)} • {file.folder?.name || 'Root'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Diubah {new Date(file.updated_at).toLocaleDateString('id-ID')}
+                                                Diupload oleh {file.user.name} • Diubah {new Date(file.updated_at).toLocaleDateString('id-ID')}
                                             </p>
                                         </div>
                                     </div>
