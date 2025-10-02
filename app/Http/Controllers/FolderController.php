@@ -44,6 +44,28 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
+        // Transform folders to include files_count and total_size
+        $folders->getCollection()->transform(function ($folder) {
+            $filesCount = File::where('folder_id', $folder->id)
+                ->where(function ($q) {
+                    $q->where('user_id', Auth::id())
+                      ->orWhere('visibility', 'public');
+                })
+                ->count();
+            
+            $totalSize = File::where('folder_id', $folder->id)
+                ->where(function ($q) {
+                    $q->where('user_id', Auth::id())
+                      ->orWhere('visibility', 'public');
+                })
+                ->sum('size');
+
+            $folder->files_count = $filesCount;
+            $folder->total_size = $totalSize;
+            
+            return $folder;
+        });
+
         // Users list for share modal
         $users = \App\Models\User::where('id', '!=', Auth::id())
             ->select('id', 'name', 'email')
@@ -463,6 +485,15 @@ class FolderController extends Controller
         }
 
         return $breadcrumbs;
+    }
+
+    private function formatFileSize($bytes)
+    {
+        if ($bytes === 0) return '0 Bytes';
+        $k = 1024;
+        $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes) / log($k));
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
 }
 

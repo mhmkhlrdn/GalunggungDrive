@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, router } from '@inertiajs/react';
+import { formatFileSize } from '@/lib/utils';
 import {
     FolderPlus,
     Search,
@@ -313,7 +314,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <HardDrive className="h-3 w-3" />
-                                                    <span>{folder.total_size}</span>
+                                                    <span>{formatFileSize(folder.total_size)}</span>
                                                 </div>
                                             </div>
                                             <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
