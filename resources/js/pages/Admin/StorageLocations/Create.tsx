@@ -13,6 +13,7 @@ export default function CreateStorageLocation() {
         name: '',
         root: '',
         is_active: true,
+        can_serve: false,
     });
 
     const [showBrowser, setShowBrowser] = useState(false);
@@ -140,6 +141,14 @@ export default function CreateStorageLocation() {
                                             onCheckedChange={(checked) => setData('is_active', checked)}
                                         />
                                         <Label htmlFor="is_active">Aktif</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id="can_serve"
+                                            checked={data.can_serve}
+                                            onCheckedChange={(checked) => setData('can_serve', checked)}
+                                        />
+                                        <Label htmlFor="can_serve">Dapat Melayani (upload/preview)</Label>
                                     </div>
                                 </div>
 

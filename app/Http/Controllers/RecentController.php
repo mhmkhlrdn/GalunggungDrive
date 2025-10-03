@@ -17,7 +17,10 @@ class RecentController extends Controller
         $sortBy = $request->get('sort_by', 'updated_at');
         $sortOrder = $request->get('sort_order', 'desc');
 
-        $query = File::with(['user', 'folder'])
+        $query = File::with(['user', 'folder', 'storageLocation'])
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public')
@@ -43,6 +46,7 @@ class RecentController extends Controller
 
         return Inertia::render('Recent/Index', [
             'files' => $files,
+            'disks' => \App\Models\StorageLocation::serving()->orderBy('name')->get(['id','name']),
             'filters' => [
                 'search' => $search,
                 'sort_by' => $sortBy,

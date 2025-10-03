@@ -32,6 +32,7 @@ class StorageLocationController extends Controller
             'name' => 'required|string|max:255',
             'root' => 'nullable|string|max:500',
             'is_active' => 'boolean',
+            'can_serve' => 'boolean',
         ]);
 
         StorageLocation::create($validated);
@@ -60,9 +61,14 @@ class StorageLocationController extends Controller
             }
         }
 
+        $otherLocations = StorageLocation::where('id', '!=', $storageLocation->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Admin/StorageLocations/Show', [
             'storageLocation' => $storageLocation,
             'diskStats' => $diskStats,
+            'otherLocations' => $otherLocations,
         ]);
     }
 
@@ -79,6 +85,7 @@ class StorageLocationController extends Controller
             'name' => 'required|string|max:255',
             'root' => 'nullable|string|max:500',
             'is_active' => 'boolean',
+            'can_serve' => 'boolean',
         ]);
 
         $storageLocation->update($validated);
@@ -111,6 +118,65 @@ class StorageLocationController extends Controller
 
         return redirect()->route('admin.storage-locations.index')
             ->with('success', "Storage location {$status} successfully.");
+    }
+
+    public function toggleServe(StorageLocation $storageLocation): RedirectResponse
+    {
+        $storageLocation->update(['can_serve' => !$storageLocation->can_serve]);
+
+        $status = $storageLocation->can_serve ? 'enabled to serve' : 'disabled from serving';
+
+        return redirect()->route('admin.storage-locations.index')
+            ->with('success', "Serving status {$status} successfully.");
+    }
+
+    public function backup(Request $request, StorageLocation $storageLocation): RedirectResponse
+    {
+        $data = $request->validate([
+            'target_storage_location_id' => 'required|exists:storage_locations,id',
+        ]);
+
+        $target = StorageLocation::findOrFail($data['target_storage_location_id']);
+        if ($target->id === $storageLocation->id) {
+            return redirect()->back()->withErrors(['target_storage_location_id' => 'Lokasi tujuan tidak boleh sama.']);
+        }
+
+        $sourceDisk = $storageLocation->diskKey();
+        $targetDisk = $target->diskKey();
+
+        $files = \App\Models\File::where('disk_id', $storageLocation->id)->get();
+        $copied = 0;
+        foreach ($files as $file) {
+            try {
+                // Copy physical file if exists
+                if (\Illuminate\Support\Facades\Storage::disk($sourceDisk)->exists($file->path)) {
+                    $contents = \Illuminate\Support\Facades\Storage::disk($sourceDisk)->get($file->path);
+                    \Illuminate\Support\Facades\Storage::disk($targetDisk)->put($file->path, $contents);
+                }
+
+                // Duplicate DB row to target disk
+                \App\Models\File::create([
+                    'user_id' => $file->user_id,
+                    'folder_id' => $file->folder_id,
+                    'name' => $file->name,
+                    'path' => $file->path,
+                    'disk_id' => $target->id,
+                    'size' => $file->size,
+                    'mime_type' => $file->mime_type,
+                    'checksum' => $file->checksum,
+                    'description' => $file->description,
+                    'visibility' => $file->visibility,
+                    'tags' => $file->tags,
+                ]);
+                $copied++;
+            } catch (\Throwable $e) {
+                // continue on error; optionally collect errors for report
+                continue;
+            }
+        }
+
+        return redirect()->route('admin.storage-locations.index')
+            ->with('success', 'Backup selesai: ' . $copied . ' file disalin ke lokasi baru.');
     }
 
     /**

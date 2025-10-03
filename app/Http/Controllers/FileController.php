@@ -57,8 +57,11 @@ class FileController extends Controller
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
 
-        $query = File::with(['user', 'folder'])
-            ->where('user_id', Auth::id());
+        $query = File::with(['user', 'folder', 'storageLocation'])
+            ->where('user_id', Auth::id())
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            });
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
@@ -94,12 +97,18 @@ class FileController extends Controller
             ->select('id', 'name', 'email')
             ->get();
 
+        // Provide active and serving storage locations for uploads
+        $activeServingLocations = StorageLocation::serving()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Files/Index', [
             'files' => $files,
             'currentFolder' => $currentFolder,
             'breadcrumbs' => $breadcrumbs,
             'folders' => $allFolders,
             'users' => $users,
+            'disks' => $activeServingLocations->map(function ($loc) { return ['id' => $loc->id, 'name' => $loc->name]; }),
             'filters' => [
                 'search' => $search,
                 'sort_by' => $sortBy,
@@ -116,6 +125,7 @@ class FileController extends Controller
             'files' => 'required|array|min:1',
             'files.*' => 'file',
             'folder_id' => 'nullable|exists:folders,id',
+            'disk_id' => 'required|integer|exists:storage_locations,id',
             'description' => 'nullable|string|max:1000',
             'tags' => 'nullable|string',
             'visibility' => 'required|in:private,shared,public',
@@ -126,9 +136,18 @@ class FileController extends Controller
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }
 
-        $request->validate($validationRules);
+        $validated = $request->validate($validationRules);
 
-        $storageDisk = $this->pickStorageDisk();
+        // Ensure selected storage location is active and can serve uploads
+        $storageLocation = StorageLocation::active()->where('id', $validated['disk_id'])->first();
+        if (!$storageLocation) {
+            return redirect()->back()->withErrors(['disk_id' => 'Lokasi penyimpanan tidak aktif.']);
+        }
+        if (!(bool) ($storageLocation->can_serve ?? false)) {
+            return redirect()->back()->withErrors(['disk_id' => 'Lokasi penyimpanan tidak tersedia untuk upload.']);
+        }
+
+        $storageDisk = $storageLocation->diskKey();
 
         $uploadedFiles = [];
 
@@ -142,7 +161,7 @@ class FileController extends Controller
                 'folder_id' => $request->folder_id,
                 'name' => $uploadedFile->getClientOriginalName(),
                 'path' => $path,
-                'disk' => $storageDisk,
+                'disk_id' => $storageLocation->id,
                 'size' => $uploadedFile->getSize(),
                 'mime_type' => $uploadedFile->getMimeType(),
                 'checksum' => $checksum,
@@ -179,7 +198,7 @@ class FileController extends Controller
         }
 
         return redirect()->back()->with('success',
-            count($uploadedFiles) . ' file(s) uploaded successfully.'
+            count($uploadedFiles) . ' file berhasil diunggah.'
         );
     }
 
@@ -303,11 +322,17 @@ class FileController extends Controller
             ],
         ]);
 
-        if (!Storage::disk($file->disk)->exists($file->path)) {
+        // Block access if storage location is inactive
+        if (!$file->storageLocation || !$file->storageLocation->is_active) {
             abort(404, 'File not found');
         }
 
-        return Storage::disk($file->disk)->download($file->path, $file->name);
+        $diskKey = $file->storageLocation->diskKey();
+        if (!Storage::disk($diskKey)->exists($file->path)) {
+            abort(404, 'File not found');
+        }
+
+        return Storage::disk($diskKey)->download($file->path, $file->name);
     }
 
     public function preview(File $file)
@@ -315,7 +340,11 @@ class FileController extends Controller
         try {
             $this->authorize('view', $file);
 
-            if (!Storage::disk($file->disk)->exists($file->path)) {
+            if (!$file->storageLocation || !$file->storageLocation->is_active) {
+                abort(404, 'File not found');
+            }
+            $diskKey = $file->storageLocation->diskKey();
+            if (!Storage::disk($diskKey)->exists($file->path)) {
                 abort(404, 'File not found');
             }
 
@@ -333,7 +362,7 @@ class FileController extends Controller
                 ],
             ]);
 
-            $fileContent = Storage::disk($file->disk)->get($file->path);
+            $fileContent = Storage::disk($diskKey)->get($file->path);
 
             return response($fileContent)
                 ->header('Content-Type', $file->mime_type)

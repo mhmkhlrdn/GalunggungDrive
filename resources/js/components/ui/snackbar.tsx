@@ -79,34 +79,18 @@ const Snackbar: React.FC<SnackbarProps> = ({
         }
     };
 
-    const getPositionClasses = () => {
-        switch (position) {
-            case 'top-right':
-                return 'top-4 right-4';
-            case 'top-left':
-                return 'top-4 left-4';
-            case 'bottom-right':
-                return 'bottom-4 right-4';
-            case 'bottom-left':
-                return 'bottom-4 left-4';
-            case 'top-center':
-                return 'top-4 left-1/2 transform -translate-x-1/2';
-            case 'bottom-center':
-                return 'bottom-4 left-1/2 transform -translate-x-1/2';
-            default:
-                return 'top-4 right-4';
-        }
-    };
+    // Position is handled by the container (provider). Keep here for API compatibility.
+    const getPositionClasses = () => '';
 
     return (
         <div
             className={`
-                fixed z-50 max-w-sm w-full mx-auto p-4 border rounded-lg shadow-lg
+                w-full max-w-sm p-4 border rounded-lg shadow-lg
                 transition-all duration-300 ease-in-out
-                ${getPositionClasses()}
                 ${getBackgroundColor()}
                 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}
             `}
+            role="alert"
         >
             <div className="flex items-start">
                 <div className="flex-shrink-0">

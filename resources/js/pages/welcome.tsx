@@ -1,4 +1,4 @@
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import GasnetLogo from '@/components/gasnet-logo';
@@ -36,10 +36,10 @@ export default function Welcome() {
                                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg">
                                     <FolderOpen className="h-7 w-7 text-white" />
                                 </div>
-                                <GasnetLogo 
-                                    size="lg" 
-                                    showText={true} 
-                                    showSubtitle={true} 
+                                <GasnetLogo
+                                    size="lg"
+                                    showText={true}
+                                    showSubtitle={true}
                                     variant="full"
                                 />
                             </div>
@@ -179,17 +179,7 @@ export default function Welcome() {
                                     Gabung dengan tim yang sudah pakai Galunggung Drive untuk berbagi file sehari-hari.
                                     Lebih praktis dari email, lebih aman dari flashdisk.
                                 </p>
-                                {!auth.user && (
-                                    <div className="mt-8">
-                                        <Link
-                                            href={register()}
-                                            className="inline-flex items-center rounded-xl bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-xl transition-all hover:bg-blue-50 hover:shadow-2xl hover:scale-105"
-                                        >
-                                            Coba Sekarang
-                                            <ArrowRight className="ml-2 h-5 w-5" />
-                                        </Link>
-                                    </div>
-                                )}
+
                             </div>
                         </div>
                     </div>

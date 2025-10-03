@@ -30,7 +30,7 @@ class AdminUserSeeder extends Seeder
                 'name' => 'Regular User',
                 'email' => 'user@example.com',
                 'password' => Hash::make('password'),
-                'role' => 'guest',
+                'role' => 'staff',
                 'storage_limit' => 1073741824, // 1GB
                 'storage_used' => 0,
             ]

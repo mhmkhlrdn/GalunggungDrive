@@ -18,7 +18,7 @@ class File extends Model
         'folder_id',
         'name',
         'path',
-        'disk',
+        'disk_id',
         'size',
         'mime_type',
         'checksum',
@@ -40,6 +40,11 @@ class File extends Model
     public function folder(): BelongsTo
     {
         return $this->belongsTo(Folder::class);
+    }
+
+    public function storageLocation(): BelongsTo
+    {
+        return $this->belongsTo(StorageLocation::class, 'disk_id');
     }
 
     public function versions(): HasMany
@@ -70,18 +75,18 @@ class File extends Model
     {
         $bytes = $this->size;
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
     public function getIconAttribute(): string
     {
         $mimeType = $this->mime_type;
-        
+
         if (str_starts_with($mimeType, 'image/')) {
             return 'image';
         } elseif (str_starts_with($mimeType, 'video/')) {

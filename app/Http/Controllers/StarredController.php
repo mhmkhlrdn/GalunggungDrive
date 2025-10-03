@@ -16,8 +16,11 @@ class StarredController extends Controller
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'updated_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
-        $query = File::with(['user', 'folder'])
+
+        $query = File::with(['user', 'folder', 'storageLocation'])
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
                   ->orWhereHas('shares', function ($shareQuery) use ($user) {
@@ -27,7 +30,7 @@ class StarredController extends Controller
             ->whereHas('starredBy', function ($starQuery) use ($user) {
                 $starQuery->where('user_id', $user->id);
             });
-        
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -35,14 +38,14 @@ class StarredController extends Controller
                   ->orWhere('tags', 'like', "%{$search}%");
             });
         }
-        
+
         $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
-        
+
         // Get all users for sharing functionality
         $users = \App\Models\User::where('id', '!=', $user->id)
             ->select('id', 'name', 'email')
             ->get();
-        
+
         return Inertia::render('starred/index', [
             'files' => $files,
             'users' => $users,

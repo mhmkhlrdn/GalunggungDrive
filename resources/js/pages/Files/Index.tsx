@@ -634,7 +634,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                     onUpload={handleFileUpload}
                     currentFolderId={currentFolder?.id}
                     currentFolderName={currentFolder?.name}
-                    disks={disks}
+                    storageLocations={(disks as any) as Array<{ id: number; name: string }>}
                 />
                 <CreateFolderModal
                     isOpen={showCreateFolderModal}

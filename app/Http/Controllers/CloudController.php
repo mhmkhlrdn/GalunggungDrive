@@ -33,7 +33,10 @@ class CloudController extends Controller
 
 
         // Get all files (including those in folders) for comprehensive search
-        $allFiles = File::with(['user', 'folder'])
+        $allFiles = File::with(['user', 'folder', 'storageLocation'])
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
                   ->orWhere('visibility', 'public')
@@ -49,7 +52,10 @@ class CloudController extends Controller
             ->get();
 
         // Get root-level files for display
-        $files = File::with(['user'])
+        $files = File::with(['user', 'storageLocation'])
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->whereNull('folder_id')
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)

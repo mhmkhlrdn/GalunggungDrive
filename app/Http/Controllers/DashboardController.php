@@ -55,7 +55,10 @@ class DashboardController extends Controller
         ];
 
 
-        $recentFiles = File::with(['folder', 'user'])
+        $recentFiles = File::with(['folder', 'user', 'storageLocation'])
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->where('visibility', 'public')
             ->orderBy('updated_at', 'desc')
             ->limit(5)
@@ -66,7 +69,7 @@ class DashboardController extends Controller
                     'name' => $file->name,
                     'type' => $this->getFileType($file->mime_type),
                     'mime_type' => $file->mime_type,
-                    'size' => $this->formatFileSize($file->size),
+                    'size' => $file->size,
                     'modified' => $file->updated_at->diffForHumans(),
                     'created_at' => $file->created_at->toISOString(),
                     'description' => $file->description,
@@ -91,7 +94,11 @@ class DashboardController extends Controller
                 return [
                     'id' => $folder->id,
                     'name' => $folder->name,
-                    'files' => File::where('folder_id', $folder->id)->count(),
+                    'files' => File::where('folder_id', $folder->id)
+                        ->whereHas('storageLocation', function ($q) {
+                            $q->where('is_active', true);
+                        })
+                        ->count(),
                     'modified' => $folder->updated_at->diffForHumans(),
                     'link' => route('folders.show', ['folder' => $folder->id]),
                     'creator' => [

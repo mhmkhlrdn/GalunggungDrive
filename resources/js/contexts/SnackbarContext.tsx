@@ -36,7 +36,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
     const showSnackbar = (message: string, type: 'success' | 'error' | 'warning' | 'info', duration = 5000) => {
         const id = Math.random().toString(36).substr(2, 9);
         const newSnackbar: SnackbarMessage = { id, message, type, duration };
-        
+
         setSnackbars(prev => [...prev, newSnackbar]);
     };
 
@@ -71,11 +71,11 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
     return (
         <SnackbarContext.Provider value={contextValue}>
             {children}
-            <div className="fixed top-4 right-4 z-50 flex flex-col space-y-2 items-end">
+            <div className="pointer-events-none fixed top-4 right-4 z-50 flex max-h-[90vh] w-full max-w-sm flex-col items-end space-y-2 overflow-y-auto pr-1">
                 {snackbars.map((snackbar, index) => (
                     <div
                         key={snackbar.id}
-                        
+                        className="pointer-events-auto"
                     >
                         <Snackbar
                             message={snackbar.message}

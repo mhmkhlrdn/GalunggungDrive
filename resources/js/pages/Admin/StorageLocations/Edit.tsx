@@ -13,6 +13,7 @@ interface StorageLocation {
     name: string;
     root: string | null;
     is_active: boolean;
+    can_serve: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -26,6 +27,7 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
         name: storageLocation.name,
         root: storageLocation.root || '',
         is_active: storageLocation.is_active,
+        can_serve: storageLocation.can_serve,
     });
 
     const [showBrowser, setShowBrowser] = useState(false);
@@ -153,6 +155,14 @@ export default function EditStorageLocation({ storageLocation }: EditStorageLoca
                                             onCheckedChange={(checked) => setData('is_active', checked)}
                                         />
                                         <Label htmlFor="is_active">Aktif</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id="can_serve"
+                                            checked={data.can_serve}
+                                            onCheckedChange={(checked) => setData('can_serve', checked)}
+                                        />
+                                        <Label htmlFor="can_serve">Dapat Melayani (upload/preview)</Label>
                                     </div>
                                 </div>
 

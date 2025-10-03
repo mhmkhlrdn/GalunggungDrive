@@ -37,7 +37,7 @@ export interface User {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
-    role: 'admin' | 'staff' | 'guest';
+    role: 'admin' | 'staff';
     storage_limit: number;
     storage_used: number;
     created_at: string;

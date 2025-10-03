@@ -11,6 +11,7 @@ interface StorageLocation {
     name: string;
     root: string | null;
     is_active: boolean;
+    can_serve: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -20,8 +21,10 @@ interface ShowStorageLocationProps {
     diskStats?: { total: number | null; free: number | null; available: number | null };
 }
 
-export default function ShowStorageLocation({ storageLocation, diskStats }: ShowStorageLocationProps) {
+export default function ShowStorageLocation({ storageLocation, diskStats, otherLocations = [] }: { storageLocation: any, diskStats?: any, otherLocations?: Array<{ id: number; name: string }> }) {
     const [isToggling, setIsToggling] = useState(false);
+    const [showBackup, setShowBackup] = useState(false);
+    const [targetId, setTargetId] = useState<number | undefined>(undefined);
 
     const formatBytes = (bytes: number) => {
         if (bytes === 0) return '0 Bytes';
@@ -101,6 +104,13 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Hapus
                             </Button>
+                            <Button onClick={() => setShowBackup(true)}>Backup ke Lokasi Lain</Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => router.post(`/admin/storage-locations/${storageLocation.id}/toggle-serve`)}
+                            >
+                                {storageLocation.can_serve ? 'Nonaktifkan Serve' : 'Aktifkan Serve'}
+                            </Button>
                         </div>
                     </div>
 
@@ -122,6 +132,12 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                                     <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
                                     <Badge variant={storageLocation.is_active ? 'default' : 'destructive'}>
                                         {storageLocation.is_active ? 'Aktif' : 'Nonaktif'}
+                                    </Badge>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-medium text-muted-foreground">Dapat Melayani</h4>
+                                    <Badge variant={storageLocation.can_serve ? 'default' : 'secondary'}>
+                                        {storageLocation.can_serve ? 'Ya' : 'Tidak'}
                                     </Badge>
                                 </div>
                             </CardContent>
@@ -199,6 +215,37 @@ export default function ShowStorageLocation({ storageLocation, diskStats }: Show
                         </CardContent>
                     </Card>
             </div>
+            {showBackup && (
+                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+                    <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h3 className="text-lg font-semibold mb-4">Pilih Lokasi Tujuan</h3>
+                        <div className="space-y-2">
+                            <select
+                                className="w-full rounded border border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-800"
+                                value={targetId ? String(targetId) : ''}
+                                onChange={(e) => setTargetId(Number(e.target.value))}
+                            >
+                                <option value="" disabled>Pilih lokasi...</option>
+                                {otherLocations.map((loc) => (
+                                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setShowBackup(false)}>Batal</Button>
+                            <Button
+                                onClick={async () => {
+                                    if (!targetId) return;
+                                    await router.post(`/admin/storage-locations/${storageLocation.id}/backup`, { target_storage_location_id: targetId });
+                                    setShowBackup(false);
+                                }}
+                            >
+                                Mulai Backup
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppSidebarLayout>
     );
 }

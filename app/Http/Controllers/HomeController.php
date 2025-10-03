@@ -17,7 +17,10 @@ class HomeController extends Controller
         $sortBy = $request->get('sort_by', 'updated_at');
         $sortOrder = $request->get('sort_order', 'desc');
 
-        $filesQuery = File::with(['folder'])
+        $filesQuery = File::with(['folder', 'storageLocation'])
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->where('user_id', $userId);
         if ($search) {
             $filesQuery->where(function ($q) use ($search) {

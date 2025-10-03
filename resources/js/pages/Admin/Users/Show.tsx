@@ -29,7 +29,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'admin' | 'staff' | 'guest';
+    role: 'admin' | 'staff';
     is_active: boolean;
     storage_limit: number;
     storage_used: number;

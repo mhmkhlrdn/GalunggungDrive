@@ -8,20 +8,27 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from '@inertiajs/react';
 
+interface StorageLocationOption {
+    id: number;
+    name: string;
+}
+
 interface FileUploadModalProps {
     isOpen: boolean;
     onClose: () => void;
     onUpload: (files: File[]) => void;
     currentFolderId?: number;
     currentFolderName?: string;
+    storageLocations?: StorageLocationOption[];
 }
 
-export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName }: FileUploadModalProps) {
+export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName, storageLocations = [] }: FileUploadModalProps) {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-    
+
     const { data, setData, post, processing, errors, reset } = useForm({
         files: [] as File[],
         folder_id: currentFolderId || null,
+        disk_id: storageLocations.length ? storageLocations[0].id : undefined as number | undefined,
         description: '',
         tags: '',
         visibility: 'public',
@@ -176,7 +183,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                             <h4 className="font-medium text-slate-900 dark:text-white">
                                 Pengaturan File
                             </h4>
-                            
+
                             {/* Visibility */}
                             <div className="space-y-2">
                                 <Label htmlFor="visibility">Visibilitas</Label>
@@ -194,6 +201,27 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                                     <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                                         <AlertCircle className="h-4 w-4" />
                                         {errors.visibility}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Storage Location */}
+                            <div className="space-y-2">
+                                <Label htmlFor="disk_id">Lokasi Penyimpanan</Label>
+                                <Select value={data.disk_id ? String(data.disk_id) : undefined} onValueChange={(v) => setData('disk_id', Number(v))}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih lokasi penyimpanan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {storageLocations.map((loc) => (
+                                            <SelectItem key={loc.id} value={String(loc.id)}>{loc.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.disk_id && (
+                                    <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {String(errors.disk_id)}
                                     </div>
                                 )}
                             </div>

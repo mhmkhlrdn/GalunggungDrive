@@ -8,6 +8,7 @@ use App\Http\Controllers\StorageController;
 use App\Http\Controllers\RecentController;
 use App\Http\Controllers\StarredController;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\TrashController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -94,6 +95,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
     });
+    Route::resource('register', RegisteredUserController::class);
 
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
     Route::post('trash/empty', [TrashController::class, 'empty'])->name('trash.empty');
@@ -106,6 +108,8 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::get('storage-locations/browse', [\App\Http\Controllers\Admin\StorageLocationController::class, 'browse'])->name('storage-locations.browse');
         Route::resource('storage-locations', \App\Http\Controllers\Admin\StorageLocationController::class);
         Route::post('storage-locations/{storageLocation}/toggle', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggle'])->name('storage-locations.toggle');
+        Route::post('storage-locations/{storageLocation}/toggle-serve', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggleServe'])->name('storage-locations.toggle-serve');
+        Route::post('storage-locations/{storageLocation}/backup', [\App\Http\Controllers\Admin\StorageLocationController::class, 'backup'])->name('storage-locations.backup');
 
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
         Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Edit, Trash2, Eye, Power, PowerOff } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Trash2, Eye, Power, PowerOff, Database } from 'lucide-react';
 import { useState } from 'react';
 
 interface StorageLocation {
@@ -13,6 +13,7 @@ interface StorageLocation {
     name: string;
     root: string | null;
     is_active: boolean;
+    can_serve: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -81,7 +82,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                 </div>
                             </CardContent>
                         </Card>
-                        
+
                     </div>
 
                     <Card>
@@ -98,6 +99,7 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                         <TableHead>Nama</TableHead>
                                         <TableHead>Root</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Serve</TableHead>
                                         <TableHead>Dibuat</TableHead>
                                         <TableHead className="w-[50px]">Aksi</TableHead>
                                     </TableRow>
@@ -112,6 +114,11 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                             <TableCell>
                                                 <Badge variant={location.is_active ? 'default' : 'destructive'}>
                                                     {location.is_active ? 'Aktif' : 'Nonaktif'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={location.can_serve ? 'default' : 'secondary'}>
+                                                    {location.can_serve ? 'Ya' : 'Tidak'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
@@ -137,6 +144,9 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                                         Ubah
                                                     </Link>
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => router.post(`/admin/storage-locations/${location.id}/toggle-serve`)}>
+                                                            {location.can_serve ? 'Nonaktifkan Serve' : 'Aktifkan Serve'}
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => handleToggle(location.id)}
                                                             disabled={isToggling === location.id}
@@ -152,6 +162,12 @@ export default function StorageLocationsIndex({ storageLocations }: StorageLocat
                                                                     Aktifkan
                                                                 </>
                                                             )}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/admin/storage-locations/${location.id}`}>
+                                                                <Database className="h-4 w-4 mr-2" />
+                                                                Backup...
+                                                            </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => handleDelete(location.id, location.name)}

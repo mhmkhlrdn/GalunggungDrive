@@ -13,7 +13,7 @@ export default function UserCreate() {
         email: '',
         password: '',
         password_confirmation: '',
-        role: 'guest' as 'admin' | 'staff' | 'guest',
+        role: 'guest' as 'admin' | 'staff',
         storage_limit: 1073741824, // 1GB default
     });
 
@@ -149,14 +149,13 @@ export default function UserCreate() {
                                 <div className="space-y-2">
                                     <Label htmlFor="role">Peran</Label>
                                     <Select
-                                        value={data.role || 'guest'}
-                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff' | 'guest')}
+                                        value={data.role || 'staff'}
+                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff')}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Pilih peran" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="guest">Tamu</SelectItem>
                                             <SelectItem value="staff">Staf</SelectItem>
                                             <SelectItem value="admin">Admin</SelectItem>
                                         </SelectContent>
@@ -164,7 +163,6 @@ export default function UserCreate() {
                                     <p className="text-sm text-muted-foreground">
                                         {data.role === 'admin' && 'Akses penuh sistem dan manajemen pengguna'}
                                         {data.role === 'staff' && 'Akses admin terbatas dan dukungan pengguna'}
-                                        {data.role === 'guest' && 'Akses tamu standar ke file dan folder'}
                                     </p>
                                     {errors.role && (
                                         <p className="text-sm text-red-500">{errors.role}</p>

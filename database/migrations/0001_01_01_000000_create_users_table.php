@@ -11,8 +11,8 @@ return new class extends Migration {
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->enum('role', ['admin', 'staff', 'guest'])->default('guest');
-            $table->bigInteger('storage_limit')->default(0);
+            $table->enum('role', ['admin', 'staff'])->default('staff');
+            $table->bigInteger('storage_limit')->default(10737418240);
             $table->bigInteger('storage_used')->default(0);
             $table->timestamps();
             $table->softDeletes();

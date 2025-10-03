@@ -14,7 +14,24 @@ class StorageLocation extends Model
         'name',
         'root',
         'is_active',
+        'can_serve',
     ];
+
+    /**
+     * Scope: Only active storage locations.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Scope: Active and allowed to serve files (can_serve = true)
+     */
+    public function scopeServing($query)
+    {
+        return $query->where('is_active', true)->where('can_serve', true);
+    }
 
     public function diskKey(): string
     {

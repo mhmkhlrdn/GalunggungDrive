@@ -10,11 +10,8 @@ return new class extends Migration {
         Schema::create('storage_locations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            // Deprecated: key, driver removed
             $table->string('root')->nullable(); // for local
-            // Deprecated: public URL removed
-            $table->string('visibility')->default('private'); // private/public
-            // Deprecated: serve flag removed
+            $table->string('visibility')->default('private');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

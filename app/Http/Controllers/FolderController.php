@@ -47,13 +47,19 @@ class FolderController extends Controller
         // Transform folders to include files_count and total_size
         $folders->getCollection()->transform(function ($folder) {
             $filesCount = File::where('folder_id', $folder->id)
+                ->whereHas('storageLocation', function ($q) {
+                    $q->where('is_active', true);
+                })
                 ->where(function ($q) {
                     $q->where('user_id', Auth::id())
                       ->orWhere('visibility', 'public');
                 })
                 ->count();
-            
+
             $totalSize = File::where('folder_id', $folder->id)
+                ->whereHas('storageLocation', function ($q) {
+                    $q->where('is_active', true);
+                })
                 ->where(function ($q) {
                     $q->where('user_id', Auth::id())
                       ->orWhere('visibility', 'public');
@@ -62,7 +68,7 @@ class FolderController extends Controller
 
             $folder->files_count = $filesCount;
             $folder->total_size = $totalSize;
-            
+
             return $folder;
         });
 

@@ -35,7 +35,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'admin' | 'staff' | 'guest';
+    role: 'admin' | 'staff';
     is_active: boolean;
     storage_limit: number;
     storage_used: number;
@@ -236,7 +236,6 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                         <SelectItem value="all">Semua peran</SelectItem>
                                         <SelectItem value="admin">Admin</SelectItem>
                                         <SelectItem value="staff">Staf</SelectItem>
-                                        <SelectItem value="guest">Tamu</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

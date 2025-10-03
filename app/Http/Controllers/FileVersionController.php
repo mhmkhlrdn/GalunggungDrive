@@ -37,12 +37,21 @@ class FileVersionController extends Controller
         ]);
 
         $uploadedFile = $request->file('file');
-        
+
+        // Ensure file's storage location is active and can serve uploads
+        $storageLocation = $file->storageLocation()->first();
+        if (!$storageLocation || !$storageLocation->is_active) {
+            return redirect()->back()->withErrors(['file' => 'Lokasi penyimpanan tidak aktif.']);
+        }
+        if (!(bool) ($storageLocation->can_serve ?? false)) {
+            return redirect()->back()->withErrors(['file' => 'Lokasi penyimpanan tidak tersedia untuk upload versi.']);
+        }
+
         // Get next version number
         $nextVersion = FileVersion::where('file_id', $file->id)->max('version_number') + 1;
-        
-        // Store the new version
-        $path = $uploadedFile->store('files/versions', 'private');
+
+        // Store the new version on the same storage location
+        $path = $uploadedFile->store('files/versions', $storageLocation->diskKey());
         $checksum = hash_file('sha256', $uploadedFile->getRealPath());
 
         $version = FileVersion::create([
@@ -149,7 +158,7 @@ class FileVersionController extends Controller
 
         // Delete the file from storage
         Storage::disk('private')->delete($version->path);
-        
+
         $versionNumber = $version->version_number;
         $version->delete();
 
