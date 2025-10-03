@@ -15,7 +15,7 @@ return [
     'max_post_size' => 0, // 0 = unlimited, or specify in bytes
     'max_execution_time' => 0, // 0 = unlimited, or specify in seconds
     'memory_limit' => '2G', // Memory limit for processing large files
-    
+
     /*
     |--------------------------------------------------------------------------
     | Allowed File Types
@@ -25,7 +25,7 @@ return [
     | Leave empty array to allow all file types.
     |
     */
-    
+
     'allowed_mime_types' => [
         // Images
         'image/jpeg',
@@ -33,7 +33,7 @@ return [
         'image/gif',
         'image/webp',
         'image/svg+xml',
-        
+
         // Documents
         'application/pdf',
         'application/msword',
@@ -44,7 +44,8 @@ return [
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'text/plain',
         'text/csv',
-        
+        'application/octet-stream',
+
         // Archives
         'application/zip',
         'application/x-zip-compressed',
@@ -53,7 +54,7 @@ return [
         'application/vnd.rar',
         'application/x-7z-compressed',
         'application/gzip',
-        
+
         // Videos
         'video/mp4',
         'video/avi',
@@ -61,13 +62,16 @@ return [
         'video/wmv',
         'video/flv',
         'video/webm',
-        
+        'video/3gpp',
+        'video/x-matroska',
+        'video/quicktime',
+
         // Audio
         'audio/mp3',
         'audio/wav',
         'audio/ogg',
         'audio/mpeg',
-        
+
         // Code files
         'text/html',
         'text/css',
@@ -76,10 +80,10 @@ return [
         'application/json',
         'application/xml',
         'text/xml',
-        
+
         // Add more as needed, or leave empty to allow all
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Storage Configuration
@@ -88,10 +92,10 @@ return [
     | Storage disk and path configuration for uploaded files.
     |
     */
-    
+
     'storage_disk' => 'private',
     'storage_path' => 'files',
-    
+
     /*
     |--------------------------------------------------------------------------
     | Security Settings
@@ -100,7 +104,7 @@ return [
     | Security-related settings for file uploads.
     |
     */
-    
+
     'scan_uploads' => true, // Scan uploaded files for malware (if available)
     'generate_checksum' => true, // Generate SHA256 checksum for uploaded files
     'create_versions' => true, // Create version history for files

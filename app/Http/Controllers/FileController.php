@@ -131,19 +131,41 @@ class FileController extends Controller
             'visibility' => 'required|in:private,shared,public',
         ];
 
+        // Log uploaded file info before validation
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $uploadedFile) {
+                \Log::info('Upload attempt', [
+                    'original_name' => $uploadedFile->getClientOriginalName(),
+                    'mime_type' => $uploadedFile->getMimeType(),
+                    'extension' => $uploadedFile->getClientOriginalExtension(),
+                    'size' => $uploadedFile->getSize(),
+                ]);
+            }
+        } else {
+            \Log::warning('No files found in upload request');
+        }
 
         if (!empty($uploadConfig['allowed_mime_types'])) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }
 
-        $validated = $request->validate($validationRules);
+        try {
+            $validated = $request->validate($validationRules);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('File upload validation failed', [
+                'errors' => $e->errors(),
+            ]);
+            throw $e;
+        }
 
         // Ensure selected storage location is active and can serve uploads
         $storageLocation = StorageLocation::active()->where('id', $validated['disk_id'])->first();
         if (!$storageLocation) {
+            \Log::error('Storage location not active', ['disk_id' => $validated['disk_id']]);
             return redirect()->back()->withErrors(['disk_id' => 'Lokasi penyimpanan tidak aktif.']);
         }
         if (!(bool) ($storageLocation->can_serve ?? false)) {
+            \Log::error('Storage location cannot serve uploads', ['disk_id' => $validated['disk_id']]);
             return redirect()->back()->withErrors(['disk_id' => 'Lokasi penyimpanan tidak tersedia untuk upload.']);
         }
 
@@ -195,7 +217,7 @@ class FileController extends Controller
             ]);
 
             $uploadedFiles[] = $file;
-        }
+    }
 
         return redirect()->back()->with('success',
             count($uploadedFiles) . ' file berhasil diunggah.'

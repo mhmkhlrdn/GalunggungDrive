@@ -43,7 +43,10 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         onDrop,
         multiple: true,
         accept: {
-            'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'],
+            // Images
+            'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'],
+
+            // Documents
             'application/pdf': ['.pdf'],
             'application/msword': ['.doc'],
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
@@ -51,13 +54,40 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
             'application/vnd.ms-powerpoint': ['.ppt'],
             'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-            'text/plain': ['.txt'],
+            'text/plain': ['.txt', '.md'],
+            'application/json': ['.json'],
+            'application/xml': ['.xml'],
+            'text/xml': ['.xml'],
+            'text/html': ['.html', '.htm'],
+            'text/css': ['.css'],
+            'text/javascript': ['.js'],
+            'application/javascript': ['.js'],
+
+            // Archives
             'application/zip': ['.zip'],
             'application/x-zip-compressed': ['.zip'],
             'application/x-compressed-zip': ['.zip'],
             'application/x-rar-compressed': ['.rar'],
             'application/vnd.rar': ['.rar'],
             'application/x-7z-compressed': ['.7z'],
+            'application/gzip': ['.gz'],
+
+            // Videos
+            'video/mp4': ['.mp4'],
+            'video/x-matroska': ['.mkv'],
+            'video/webm': ['.webm'],
+            'video/quicktime': ['.mov'],
+            'video/avi': ['.avi'],
+            'video/wmv': ['.wmv'],
+            'video/flv': ['.flv'],
+
+            // Audio
+            'audio/mp3': ['.mp3'],
+            'audio/mpeg': ['.mp3'],
+            'audio/wav': ['.wav'],
+            'audio/ogg': ['.ogg'],
+            'audio/x-m4a': ['.m4a'],
+            'audio/aac': ['.aac'],
         },
     });
 
