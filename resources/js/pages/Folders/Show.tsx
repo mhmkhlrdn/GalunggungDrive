@@ -101,7 +101,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`${folder.name} - Folders`} />
+            <Head title={`${folder.name} - Folder`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 {/* Header */}
@@ -259,19 +259,19 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                     <thead className="bg-gray-50 dark:bg-gray-700">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Name
+                                                Nama
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Type
+                                                Jenis
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Size
+                                                Ukuran
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Modified
+                                                Dimodifikasi
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Actions
+                                                Aksi
                                             </th>
                                         </tr>
                                     </thead>
@@ -286,7 +286,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                                 <button
                                                                     onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
                                                                     className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate text-left"
-                                                                    title="Click to preview file"
+                                                                    title="Klik untuk melihat file"
                                                                 >
                                                                     {file.name}
                                                                 </button>
@@ -320,7 +320,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
-                                                            title="Preview"
+                                                            title="Lihat"
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
@@ -338,7 +338,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
-                                                            title="Move"
+                                                            title="Pindah"
                                                         >
                                                             <Move className="h-4 w-4" />
                                                         </Button>

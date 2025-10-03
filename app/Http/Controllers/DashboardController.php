@@ -17,7 +17,7 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-
+        $users = \App\Models\User::where('id', '!=', $user->id)->get();
 
         $totalUsedSpace = File::sum('size') + FileVersion::sum('size');
 
@@ -113,6 +113,7 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'stats' => $stats,
+            'users' => $users,
             'recentFiles' => $recentFiles,
             'recentFolders' => $recentFolders,
             'disks' => $availableDisks,

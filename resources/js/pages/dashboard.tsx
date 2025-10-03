@@ -74,6 +74,7 @@ interface DashboardProps {
         };
     }>;
     disks?: Array<{ key: string; label: string }>;
+    users: Array<{ id: number; name: string; email: string }>;
 }
 
 export default function Dashboard({ stats, recentFiles, recentFolders, disks = [] }: DashboardProps) {
@@ -83,6 +84,8 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [selectedFile, setSelectedFile] = useState<any>(null);
+    const { auth, users } = usePage().props as { auth?: any, users?: any };
+    const currentUserId = auth?.user?.id;
 
     const getFileIcon = (type: string) => {
         switch (type) {
@@ -351,7 +354,9 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                         setShowFilePreview(false);
                         setSelectedFile(null);
                     }}
+                    loggedinUser={auth.user}
                     file={selectedFile}
+                    users={users}
                 />
             </div>
         </AppLayout>

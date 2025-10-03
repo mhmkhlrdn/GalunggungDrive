@@ -106,7 +106,6 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order as any || 'desc');
 
-    // Handle URL action parameter
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
@@ -550,7 +549,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Location Information */}
                                             {file.folder && (
                                                 <div className="mt-1 flex items-center gap-1">
@@ -568,7 +567,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                                     </span>
                                                 </div>
                                             )}
-                                            
+
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {formatFileSize(file.size)} • {new Date(file.updated_at).toLocaleDateString()}
                                             </p>

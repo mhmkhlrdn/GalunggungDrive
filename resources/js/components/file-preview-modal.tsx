@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
+// If you use a toast system, import it here. Example:
+// import { toast } from '@/components/ui/use-toast';
 import { formatFileSize } from '@/lib/utils';
 import { X, Download, Share2, Eye, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import ShareModal from '@/components/share-modal';
+import { User } from '@/types';
 
 interface FilePreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
+    loggedinUser: User;
     file: {
         id: number;
         name: string;
@@ -23,30 +28,31 @@ interface FilePreviewModalProps {
     } | null;
 }
 
-export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProps) {
+export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, users = [] }: FilePreviewModalProps & { users?: Array<{ id: number; name: string; email: string }> }) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     useEffect(() => {
         let timeout: NodeJS.Timeout;
-        
+
         if (file && isOpen) {
             setLoading(true);
             setError(null);
             setPreviewUrl(null);
-            
+
             // Generate preview URL based on file type
             if (isImage(file.mime_type) || isVideo(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type)) {
                 const url = `/files/${file.id}/preview`;
                 setPreviewUrl(url);
-                
+
                 // Set a timeout to prevent infinite loading
                 timeout = setTimeout(() => {
                     setError('Preview loading timeout');
                     setLoading(false);
                 }, 10000); // 10 second timeout
-                
+
                 // Test if the URL is accessible
                 fetch(url, { method: 'HEAD' })
                     .then(response => {
@@ -72,7 +78,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
             setLoading(false);
             setError(null);
         }
-        
+
         return () => {
             if (timeout) {
                 clearTimeout(timeout);
@@ -171,7 +177,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                         }}
                                     />
                                 )}
-                                
+
                                 {isVideo(file.mime_type) && (
                                     <video
                                         src={previewUrl}
@@ -185,7 +191,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                         preload="metadata"
                                     />
                                 )}
-                                
+
                                 {isAudio(file.mime_type) && (
                                     <div className="p-8 text-center">
                                         <Music className="h-16 w-16 text-slate-400 mx-auto mb-4" />
@@ -202,7 +208,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                         />
                                     </div>
                                 )}
-                                
+
                                 {isPdf(file.mime_type) && (
                                     <iframe
                                         src={previewUrl}
@@ -220,7 +226,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                             {/* File Information */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                 <div>
-                                    <h4 className="font-medium text-slate-900 dark:text-white mb-2">File Information</h4>
+                                    <h4 className="font-medium text-slate-900 dark:text-white mb-2">Informasi File</h4>
                                     <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
                                         <p><strong>Nama:</strong> {file.name}</p>
                                         <p><strong>Ukuran:</strong> {formatFileSize(file.size)}</p>
@@ -231,14 +237,14 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                         )}
                                     </div>
                                 </div>
-                                
+
                                 {file.description && (
                                     <div>
                                         <h4 className="font-medium text-slate-900 dark:text-white mb-2">Description</h4>
                                         <p className="text-sm text-slate-600 dark:text-slate-300">{file.description}</p>
                                     </div>
                                 )}
-                                
+
                                 {file.tags && file.tags.length > 0 && (
                                     <div className="md:col-span-2">
                                         <h4 className="font-medium text-slate-900 dark:text-white mb-2">Tags</h4>
@@ -269,16 +275,34 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                             <Download className="mr-2 h-4 w-4" />
                             Download
                         </Button>
-                        <Button variant="outline">
+
+                        {/* { file.uploader != } */}
+
+                        {loggedinUser.id == file.uploader?.id &&
+                        <Button variant="outline" onClick={() => setShowShareModal(true)}>
                             <Share2 className="mr-2 h-4 w-4" />
-                            Share
+                            Bagikan
                         </Button>
+                        }
                     </div>
                     <Button variant="outline" onClick={onClose}>
                         <X className="mr-2 h-4 w-4" />
-                        Close
+                        Tutup
                     </Button>
                 </div>
+
+                {/* Show ShareModal */}
+                {showShareModal && file && (
+                    <ShareModal
+                        isOpen={showShareModal}
+                        onClose={() => setShowShareModal(false)}
+                        onShare={() => setShowShareModal(false)}
+                        files={[file]}
+                        users={users}
+                        mode="user-selection"
+                        selectedFiles={[file]}
+                    />
+                )}
             </DialogContent>
         </Dialog>
     );
