@@ -42,35 +42,32 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
             setError(null);
             setPreviewUrl(null);
 
-            // Generate preview URL based on file type
-            if (isImage(file.mime_type) || isVideo(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type)) {
+            if (isImage(file.mime_type) || isVideo(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
                 const url = `/files/${file.id}/preview`;
                 setPreviewUrl(url);
 
-                // Set a timeout to prevent infinite loading
                 timeout = setTimeout(() => {
                     setError('Preview loading timeout');
                     setLoading(false);
-                }, 10000); // 10 second timeout
+                }, 10000);
 
-                // Test if the URL is accessible
                 fetch(url, { method: 'HEAD' })
                     .then(response => {
                         clearTimeout(timeout);
                         if (response.ok) {
                             setLoading(false);
                         } else {
-                            setError('Failed to load file preview');
+                            setError('Gagal menampilkan file.');
                             setLoading(false);
                         }
                     })
                     .catch(() => {
                         clearTimeout(timeout);
-                        setError('Failed to load file preview');
+                        setError('Gagal menampilkan file.');
                         setLoading(false);
                     });
             } else {
-                setError('Preview not available for this file type');
+                setError('File ini tidak dapat diperlihatkan.');
                 setLoading(false);
             }
         } else {
@@ -90,7 +87,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
     const isVideo = (mimeType: string) => mimeType.startsWith('video/');
     const isAudio = (mimeType: string) => mimeType.startsWith('audio/');
     const isPdf = (mimeType: string) => mimeType === 'application/pdf';
-    const isText = (mimeType: string) => mimeType.startsWith('text/') || mimeType === 'application/json';
+    const isText = (mimeType: string) => mimeType.startsWith('text/');
 
     const getFileIcon = (mimeType: string) => {
         if (isImage(mimeType)) return Image;
@@ -177,7 +174,6 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                         }}
                                     />
                                 )}
-
                                 {isVideo(file.mime_type) && (
                                     <video
                                         src={previewUrl}
@@ -191,7 +187,6 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                         preload="metadata"
                                     />
                                 )}
-
                                 {isAudio(file.mime_type) && (
                                     <div className="p-8 text-center">
                                         <Music className="h-16 w-16 text-slate-400 mx-auto mb-4" />
@@ -208,7 +203,6 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                         />
                                     </div>
                                 )}
-
                                 {isPdf(file.mime_type) && (
                                     <iframe
                                         src={previewUrl}
@@ -219,6 +213,18 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                             setLoading(false);
                                         }}
                                         title={`PDF Preview: ${file.name}`}
+                                    />
+                                )}
+                                {isText(file.mime_type) && (
+                                    <iframe
+                                        src={previewUrl}
+                                        className="w-full h-96 border-0 bg-white text-left font-mono text-xs p-4"
+                                        onLoad={() => setLoading(false)}
+                                        onError={() => {
+                                            setError('Failed to load text preview');
+                                            setLoading(false);
+                                        }}
+                                        title={`Text Preview: ${file.name}`}
                                     />
                                 )}
                             </div>
@@ -265,7 +271,6 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                     )}
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center justify-between border-t pt-4">
                     <div className="flex items-center gap-2">
                         <Button
@@ -275,8 +280,6 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                             <Download className="mr-2 h-4 w-4" />
                             Download
                         </Button>
-
-                        {/* { file.uploader != } */}
 
                         {loggedinUser.id == file.uploader?.id &&
                         <Button variant="outline" onClick={() => setShowShareModal(true)}>
