@@ -108,12 +108,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             </Button>
                         </div>
 
-                <div className="text-center text-sm text-muted-foreground">
-                    Belum punya akun?{' '}
-                    <TextLink href={register()} tabIndex={5}>
-                        Daftar sekarang
-                    </TextLink>
-                </div>
+
             </form>
 
             {status && (

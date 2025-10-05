@@ -95,7 +95,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
     });
-    Route::resource('register', RegisteredUserController::class);
+    // Route::resource('register', RegisteredUserController::class);
 
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
     Route::post('trash/empty', [TrashController::class, 'empty'])->name('trash.empty');
