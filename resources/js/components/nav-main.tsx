@@ -154,7 +154,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     >
                         <div className="flex items-center gap-2">
                             <FolderPlus className="h-4 w-4" />
-                                    <span className="text-sm font-medium">Folder Saya</span>
+                                    <span className="text-sm font-medium">Folder</span>
                         </div>
                     </Link>
                 </div>

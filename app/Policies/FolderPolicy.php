@@ -24,7 +24,7 @@ class FolderPolicy
 
     public function restore(User $user, Folder $folder): bool
     {
-        return $user->id === $folder->user_id;
+        return $user->isAdmin() || $user->id === $folder->user_id;
     }
 }
 

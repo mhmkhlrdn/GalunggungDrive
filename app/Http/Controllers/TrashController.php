@@ -7,61 +7,68 @@ use App\Models\Folder;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TrashController extends Controller
 {
     public function index(Request $request): Response
-    {
-        $user = auth()->user();
-        $search = $request->get('search');
-        $type = $request->get('type', 'all');
-        $sortBy = $request->get('sort_by', 'deleted_at');
-        $sortOrder = $request->get('sort_order', 'desc');
+{
+    $user = Auth::user();
+    $isAdmin = $user->role === 'admin';
 
-        $filesQuery = File::onlyTrashed()
-            ->where('user_id', $user->id)
-            ->with(['user', 'folder']);
+    $search = $request->get('search');
+    $type = $request->get('type', 'all');
+    $sortBy = $request->get('sort_by', 'deleted_at');
+    $sortOrder = $request->get('sort_order', 'desc');
 
-        $foldersQuery = Folder::onlyTrashed()
-            ->where('user_id', $user->id);
+    $filesQuery = File::onlyTrashed()->with(['user', 'folder']);
+    $foldersQuery = Folder::onlyTrashed();
 
-        if ($search) {
-            $filesQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
-
-            $foldersQuery->where('name', 'like', "%{$search}%");
-        }
-
-        $files = null;
-        $folders = null;
-
-        if ($type === 'all' || $type === 'files') {
-            $files = $filesQuery->orderBy($sortBy, $sortOrder)->paginate(20);
-        }
-
-        if ($type === 'all' || $type === 'folders') {
-            $folders = $foldersQuery->orderBy($sortBy, $sortOrder)->paginate(20);
-        }
-
-        return Inertia::render('trash/index', [
-            'files' => $files,
-            'folders' => $folders,
-            'filters' => [
-                'search' => $search,
-                'type' => $type,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-            ],
-        ]);
+    if (!$isAdmin) {
+        // Restrict to current user's trashed items
+        $filesQuery->where('user_id', $user->id);
+        $foldersQuery->where('user_id', $user->id);
     }
+
+    if ($search) {
+        $filesQuery->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%");
+        });
+
+        $foldersQuery->where('name', 'like', "%{$search}%");
+    }
+
+    $files = null;
+    $folders = null;
+
+    if ($type === 'all' || $type === 'files') {
+        $files = $filesQuery->orderBy($sortBy, $sortOrder)->paginate(20);
+    }
+
+    if ($type === 'all' || $type === 'folders') {
+        $folders = $foldersQuery->orderBy($sortBy, $sortOrder)->paginate(20);
+    }
+
+    return Inertia::render('trash/index', [
+        'files' => $files,
+        'folders' => $folders,
+        'filters' => [
+            'search' => $search,
+            'type' => $type,
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ],
+        'isAdmin' => $isAdmin,
+    ]);
+}
+
 
     public function restoreFile(int $fileId): RedirectResponse
     {
-        $file = File::withTrashed()->where('id', $fileId)->where('user_id', auth()->id())->firstOrFail();
+        $file = File::withTrashed()->where('id', $fileId)->firstOrFail();
         $this->authorize('restore', $file);
         $file->restore();
         return redirect()->back()->with('success', 'File restored successfully.');
@@ -69,7 +76,7 @@ class TrashController extends Controller
 
     public function restoreFolder(int $folderId): RedirectResponse
     {
-        $folder = Folder::withTrashed()->where('id', $folderId)->where('user_id', auth()->id())->firstOrFail();
+        $folder = Folder::withTrashed()->where('id', $folderId)->firstOrFail();
         $this->authorize('restore', $folder);
         $folder->restore();
         return redirect()->back()->with('success', 'Folder restored successfully.');
@@ -77,7 +84,7 @@ class TrashController extends Controller
 
     public function destroyFilePermanently(int $fileId): RedirectResponse
     {
-        $file = File::withTrashed()->where('id', $fileId)->where('user_id', auth()->id())->firstOrFail();
+        $file = File::withTrashed()->where('id', $fileId)->firstOrFail();
         $this->authorize('delete', $file);
         $this->deletePhysicalFileAndVersions($file);
         $file->forceDelete();
@@ -86,25 +93,40 @@ class TrashController extends Controller
 
     public function destroyFolderPermanently(int $folderId): RedirectResponse
     {
-        $folder = Folder::withTrashed()->where('id', $folderId)->where('user_id', auth()->id())->firstOrFail();
+        $folder = Folder::withTrashed()->where('id', $folderId)->firstOrFail();
         $this->authorize('delete', $folder);
         $folder->forceDelete();
         return redirect()->back()->with('success', 'Folder permanently deleted.');
     }
 
     public function empty(Request $request): RedirectResponse
-    {
-        $userId = auth()->id();
+{
+    $user = Auth::user();
+    $isAdmin = $user->is_admin;
 
-        // Permanently delete all trashed files and folders owned by the user
-        File::onlyTrashed()->where('user_id', $userId)->get()->each(function (File $file) {
-            $this->deletePhysicalFileAndVersions($file);
-            $file->forceDelete();
-        });
-        Folder::onlyTrashed()->where('user_id', $userId)->forceDelete();
+    // Get the appropriate trashed files/folders
+    $fileQuery = File::onlyTrashed();
+    $folderQuery = Folder::onlyTrashed();
 
-        return redirect()->back()->with('success', 'Trash emptied successfully.');
+    if (!$isAdmin) {
+        $fileQuery->where('user_id', $user->id);
+        $folderQuery->where('user_id', $user->id);
     }
+
+    // Delete files and their versions
+    $fileQuery->get()->each(function (File $file) {
+        $this->deletePhysicalFileAndVersions($file);
+        $file->forceDelete();
+    });
+
+    // Delete folders
+    $folderQuery->get()->each(function (Folder $folder) {
+        $folder->forceDelete();
+    });
+
+    return redirect()->back()->with('success', 'Trash emptied successfully.');
+}
+
 
     private function deletePhysicalFileAndVersions(File $file): void
     {

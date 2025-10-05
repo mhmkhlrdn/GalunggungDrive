@@ -87,7 +87,7 @@
         <p>Situs sedang dalam mode maintenance. Kami sedang melakukan perbaikan untuk memberikan pengalaman yang lebih baik.</p>
                         <div>
                             <button onclick="window.location.reload()" class="button secondary">Coba Lagi</button>
-                            <a href="/login" class="button secondary">Login Admin</a>
+
                             <a href="/" class="button">Kembali ke Beranda</a>
                         </div>
     </div>

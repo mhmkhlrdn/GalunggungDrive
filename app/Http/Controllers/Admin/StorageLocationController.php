@@ -97,14 +97,20 @@ class StorageLocationController extends Controller
     public function destroy(StorageLocation $storageLocation): RedirectResponse
     {
         // Check if this storage location is being used by any files
-        $filesCount = \App\Models\File::where('disk', $storageLocation->diskKey())->count();
+        $filesCount = \App\Models\File::where('disk_id', $storageLocation->id)->count();
+
 
         if ($filesCount > 0) {
             return redirect()->route('admin.storage-locations.index')
                 ->with('error', "Cannot delete storage location. It is being used by {$filesCount} file(s).");
         }
 
-        $storageLocation->delete();
+        try {
+            $storageLocation->delete();
+        } catch (\Exception $e) {
+            return redirect()->route('admin.storage-locations.index')
+                ->with('error', 'Error deleting storage location: ' . $e->getMessage());
+        }
 
         return redirect()->route('admin.storage-locations.index')
             ->with('success', 'Storage location deleted successfully.');

@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import { FolderOpen, FileText, Download, Trash2, Search, Grid3X3, List, Eye, User, Calendar, HardDrive } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { fuzzyFilter } from '@/lib/utils';
 
 interface CloudFile {
@@ -53,7 +53,6 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
     const [draggingFileId, setDraggingFileId] = useState<number | null>(null);
     const [hoverFolderId, setHoverFolderId] = useState<number | null>(null);
 
-    const searchDebounceRef = useRef<number | null>(null);
     // Client-side fuzzy filtering for folders and files
     const filteredFolders = fuzzyFilter(
         folders,
@@ -80,7 +79,7 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs as any}>
+        <AppLayout breadcrumbs={breadcrumbs as Array<{ title: string; href: string }>}>
             <Head title="Cloud" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 <div className="flex items-center justify-between">
@@ -149,6 +148,19 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                                                 </div>
                                             </div>
                                         </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (confirm('Are you sure you want to delete this folder? All files and subfolders within it will also be deleted.')) {
+                                                    router.delete(`/folders/${folder.id}`);
+                                                }
+                                            }}
+                                            className="rounded bg-white p-2 text-red-600 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-700"
+                                            title="Delete folder"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
                                     </div>
                                 </Link>
                             ))}

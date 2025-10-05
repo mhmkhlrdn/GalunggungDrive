@@ -43,7 +43,7 @@ class FilePolicy
 
     public function restore(User $user, File $file): bool
     {
-        return $user->id === $file->user_id;
+        return $user->isAdmin() || $user->id === $file->user_id;
     }
 
     public function download(User $user, File $file): bool

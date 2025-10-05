@@ -38,12 +38,6 @@ export default function Maintenance() {
                                 Coba Lagi
                             </Button>
 
-                            <Button asChild variant="outline" className="flex items-center gap-2">
-                                <Link href="/login">
-                                    <LogIn className="h-4 w-4" />
-                                    Login Admin
-                                </Link>
-                            </Button>
 
                             <Button asChild className="flex items-center gap-2">
                                 <Link href="/">
