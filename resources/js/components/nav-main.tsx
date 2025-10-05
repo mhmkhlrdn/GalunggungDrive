@@ -92,7 +92,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
             icon: FileText,
         },
         {
-            title: 'Folder',
+            title: 'Folder Saya',
             href: '/folders',
             icon: Folder,
         },
@@ -154,7 +154,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     >
                         <div className="flex items-center gap-2">
                             <FolderPlus className="h-4 w-4" />
-                                    <span className="text-sm font-medium">Folder</span>
+                                    <span className="text-sm font-medium">Folder Saya</span>
                         </div>
                     </Link>
                 </div>
@@ -202,7 +202,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         <SidebarMenuButton asChild>
                             <Link href="/folders" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                 <Folder className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                                <span className="text-sm font-medium">Folder</span>
+                                <span className="text-sm font-medium">Folder Saya</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -299,6 +299,15 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
 
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild>
+                                <Link href="/admin/settings" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                    <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    <span className="text-sm font-medium">Pengaturan</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem>
+                            <SidebarMenuButton asChild>
                                 <Link href="/activity" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                     <Activity className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                     <span className="text-sm font-medium">Aktivitas</span>
@@ -306,14 +315,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
 
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild>
-                                <Link href="/admin/settings" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                    <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                                    <span className="text-sm font-medium">Pengaturan</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+
                     </SidebarGroup>
                 )}
             </SidebarMenu>

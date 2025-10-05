@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            // Add maintenance mode check to web middleware group, after authentication
+            \App\Http\Middleware\CheckMaintenanceMode::class,
         ]);
 
         $middleware->alias([
@@ -34,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (Throwable $e, $request) {
             if ($e instanceof HttpException) {
                 $status = $e->getStatusCode();
-                
+
                 // Check if the request expects JSON
                 if ($request->expectsJson()) {
                     $message = $e->getMessage() ?: match ($status) {
@@ -48,7 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         'status' => $status
                     ], $status);
                 }
-                
+
                 // Render custom error pages for web requests
                 switch ($status) {
                     case 403:
@@ -56,12 +58,13 @@ return Application::configure(basePath: dirname(__DIR__))
                     case 404:
                         return Inertia::render('errors/404')->toResponse($request)->setStatusCode(404);
                     case 500:
-                        return Inertia::render('errors/500')->toResponse($request)->setStatusCode(500);
+                        $errorMessage = $e->getMessage() ?: 'Kesalahan Server Internal';
+                        return Inertia::render('errors/500', ['message' => $errorMessage])->toResponse($request)->setStatusCode(500);
                     default:
                         return null; // Let Laravel handle other cases
                 }
             }
-            
+
             // Handle other exceptions
             if ($request->expectsJson()) {
                 return response()->json([
@@ -69,8 +72,8 @@ return Application::configure(basePath: dirname(__DIR__))
                     'status' => 500
                 ], 500);
             }
-            
-            // For web requests, render the 500 error page
-            return Inertia::render('errors/500')->toResponse($request)->setStatusCode(500);
+
+            // For web requests, render the 500 error page with a generic message
+            return Inertia::render('errors/500', ['message' => 'Terjadi kesalahan server yang tidak terduga.'])->toResponse($request)->setStatusCode(500);
         });
     })->create();

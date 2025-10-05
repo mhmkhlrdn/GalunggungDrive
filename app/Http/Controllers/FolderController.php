@@ -25,11 +25,8 @@ class FolderController extends Controller
 
         $query = Folder::with(['user', 'parent'])
             ->where(function ($q) {
-                $q->where('user_id', Auth::id())
-                  ->orWhere('visibility', 'public')
-                  ->orWhereHas('shares', function ($shareQuery) {
-                      $shareQuery->where('shared_with', Auth::id());
-                  });
+                $q->where('user_id', Auth::id());
+
             });
 
         if ($parentId) {

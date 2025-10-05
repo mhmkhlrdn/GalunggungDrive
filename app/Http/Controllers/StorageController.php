@@ -16,39 +16,17 @@ class StorageController extends Controller
     public function index(): Response
     {
         $user = auth()->user();
-        
+
         // Calculate storage statistics
         $totalFiles = File::where('user_id', $user->id)->count();
         $totalFolders = Folder::where('user_id', $user->id)->count();
         $sharedFiles = FileShare::where('shared_by', $user->id)->count();
-        
+
         // Calculate storage usage based on user's capacity
         $usedSpace = File::where('user_id', $user->id)->sum('size');
-        
-        // Calculate total free space from all active storage locations
-        $totalSpace = 0;
-        $locations = StorageLocation::where('is_active', true)->get();
-        foreach ($locations as $location) {
-            if ($location->driver === 'local' && $location->root && @is_dir($location->root)) {
-                try {
-                    $diskFreeSpace = @disk_free_space($location->root);
-                    if ($diskFreeSpace !== false) {
-                        $totalSpace += $diskFreeSpace;
-                    }
-                } catch (\Throwable $e) {
-                    // Skip this location if we can't read it
-                    continue;
-                }
-            }
-        }
-        
-        // Fallback to user's storage limit if no storage locations found
-        if ($totalSpace === 0) {
-            $totalSpace = (int) ($user->storage_limit ?? (100 * 1024 * 1024 * 1024));
-        }
-        
+        $totalSpace = (int) ($user->storage_limit ?? (100 * 1024 * 1024 * 1024));
         $availableSpace = max(0, $totalSpace - $usedSpace);
-        
+
         $stats = [
             'totalSpace' => $totalSpace,
             'usedSpace' => $usedSpace,
@@ -61,19 +39,19 @@ class StorageController extends Controller
                 ->count(),
             'monthlyGrowth' => 0, // You can implement this based on your needs
         ];
-        
+
         // Get file type statistics
         $fileTypeStats = File::where('user_id', $user->id)
             ->selectRaw('
-                CASE 
-                    WHEN mime_type LIKE "image/%" THEN "Foto"
-                    WHEN mime_type LIKE "video/%" THEN "Video"
-                    WHEN mime_type LIKE "audio/%" THEN "Suara"
-                    WHEN mime_type = "application/pdf" THEN "PDF"
-                    WHEN mime_type LIKE "%word%" THEN "Dokumen"
-                    WHEN mime_type LIKE "%excel%" OR mime_type LIKE "%spreadsheet%" THEN "Spreadsheet"
-                    WHEN mime_type LIKE "%zip%" OR mime_type LIKE "%rar%" OR mime_type LIKE "%7z%" THEN "Arsip"
-                    ELSE "Lain-lain"
+                CASE
+                    WHEN mime_type LIKE "image/%" THEN "Images"
+                    WHEN mime_type LIKE "video/%" THEN "Videos"
+                    WHEN mime_type LIKE "audio/%" THEN "Audio"
+                    WHEN mime_type = "application/pdf" THEN "PDFs"
+                    WHEN mime_type LIKE "%word%" THEN "Documents"
+                    WHEN mime_type LIKE "%excel%" OR mime_type LIKE "%spreadsheet%" THEN "Spreadsheets"
+                    WHEN mime_type LIKE "%zip%" OR mime_type LIKE "%rar%" OR mime_type LIKE "%7z%" THEN "Archives"
+                    ELSE "Other"
                 END as type,
                 COUNT(*) as count,
                 SUM(size) as size
@@ -90,7 +68,7 @@ class StorageController extends Controller
                     'color' => $colors[$index % count($colors)],
                 ];
             });
-        
+
         // Get recent activity
         $recentActivity = ActivityLog::where('user_id', $user->id)
             ->whereIn('action', ['upload', 'download', 'share', 'delete'])
@@ -106,7 +84,7 @@ class StorageController extends Controller
                     'timestamp' => $log->created_at->toISOString(),
                 ];
             });
-        
+
         // For admins, include per-storage-location disk stats (best-effort)
         $locations = [];
         if ($user->role === 'admin') {
@@ -147,7 +125,7 @@ class StorageController extends Controller
             'locations' => $locations,
         ]);
     }
-    
+
     private function formatFileSize($bytes)
     {
         if ($bytes === 0) return '0 Bytes';

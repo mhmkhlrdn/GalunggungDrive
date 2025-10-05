@@ -148,7 +148,7 @@ export default function CreateStorageLocation() {
                                             checked={data.can_serve}
                                             onCheckedChange={(checked) => setData('can_serve', checked)}
                                         />
-                                        <Label htmlFor="can_serve">Dapat Melayani (upload/preview)</Label>
+                                        <Label htmlFor="can_serve">Dapat Melayani</Label>
                                     </div>
                                 </div>
 

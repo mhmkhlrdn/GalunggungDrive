@@ -13,12 +13,12 @@ class FilePolicy
         if ($user->id === $file->user_id) {
             return true;
         }
-        
+
         // Allow viewing if file is public
         if ($file->visibility === 'public') {
             return true;
         }
-        
+
         // Allow viewing if user has been granted access through sharing
         $hasSharedAccess = $file->shares()
             ->where('shared_with', $user->id)
@@ -27,18 +27,18 @@ class FilePolicy
                       ->orWhere('expires_at', '>', now());
             })
             ->exists();
-            
+
         return $hasSharedAccess;
     }
 
     public function update(User $user, File $file): bool
     {
-        return $user->id === $file->user_id;
+        return $user->isAdmin() || $user->id === $file->user_id;
     }
 
     public function delete(User $user, File $file): bool
     {
-        return $user->id === $file->user_id;
+        return $user->isAdmin() || $user->id === $file->user_id;
     }
 
     public function restore(User $user, File $file): bool
@@ -52,12 +52,12 @@ class FilePolicy
         if ($user->id === $file->user_id) {
             return true;
         }
-        
+
         // Allow download if file is public
         if ($file->visibility === 'public') {
             return true;
         }
-        
+
         // Allow download if user has been granted download permission through sharing
         $hasDownloadAccess = $file->shares()
             ->where('shared_with', $user->id)
@@ -67,7 +67,7 @@ class FilePolicy
                       ->orWhere('expires_at', '>', now());
             })
             ->exists();
-            
+
         return $hasDownloadAccess;
     }
 }

@@ -142,13 +142,13 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Folder" />
+            <Head title="Folder Saya" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                            {currentFolder ? currentFolder.name : 'Folder'}
+                            {currentFolder ? currentFolder.name : 'Folder Saya'}
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
                             {folders.total} folder • {currentFolder ? 'dalam folder ini' : 'total'}

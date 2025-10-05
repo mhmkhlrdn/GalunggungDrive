@@ -113,6 +113,9 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
 
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
         Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
+
+        Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
+        Route::post('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
     });
 });
 
