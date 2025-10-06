@@ -185,7 +185,7 @@ class FileController extends Controller
                 $path = $uploadedFile->store($storagePath, $storageDisk);
                 Log::info('File stored successfully', ['path' => $path, 'disk' => $storageDisk]);
             } catch (\Exception $e) {
-                Log::error('File storage failed', [
+                Log::error('File storage failed due to exception', [
                     'error' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -194,13 +194,23 @@ class FileController extends Controller
                 return redirect()->back()->withErrors(['upload' => 'Gagal mengunggah file: ' . $e->getMessage()]);
             }
 
+            if ($path === false) {
+                Log::error('File storage returned false', [
+                    'original_name' => $uploadedFile->getClientOriginalName(),
+                    'storage_path' => $storagePath,
+                    'storage_disk' => $storageDisk,
+                    'message' => 'This often indicates a permissions issue or an invalid path on the filesystem. Check web server write permissions for the target directory and mount options for the FAT32 drive.',
+                ]);
+                return redirect()->back()->withErrors(['upload' => 'Gagal menyimpan file ke disk. Periksa izin direktori dan opsi mount drive.']);
+            }
+
             if (is_null($path)) {
-                Log::error('File path is null after storage', [
+                Log::error('File path is null after successful storage operation (unexpected)', [
                     'original_name' => $uploadedFile->getClientOriginalName(),
                     'storage_path' => $storagePath,
                     'storage_disk' => $storageDisk,
                 ]);
-                return redirect()->back()->withErrors(['upload' => 'Gagal mendapatkan path file setelah diunggah.']);
+                return redirect()->back()->withErrors(['upload' => 'Gagal mendapatkan path file setelah diunggah (path null).']);
             }
 
             $checksum = hash_file('sha256', $uploadedFile->getRealPath());
