@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\StorageLocation;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -175,7 +176,33 @@ class FileController extends Controller
 
         foreach ($request->file('files') as $uploadedFile) {
             $storagePath = $uploadConfig['storage_path'] ?? 'files';
-            $path = $uploadedFile->store($storagePath, $storageDisk);
+            \Log::info('Attempting to store file', [
+                'storage_path' => $storagePath,
+                'storage_disk' => $storageDisk,
+                'original_name' => $uploadedFile->getClientOriginalName(),
+            ]);
+            try {
+                $path = $uploadedFile->store($storagePath, $storageDisk);
+                \Log::info('File stored successfully', ['path' => $path, 'disk' => $storageDisk]);
+            } catch (\Exception $e) {
+                \Log::error('File storage failed', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return redirect()->back()->withErrors(['upload' => 'Gagal mengunggah file: ' . $e->getMessage()]);
+            }
+
+            if (is_null($path)) {
+                Log::error('File path is null after storage', [
+                    'original_name' => $uploadedFile->getClientOriginalName(),
+                    'storage_path' => $storagePath,
+                    'storage_disk' => $storageDisk,
+                ]);
+                return redirect()->back()->withErrors(['upload' => 'Gagal mendapatkan path file setelah diunggah.']);
+            }
+
             $checksum = hash_file('sha256', $uploadedFile->getRealPath());
 
             $file = File::create([
