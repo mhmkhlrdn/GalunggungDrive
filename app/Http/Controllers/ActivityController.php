@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Response;
 
 class ActivityController extends Controller
@@ -40,7 +41,7 @@ class ActivityController extends Controller
 
         $activities = $query->with('user')->orderBy('created_at', 'desc')->paginate(20);
 
-        
+
         $availableActions = ActivityLog::where('user_id', $user->id)
             ->distinct()
             ->pluck('action')
@@ -58,4 +59,18 @@ class ActivityController extends Controller
             ],
         ]);
     }
+
+    public function clear(Request $request){
+        $user = Auth::user();
+        if($user->role === 'super-admin'){
+            try {
+            ActivityLog::truncate();
+            return redirect()->back()->with('success', 'Activity log cleared successfully.');
+            } catch (\Exception $e) {
+                return redirect()->back()->with('error', 'An error occurred while clearing the activity log.');
+            }
+    }
+
+    ;
+}
 }

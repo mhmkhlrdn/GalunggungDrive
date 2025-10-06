@@ -95,6 +95,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
 
     Route::middleware('admin')->group(function () {
         Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
+        Route::post('activity/clear', [ActivityController::class, 'clear'])->name('activity.clear');
     });
     // Route::resource('register', RegisteredUserController::class);
 
@@ -115,6 +116,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::middleware(SuperAdminMiddleware::class)->group(function () {
             Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
             Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
+
         });
 
         Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
