@@ -162,6 +162,8 @@ class FileController extends Controller
             // Admins and Super-Admins can upload any file type, so no specific mimetypes validation is added here.
         } elseif ($user && $user->isStaff()) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $staffAllowedMimeTypes);
+            // Staff users can only upload public files
+            $validationRules['visibility'] = 'required|in:public';
         } elseif (!empty($uploadConfig['allowed_mime_types'])) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }

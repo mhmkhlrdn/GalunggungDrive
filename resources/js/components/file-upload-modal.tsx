@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 
 interface StorageLocationOption {
     id: number;
@@ -23,6 +23,10 @@ interface FileUploadModalProps {
 }
 
 export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName, storageLocations = [] }: FileUploadModalProps) {
+    const { auth } = usePage<SharedData>().props;
+    const user = auth.user;
+    const isStaff = user && user.role === 'staff';
+
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -31,7 +35,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         disk_id: storageLocations.length ? storageLocations[0].id : undefined as number | undefined,
         description: '',
         tags: '',
-        visibility: 'public',
+        visibility: isStaff ? 'public' : 'private', // Default to public for staff, private for others
     });
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -222,8 +226,12 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                                         <SelectValue placeholder="Pilih visibilitas" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="private">Pribadi</SelectItem>
-                                        <SelectItem value="shared">Dibagikan</SelectItem>
+                                        {!isStaff && (
+                                            <>
+                                                <SelectItem value="private">Pribadi</SelectItem>
+                                                <SelectItem value="shared">Dibagikan</SelectItem>
+                                            </>
+                                        )}
                                         <SelectItem value="public">Publik</SelectItem>
                                     </SelectContent>
                                 </Select>

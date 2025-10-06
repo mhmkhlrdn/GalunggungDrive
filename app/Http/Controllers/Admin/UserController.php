@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -160,7 +161,23 @@ class UserController extends Controller
             ]);
         }
 
-        $user->delete();
+        // Delete all files uploaded by the user from storage
+        foreach ($user->files as $file) {
+            if ($file->storageLocation && $file->storageLocation->is_active) {
+                $diskKey = $file->storageLocation->diskKey();
+                if (Storage::disk($diskKey)->exists($file->path)) {
+                    Storage::disk($diskKey)->delete($file->path);
+                }
+            }
+            $file->forceDelete(); // Permanently delete file record from database
+        }
+
+        // Delete all folders created by the user
+        foreach ($user->folders as $folder) {
+            $folder->forceDelete(); // Permanently delete folder record from database
+        }
+
+        $user->delete(); // Soft delete the user
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User deleted successfully.');
