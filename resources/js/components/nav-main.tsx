@@ -70,6 +70,7 @@ import { useState } from 'react';
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const page = usePage<SharedData>();
     const [expandedItems, setExpandedItems] = useState<string[]>(['files', 'sharing', 'management']);
+    const isSuperAdmin = page.props.auth.user.role === 'super-admin';
     const isAdmin = ['admin', 'super-admin'].includes(page.props.auth.user.role);
 
     const toggleExpanded = (itemId: string) => {
@@ -288,14 +289,16 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
 
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild>
-                                <Link href="/admin/users" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                    <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                                    <span className="text-sm font-medium">Pengguna</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {isSuperAdmin && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild>
+                                    <Link href="/admin/users" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                        <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                        <span className="text-sm font-medium">Pengguna</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
 
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild>

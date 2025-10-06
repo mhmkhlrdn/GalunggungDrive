@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\TrashController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Middleware\SuperAdminMiddleware;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -111,8 +112,10 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::post('storage-locations/{storageLocation}/toggle-serve', [\App\Http\Controllers\Admin\StorageLocationController::class, 'toggleServe'])->name('storage-locations.toggle-serve');
         Route::post('storage-locations/{storageLocation}/backup', [\App\Http\Controllers\Admin\StorageLocationController::class, 'backup'])->name('storage-locations.backup');
 
-        Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
-        Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::middleware(SuperAdminMiddleware::class)->group(function () {
+            Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+            Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
+        });
 
         Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
