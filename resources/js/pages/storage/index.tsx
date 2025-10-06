@@ -238,29 +238,6 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                             ))}
                         </div>
                     </div>
-
-                    <div className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800">
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                            Aktivitas Terbaru
-                        </h3>
-                        <div className="space-y-3">
-                            {recentActivity.map((activity) => (
-                                <div key={activity.id} className="flex items-center space-x-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
-                                        <Activity className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                            {activity.action} {activity.file_name}
-                                        </p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {activity.size} • {new Date(activity.timestamp).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                 </div>
 
                 {/* Storage Alerts */}
@@ -289,7 +266,7 @@ export default function StorageIndex({ stats, fileTypeStats, recentActivity, loc
                     </div>
                 )}
 
-                
+
 
             </div>
         </AppLayout>

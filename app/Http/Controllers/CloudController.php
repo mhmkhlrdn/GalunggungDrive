@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\File;
 use App\Models\Folder;
+use App\Models\User; // Add this line
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -12,21 +13,31 @@ class CloudController extends Controller
 {
     public function index(): Response
     {
-        $userId = Auth::id();
+        /** @var User $user */ // Add this line
+        $user = Auth::user();
+        $userId = $user->id;
 
+
+        $user = Auth::user();
 
         $folders = Folder::with('user')
             ->whereNull('parent_id')
-            ->where(function ($q) use ($userId) {
-                $q->where('user_id', $userId)
-                  ->orWhere('visibility', 'public')
-                  ->orWhereHas('shares', function ($shareQuery) use ($userId) {
-                      $shareQuery->where('shared_with', $userId)
-                                 ->where(function ($expireQuery) {
-                                     $expireQuery->whereNull('expires_at')
-                                                ->orWhere('expires_at', '>', now());
-                                 });
-                  });
+            ->where(function ($q) use ($userId, $user) {
+                if ($user->isStaff() && !$user->isAdmin()) {
+                    // Staff users can only see their own folders
+                    $q->where('user_id', $userId);
+                } else {
+                    // Regular users and admins see their own, public, and shared folders
+                    $q->where('user_id', $userId)
+                      ->orWhere('visibility', 'public')
+                      ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                          $shareQuery->where('shared_with', $userId)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                }
             })
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id', 'user_id', 'updated_at']);
@@ -37,16 +48,22 @@ class CloudController extends Controller
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
             })
-            ->where(function ($q) use ($userId) {
-                $q->where('user_id', $userId)
-                  ->orWhere('visibility', 'public')
-                  ->orWhereHas('shares', function ($shareQuery) use ($userId) {
-                      $shareQuery->where('shared_with', $userId)
-                                 ->where(function ($expireQuery) {
-                                     $expireQuery->whereNull('expires_at')
-                                                ->orWhere('expires_at', '>', now());
-                                 });
-                  });
+            ->where(function ($q) use ($userId, $user) {
+                if ($user->isStaff() && !$user->isAdmin()) {
+                    // Staff users can only see their own files
+                    $q->where('user_id', $userId);
+                } else {
+                    // Regular users and admins see their own, public, and shared files
+                    $q->where('user_id', $userId)
+                      ->orWhere('visibility', 'public')
+                      ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                          $shareQuery->where('shared_with', $userId)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                }
             })
             ->orderBy('updated_at', 'desc')
             ->get();
@@ -57,16 +74,22 @@ class CloudController extends Controller
                 $q->where('is_active', true);
             })
             ->whereNull('folder_id')
-            ->where(function ($q) use ($userId) {
-                $q->where('user_id', $userId)
-                  ->orWhere('visibility', 'public')
-                  ->orWhereHas('shares', function ($shareQuery) use ($userId) {
-                      $shareQuery->where('shared_with', $userId)
-                                 ->where(function ($expireQuery) {
-                                     $expireQuery->whereNull('expires_at')
-                                                ->orWhere('expires_at', '>', now());
-                                 });
-                  });
+            ->where(function ($q) use ($userId, $user) {
+                if ($user->isStaff() && !$user->isAdmin()) {
+                    // Staff users can only see their own files
+                    $q->where('user_id', $userId);
+                } else {
+                    // Regular users and admins see their own, public, and shared files
+                    $q->where('user_id', $userId)
+                      ->orWhere('visibility', 'public')
+                      ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                          $shareQuery->where('shared_with', $userId)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                }
             })
             ->orderBy('updated_at', 'desc')
             ->paginate(20);

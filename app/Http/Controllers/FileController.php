@@ -54,16 +54,25 @@ class FileController extends Controller
     }
     public function index(Request $request): Response
     {
+        /** @var User $user */
+        $user = Auth::user();
         $folderId = $request->get('folder_id');
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
 
         $query = File::with(['user', 'folder', 'storageLocation'])
-            ->where('user_id', Auth::id())
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
             });
+
+        if ($user->isStaff() && !$user->isAdmin()) {
+            // Staff users can only see their own files
+            $query->where('user_id', $user->id);
+        } else {
+            // Admins and regular users see their own files
+            $query->where('user_id', $user->id);
+        }
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
@@ -80,22 +89,26 @@ class FileController extends Controller
 
         $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
-        $files->getCollection()->transform(function ($file) {
-            $file->starred = $file->isStarredBy(Auth::user());
+        $files->getCollection()->transform(function ($file) use ($user) {
+            $file->starred = $file->isStarredBy($user);
             return $file;
         });
 
         $currentFolder = $folderId ? Folder::find($folderId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
 
-        $allFolders = Folder::where(function ($q) {
-                $q->where('user_id', Auth::id())
-                  ->orWhere('visibility', 'public');
+        $allFolders = Folder::where(function ($q) use ($user) {
+                if ($user->isStaff() && !$user->isAdmin()) {
+                    $q->where('user_id', $user->id);
+                } else {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('visibility', 'public');
+                }
             })
             ->orderBy('name')
             ->get(['id', 'name', 'parent_id']);
 
-        $users = \App\Models\User::where('id', '!=', Auth::id())
+        $users = \App\Models\User::where('id', '!=', $user->id)
             ->select('id', 'name', 'email')
             ->get();
 

@@ -9,6 +9,17 @@ class FilePolicy
 {
     public function view(User $user, File $file): bool
     {
+        // Admins and Super-Admins can view any file
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        // Staff users can only view their own files
+        if ($user->isStaff()) {
+            return $user->id === $file->user_id;
+        }
+
+        // For regular users (non-staff, non-admin):
         // Allow viewing if user owns the file
         if ($user->id === $file->user_id) {
             return true;
@@ -48,6 +59,17 @@ class FilePolicy
 
     public function download(User $user, File $file): bool
     {
+        // Admins and Super-Admins can download any file
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        // Staff users can only download their own files
+        if ($user->isStaff()) {
+            return $user->id === $file->user_id;
+        }
+
+        // For regular users (non-staff, non-admin):
         // Allow download if user owns the file
         if ($user->id === $file->user_id) {
             return true;
