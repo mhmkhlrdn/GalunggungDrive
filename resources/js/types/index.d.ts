@@ -1,6 +1,8 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
 
+declare function route(name: string, params?: Record<string, unknown>): string;
+
 export interface Auth {
     user: User;
 }

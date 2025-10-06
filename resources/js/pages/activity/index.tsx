@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 import {
     Search,
     Filter,
@@ -31,7 +32,7 @@ interface ActivityLog {
     ip_address: string;
     user_agent: string;
     success: boolean;
-    details: Record<string, any>;
+    details: Record<string, unknown>;
     created_at: string;
     user?: {
         id: number;
@@ -61,6 +62,8 @@ export default function ActivityIndex({ activities, availableActions, filters }:
     const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
     const [search, setSearch] = useState(filters.search || '');
     const [actionFilter, setActionFilter] = useState(filters.action || '');
+    const [dateFromFilter, setDateFromFilter] = useState(filters.date_from || '');
+    const [dateToFilter, setDateToFilter] = useState(filters.date_to || '');
 
     // Client-side fuzzy filtering for activities
     const filteredActivities = fuzzyFilter(
@@ -82,7 +85,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
     );
 
     // Apply action filter if selected
-    const finalFilteredActivities = actionFilter 
+    const finalFilteredActivities = actionFilter
         ? filteredActivities.filter(activity => activity.action === actionFilter)
         : filteredActivities;
 
@@ -246,7 +249,8 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                             </label>
                             <input
                                 type="date"
-                                defaultValue={filters.date_from}
+                                value={dateFromFilter}
+                                onChange={(e) => setDateFromFilter(e.target.value)}
                                 className="w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             />
                         </div>
@@ -256,19 +260,26 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                             </label>
                             <input
                                 type="date"
-                                defaultValue={filters.date_to}
+                                value={dateToFilter}
+                                onChange={(e) => setDateToFilter(e.target.value)}
                                 className="w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             />
                         </div>
                     </div>
                     <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                            <button className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            <button
+                                onClick={() => router.get(route('activity.index', { search, action: actionFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
+                                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
                                 <Filter className="mr-2 h-4 w-4" />
                                 Terapkan Filter
                             </button>
-                            <button className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
-                                Hapus
+                            <button
+                                onClick={() => router.get(route('activity.index'))}
+                                className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                            >
+                                Hapus Filter
                             </button>
                         </div>
                         <div className="text-sm text-slate-600 dark:text-slate-300">
@@ -287,7 +298,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                             {search || actionFilter ? 'Tidak ada aktivitas yang cocok' : 'Tidak ada aktivitas ditemukan'}
                         </h3>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {search || actionFilter 
+                            {search || actionFilter
                                 ? `Tidak ada aktivitas yang cocok dengan filter "${search || actionFilter}".`
                                 : 'Aktivitas akan muncul di sini saat Anda menggunakan sistem.'
                             }
@@ -386,12 +397,14 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
+                                onClick={() => router.get(route('activity.index', { page: activities.current_page - 1, search, action: actionFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
                                 disabled={activities.current_page === 1}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Sebelumnya
                             </button>
                             <button
+                                onClick={() => router.get(route('activity.index', { page: activities.current_page + 1, search, action: actionFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
                                 disabled={activities.current_page === activities.last_page}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
