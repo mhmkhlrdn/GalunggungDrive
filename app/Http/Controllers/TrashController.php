@@ -102,7 +102,7 @@ class TrashController extends Controller
     public function empty(Request $request): RedirectResponse
 {
     $user = Auth::user();
-    $isAdmin = $user->is_admin;
+    $isAdmin = in_array($user->role, ['admin', 'super-admin']);
 
     // Get the appropriate trashed files/folders
     $fileQuery = File::onlyTrashed();
@@ -126,6 +126,7 @@ class TrashController extends Controller
 
     return redirect()->back()->with('success', 'Trash emptied successfully.');
 }
+
 
 
     private function deletePhysicalFileAndVersions(File $file): void
