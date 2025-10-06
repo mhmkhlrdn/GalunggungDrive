@@ -62,6 +62,7 @@ interface Props {
         sort_order: string;
     };
     users: Array<{ id: number; name: string; email: string }>;
+    
 }
 
 export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filters, users }: Props) {

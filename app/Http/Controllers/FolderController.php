@@ -8,6 +8,7 @@ use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Models\StorageLocation;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Zip;
@@ -18,6 +19,7 @@ class FolderController extends Controller
 {
     public function index(Request $request): Response
     {
+        $activeServingLocations = StorageLocation::serving()->orderBy('name')->get(['id', 'name']);
         $parentId = $request->get('parent_id');
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'name');
@@ -89,6 +91,7 @@ class FolderController extends Controller
 
         return Inertia::render('Folders/Index', [
             'folders' => $folders,
+            'storageLoc' => $activeServingLocations->map(function ($loc) { return ['id' => $loc->id, 'name' => $loc->name]; }),
             'currentFolder' => $currentFolder,
             'breadcrumbs' => $breadcrumbs,
             'users' => $users,
@@ -227,6 +230,10 @@ class FolderController extends Controller
             })
             ->values();
 
+        $activeServingLocations = StorageLocation::serving()
+            ->orderBy('name')
+            ->get(['id', 'name']); 
+
         return inertia('Folders/Show', [
             'folder' => [
                 'id' => $folder->id,
@@ -243,6 +250,7 @@ class FolderController extends Controller
             'currentFolderId' => $folder->id,
             'allFolders' => $allFolders,
             'disks' => $availableDisks,
+            'storageLoc' => $activeServingLocations->map(function ($loc) { return ['id' => $loc->id, 'name' => $loc->name]; }),
             'from' => $request->query('from'),
         ]);
     }

@@ -51,9 +51,10 @@ interface Props {
     breadcrumbs: Breadcrumb[];
     allFolders: Folder[];
     from?: string;
+    storageLoc: Array<{id: number; name: string}>;
 }
 
-export default function FolderShow({ folder, files, folders, breadcrumbs, allFolders, from }: Props) {
+export default function FolderShow({ folder, files, folders, breadcrumbs, allFolders, from, storageLoc }: Props) {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [fileToMove, setFileToMove] = useState<{ id: number; name: string } | null>(null);
@@ -413,6 +414,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                 currentFolderId={folder.id}
                 currentFolderName={folder.name}
                 onUpload={() => window.location.reload()}
+                storageLocations={storageLoc}
             />
 
             {/* Move File Modal */}
