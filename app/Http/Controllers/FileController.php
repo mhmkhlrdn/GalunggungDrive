@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\StorageLocation;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\User;
 
 class FileController extends Controller
 {
@@ -120,6 +121,8 @@ class FileController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        /** @var User $user */
+        $user = Auth::user();
         $uploadConfig = config('upload', []);
 
         $validationRules = [
@@ -146,7 +149,20 @@ class FileController extends Controller
             Log::warning('No files found in upload request');
         }
 
-        if (!empty($uploadConfig['allowed_mime_types'])) {
+        $staffAllowedMimeTypes = [
+            'image/*',
+            'video/*',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+        ];
+
+        if ($user && $user->isAdmin()) {
+            // Admins and Super-Admins can upload any file type, so no specific mimetypes validation is added here.
+        } elseif ($user && $user->isStaff()) {
+            $validationRules['files.*'] .= '|mimetypes:' . implode(',', $staffAllowedMimeTypes);
+        } elseif (!empty($uploadConfig['allowed_mime_types'])) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
         }
 
@@ -555,6 +571,7 @@ class FileController extends Controller
     {
         $this->authorize('view', $file);
 
+        /** @var User $user */
         $user = Auth::user();
         $isStarred = $file->isStarredBy($user);
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -38,7 +39,7 @@ class UserController extends Controller
         // Get statistics
         $stats = [
             'totalUsers' => User::count(),
-            'adminUsers' => User::where('role', 'admin')->count(),
+            'adminUsers' => User::whereIn('role', ['admin', 'super-admin'])->count(),
             'staffUsers' => User::where('role', 'staff')->count(),
             'regularUsers' => User::where('role', 'user')->count(),
         ];
@@ -57,7 +58,10 @@ class UserController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/Users/Create');
+        $roles = ['user', 'staff', 'admin', 'super-admin'];
+        return Inertia::render('Admin/Users/Create', [
+            'roles' => $roles,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -66,7 +70,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:admin,staff,user',
+            'role' => 'required|in:admin,staff,user,super-admin',
             'storage_limit' => 'nullable|integer|min:0',
         ]);
 
@@ -85,7 +89,7 @@ class UserController extends Controller
     public function show(User $user): Response
     {
         $user->load(['files', 'folders']);
-        
+
         // Get recent activity
         $recentFiles = $user->files()
             ->orderBy('updated_at', 'desc')
@@ -106,8 +110,10 @@ class UserController extends Controller
 
     public function edit(User $user): Response
     {
+        $roles = ['user', 'staff', 'admin', 'super-admin'];
         return Inertia::render('Admin/Users/Edit', [
             'user' => $user,
+            'roles' => $roles,
         ]);
     }
 
@@ -117,7 +123,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|in:admin,staff,user',
+            'role' => 'required|in:admin,staff,user,super-admin',
             'storage_limit' => 'nullable|integer|min:0',
         ]);
 
@@ -141,14 +147,14 @@ class UserController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         // Prevent admin from deleting themselves
-        if ($user->id === auth()->id()) {
+        if ($user->id === Auth::id()) {
             return redirect()->back()->withErrors([
                 'error' => 'You cannot delete your own account.'
             ]);
         }
 
         // Prevent deleting the last admin
-        if ($user->role === 'admin' && User::where('role', 'admin')->count() <= 1) {
+        if (in_array($user->role, ['admin', 'super-admin']) && User::whereIn('role', ['admin', 'super-admin'])->count() <= 1) {
             return redirect()->back()->withErrors([
                 'error' => 'Cannot delete the last admin user.'
             ]);
@@ -167,7 +173,7 @@ class UserController extends Controller
         ]);
 
         $status = $user->is_active ? 'activated' : 'deactivated';
-        
+
         return redirect()->back()->with('success', "User {$status} successfully.");
     }
 }

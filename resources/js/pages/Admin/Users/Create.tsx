@@ -13,7 +13,7 @@ export default function UserCreate() {
         email: '',
         password: '',
         password_confirmation: '',
-        role: 'guest' as 'admin' | 'staff',
+        role: 'user' as 'admin' | 'staff' | 'user' | 'super-admin',
         storage_limit: 1073741824, // 1GB default
     });
 
@@ -149,24 +149,28 @@ export default function UserCreate() {
                                 <div className="space-y-2">
                                     <Label htmlFor="role">Peran</Label>
                                     <Select
-                                        value={data.role || 'staff'}
-                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff')}
+                                        value={data.role || 'user'}
+                                        onValueChange={(value) => setData('role', value as 'admin' | 'staff' | 'user' | 'super-admin')}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih peran" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="staff">Staf</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-sm text-muted-foreground">
-                                        {data.role === 'admin' && 'Akses penuh sistem dan manajemen pengguna'}
-                                        {data.role === 'staff' && 'Akses admin terbatas dan dukungan pengguna'}
-                                    </p>
-                                    {errors.role && (
-                                        <p className="text-sm text-red-500">{errors.role}</p>
-                                    )}
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih peran" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="user">Pengguna</SelectItem>
+                                                <SelectItem value="staff">Staf</SelectItem>
+                                                <SelectItem value="admin">Admin</SelectItem>
+                                                <SelectItem value="super-admin">Super Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-sm text-muted-foreground">
+                                            {data.role === 'user' && 'Akses pengguna standar dengan batasan penyimpanan'}
+                                            {data.role === 'staff' && 'Akses admin terbatas dan dukungan pengguna'}
+                                            {data.role === 'admin' && 'Akses penuh sistem dan manajemen pengguna'}
+                                            {data.role === 'super-admin' && 'Akses penuh ke semua fitur dan pengaturan sistem'}
+                                        </p>
+                                        {errors.role && (
+                                            <p className="text-sm text-red-500">{errors.role}</p>
+                                        )}
                                 </div>
 
                                 <div className="space-y-2">

@@ -70,7 +70,7 @@ import { useState } from 'react';
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const page = usePage<SharedData>();
     const [expandedItems, setExpandedItems] = useState<string[]>(['files', 'sharing', 'management']);
-    const isAdmin = page.props.auth.user.role === 'admin';
+    const isAdmin = ['admin', 'super-admin'].includes(page.props.auth.user.role);
 
     const toggleExpanded = (itemId: string) => {
         setExpandedItems(prev =>

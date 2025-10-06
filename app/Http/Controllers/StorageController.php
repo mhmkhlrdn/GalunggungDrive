@@ -8,6 +8,7 @@ use App\Models\FileShare;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Response;
 use App\Models\StorageLocation;
 
@@ -15,7 +16,8 @@ class StorageController extends Controller
 {
     public function index(): Response
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         // Calculate storage statistics
         $totalFiles = File::where('user_id', $user->id)->count();
@@ -87,7 +89,7 @@ class StorageController extends Controller
 
         // For admins, include per-storage-location disk stats (best-effort)
         $locations = [];
-        if ($user->role === 'admin') {
+        if (in_array($user->role, ['admin', 'super-admin'])) {
             $locations = StorageLocation::where('is_active', true)
                 ->get()
                 ->map(function ($loc) {

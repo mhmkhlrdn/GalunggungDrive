@@ -16,7 +16,7 @@ class TrashController extends Controller
     public function index(Request $request): Response
 {
     $user = Auth::user();
-    $isAdmin = $user->role === 'admin';
+    $isAdmin = in_array($user->role, ['admin', 'super-admin']);
 
     $search = $request->get('search');
     $type = $request->get('type', 'all');

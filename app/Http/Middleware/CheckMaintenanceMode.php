@@ -23,7 +23,7 @@ class CheckMaintenanceMode
 
         if ($databaseMaintenance) {
             // Allow authenticated admin users full access during maintenance
-            if ($request->user() && $request->user()->role === 'admin') {
+            if ($request->user() && in_array($request->user()->role, ['admin', 'super-admin'])) {
                 return $next($request);
             }
 
