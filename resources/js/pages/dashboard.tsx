@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage, router } from '@inertiajs/react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatFileSize } from '@/lib/utils';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
@@ -286,7 +287,8 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                             {formatFileSize(file.size)} • {file.modified} • oleh {file.uploader.name}
                                         </p>
                                     </button>
-                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {/* Desktop hover actions */}
+                                    <div className="hidden sm:flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
                                             className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -305,6 +307,28 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
+                                    </div>
+                                    {/* Mobile dropdown actions */}
+                                    <div className="sm:hidden ml-auto">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="p-1 text-slate-500 rounded hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Actions">
+                                                    <span className="sr-only">Actions</span>
+                                                    <Grid3X3 className="h-4 w-4" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handleFilePreview(idx)}>
+                                                    Preview
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => window.open(`/files/${file.id}/download`, '_blank')}>
+                                                    Download
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { if (confirm('Are you sure you want to delete this file?')) { router.delete(`/files/${file.id}`); } }} className="text-red-600">
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
                             ))}
@@ -333,7 +357,8 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                             {folder.files} files • {folder.modified} • oleh {folder.creator.name}
                                         </p>
                                     </Link>
-                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {/* Desktop hover actions */}
+                                    <div className="hidden sm:flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
                                             className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -352,6 +377,25 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
+                                    </div>
+                                    {/* Mobile dropdown actions */}
+                                    <div className="sm:hidden ml-auto">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="p-1 text-slate-500 rounded hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Actions">
+                                                    <span className="sr-only">Actions</span>
+                                                    <Grid3X3 className="h-4 w-4" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}>
+                                                    Download ZIP
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { if (confirm('Are you sure you want to delete this folder?')) { router.delete(`/folders/${folder.id}`); } }} className="text-red-600">
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
                             ))}

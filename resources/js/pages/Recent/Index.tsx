@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatFileSize, fuzzyFilter } from '@/lib/utils';
 import FilePreview from '@/components/file-preview';
 import {
@@ -373,33 +374,44 @@ export default function RecentIndex({ files, filters }: Props) {
                                     </div>
 
                                     {/* Quick Actions */}
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                    {/* Desktop hover actions */}
+                                    <div className="absolute inset-0 hidden sm:flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                                         <div className="flex items-center space-x-2">
-                                            <Link
-                                                href={`/files/${file.id}`}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                            >
+                                            <Link href={`/files/${file.id}`} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <Eye className="h-4 w-4" />
                                             </Link>
-                                            <button
-                                                onClick={() => handleDownload(file.id)}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                            >
+                                            <button onClick={() => handleDownload(file.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <Download className="h-4 w-4" />
                                             </button>
-                                            <Link
-                                                href={`/files/${file.id}/share`}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                            >
+                                            <Link href={`/files/${file.id}/share`} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <Share2 className="h-4 w-4" />
                                             </Link>
-                                            <Link
-                                                href={`/files/${file.id}/edit`}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                            >
+                                            <Link href={`/files/${file.id}/edit`} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <Edit className="h-4 w-4" />
                                             </Link>
                                         </div>
+                                    </div>
+                                    {/* Mobile dropdown actions */}
+                                    <div className="sm:hidden absolute top-2 right-2">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="rounded bg-white/90 p-2 text-slate-600 shadow-sm">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/files/${file.id}`}>Lihat</Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDownload(file.id)}>Download</DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/files/${file.id}/share`}>Bagikan</Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/files/${file.id}/edit`}>Edit</Link>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
                             );

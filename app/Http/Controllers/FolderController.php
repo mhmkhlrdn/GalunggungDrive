@@ -8,6 +8,7 @@ use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\StorageLocation;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
@@ -232,7 +233,7 @@ class FolderController extends Controller
 
         $activeServingLocations = StorageLocation::serving()
             ->orderBy('name')
-            ->get(['id', 'name']); 
+            ->get(['id', 'name']);
 
         return inertia('Folders/Show', [
             'folder' => [
@@ -294,8 +295,14 @@ class FolderController extends Controller
         }
 
         foreach ($files as $file) {
-            if (Storage::disk($file->disk)->exists($file->path)) {
-                $fileContent = Storage::disk($file->disk)->get($file->path);
+            // Use storageLocation to resolve the correct disk
+            $storageLocation = $file->storageLocation;
+            if (!$storageLocation || !$storageLocation->is_active) {
+                continue;
+            }
+            $diskKey = method_exists($storageLocation, 'diskKey') ? $storageLocation->diskKey() : $storageLocation->disk;
+            if ($diskKey && Storage::disk($diskKey)->exists($file->path)) {
+                $fileContent = Storage::disk($diskKey)->get($file->path);
                 $zip->addFromString($file->name, $fileContent);
             }
         }
@@ -351,75 +358,85 @@ class FolderController extends Controller
 
     public function update(Request $request, Folder $folder): RedirectResponse
     {
-        $this->authorize('update', $folder);
+        try {
+            $this->authorize('update', $folder);
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'visibility' => 'required|in:private,shared,public',
-            'shared_with' => 'nullable|array',
-            'shared_with.*' => 'integer|exists:users,id',
-        ]);
-
-        // Check if folder with same name exists in parent
-        $existingFolder = Folder::where('user_id', Auth::id())
-            ->where('parent_id', $folder->parent_id)
-            ->where('name', $request->name)
-            ->where('id', '!=', $folder->id)
-            ->first();
-
-        if ($existingFolder) {
-            return redirect()->back()->withErrors([
-                'name' => 'A folder with this name already exists in this location.'
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'visibility' => 'required|in:private,shared,public',
+                'shared_with' => 'nullable|array',
+                'shared_with.*' => 'integer|exists:users,id',
             ]);
-        }
 
-        $oldData = [
-            'name' => $folder->name,
-            'visibility' => $folder->visibility,
-        ];
+            // Check if folder with same name exists in parent
+            $existingFolder = Folder::where('user_id', $folder->user_id)
+                ->where('parent_id', $folder->parent_id)
+                ->where('name', $request->name)
+                ->where('id', '!=', $folder->id)
+                ->first();
 
-        $folder->update([
-            'name' => $request->name,
-            'visibility' => $request->visibility,
-        ]);
-
-        // Handle sharing if visibility is 'shared' and users are selected
-        if ($request->visibility === 'shared' && $request->has('shared_with')) {
-            // Remove existing shares
-            $folder->shares()->delete();
-
-            // Create new shares
-            foreach ($request->shared_with as $userId) {
-                $folder->shares()->create([
-                    'shared_with' => $userId,
-                    'permission' => 'view',
-                    'shared_by' => Auth::id(),
+            if ($existingFolder) {
+                return redirect()->back()->withErrors([
+                    'name' => 'A folder with this name already exists in this location.'
                 ]);
             }
-        } elseif ($request->visibility !== 'shared') {
-            // Remove all shares if not shared
-            $folder->shares()->delete();
+
+            $oldData = [
+                'name' => $folder->name,
+                'visibility' => $folder->visibility,
+            ];
+
+            $folder->update([
+                'name' => $request->name,
+                'visibility' => $request->visibility,
+            ]);
+
+            // Handle sharing if visibility is 'shared' and users are selected
+            if ($request->visibility === 'shared' && $request->has('shared_with')) {
+                // Remove existing shares
+                $folder->shares()->delete();
+
+                // Create new shares
+                foreach ($request->shared_with as $userId) {
+                    $folder->shares()->create([
+                        'shared_with' => $userId,
+                        'permission' => 'view',
+                        'shared_by' => Auth::id(),
+                    ]);
+                }
+            } elseif ($request->visibility !== 'shared') {
+                // Remove all shares if not shared
+                $folder->shares()->delete();
+            }
+
+            // Log the activity
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'edit',
+                'target_type' => 'folder',
+                'target_id' => $folder->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'success' => true,
+                'details' => [
+                    'folder_name' => $folder->name,
+                    'changes' => array_diff_assoc([
+                        'name' => $folder->name,
+                        'visibility' => $folder->visibility,
+                    ], $oldData),
+                ],
+            ]);
+
+            return redirect()->back()->with('success', 'Folder updated successfully.');
+        } catch (\Exception $e) {
+            Log::error('Folder update failed: ' . $e->getMessage(), [
+                'folder_id' => $folder->id,
+                'user_id' => Auth::id(),
+                'request_data' => $request->all(),
+                'exception' => $e,
+            ]);
+            return redirect()->back()->withErrors(['error' => 'An unexpected error occurred while updating the folder. Please check the logs for more details.']);
         }
-
-        // Log the activity
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'edit',
-            'target_type' => 'folder',
-            'target_id' => $folder->id,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'success' => true,
-            'details' => [
-                'folder_name' => $folder->name,
-                'changes' => array_diff_assoc([
-                    'name' => $folder->name,
-                    'visibility' => $folder->visibility,
-                ], $oldData),
-            ],
-        ]);
-
-        return redirect()->back()->with('success', 'Folder updated successfully.');
     }
 
     public function destroy(Folder $folder): RedirectResponse

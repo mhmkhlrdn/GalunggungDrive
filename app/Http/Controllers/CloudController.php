@@ -99,6 +99,12 @@ class CloudController extends Controller
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
 
+        // Users list for share modal (exclude current user)
+        $users = \App\Models\User::where('id', '!=', $userId)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Cloud/Index', [
             'folders' => $folders->map(function ($f) {
                 return [
@@ -136,6 +142,7 @@ class CloudController extends Controller
             'breadcrumbs' => [
                 ['title' => 'Cloud', 'href' => route('cloud.index')],
             ],
+            'users' => $users,
         ]);
     }
 }
