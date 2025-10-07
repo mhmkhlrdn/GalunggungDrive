@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Models\StorageLocation;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -422,7 +423,7 @@ class FileController extends Controller
             abort(404, 'File not found');
         }
 
-        return Storage::disk($diskKey)->download($file->path, $file->name);
+        return response()->download(Storage::disk($diskKey)->path($file->path), $file->name);
     }
 
     public function preview(File $file)
@@ -452,13 +453,40 @@ class FileController extends Controller
                 ],
             ]);
 
-            $fileContent = Storage::disk($diskKey)->get($file->path);
+            $filePath = Storage::disk($diskKey)->path($file->path);
+            $fileSize = Storage::disk($diskKey)->size($file->path);
+            $mimeType = $file->mime_type;
 
-            return response($fileContent)
-                ->header('Content-Type', $file->mime_type)
-                ->header('Content-Disposition', 'inline; filename="' . $file->name . '"')
-                ->header('Content-Length', strlen($fileContent))
-                ->header('Cache-Control', 'public, max-age=3600');
+            $headers = [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . $file->name . '"',
+                'Cache-Control' => 'public, max-age=3600',
+            ];
+
+            $range = request()->header('Range');
+
+            if ($range && Str::startsWith($mimeType, 'video/')) { // Only handle range requests for video
+                list($start, $end) = $this->parseRangeHeader($range, $fileSize);
+
+                if ($start !== null && $end !== null) {
+                    $length = $end - $start + 1;
+
+                    $headers['Content-Range'] = 'bytes ' . $start . '-' . $end . '/' . $fileSize;
+                    $headers['Accept-Ranges'] = 'bytes';
+                    $headers['Content-Length'] = $length;
+
+                    return response()->stream(function () use ($filePath, $start, $length) {
+                        $handle = fopen($filePath, 'rb');
+                        fseek($handle, $start);
+                        echo fread($handle, $length);
+                        fclose($handle);
+                    }, 206, $headers);
+                }
+            }
+
+            // For other file types or if range header is not present/valid for video
+            return response()->file($filePath, $headers);
+
         } catch (\Exception $e) {
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -478,6 +506,28 @@ class FileController extends Controller
         }
     }
 
+    /**
+     * Parses the Range header and returns the start and end bytes.
+     *
+     * @param string $rangeHeader
+     * @param int $fileSize
+     * @return array|null
+     */
+    private function parseRangeHeader(string $rangeHeader, int $fileSize): ?array
+    {
+        $range = str_replace('bytes=', '', $rangeHeader);
+        $parts = explode('-', $range);
+
+        $start = (int) ($parts[0] ?? 0);
+        $end = (int) ($parts[1] ?? $fileSize - 1);
+
+        // Ensure range is valid
+        if ($start > $end || $start < 0 || $end >= $fileSize) {
+            return null;
+        }
+
+        return [$start, $end];
+    }
 
     public function restore(File $file): RedirectResponse
     {

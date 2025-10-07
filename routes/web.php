@@ -53,6 +53,9 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::resource('files', FileController::class);
         Route::get('files/{file}/download', [FileController::class, 'download'])->name('files.download');
         Route::get('files/{file}/preview', [FileController::class, 'preview'])->name('files.preview');
+        Route::get('files/{file}/video-preview', function (\App\Models\File $file) {
+            return Inertia::render('Files/VideoPreview', ['file' => $file]);
+        })->name('files.video-preview');
         Route::post('files/{file}/restore', [FileController::class, 'restore'])->name('files.restore');
         Route::post('files/{file}/move', [FileController::class, 'move'])->name('files.move');
         Route::post('files/{file}/toggle-star', [FileController::class, 'toggleStar'])->name('files.toggle-star');

@@ -10,7 +10,7 @@ class FilePolicy
     public function view(User $user, File $file): bool
     {
         // Admins and Super-Admins can view any file
-        if ($user->isAdmin()) {
+        if ($user->is_super_admin || $user->isAdmin()) {
             return true;
         }
 
@@ -49,18 +49,18 @@ class FilePolicy
 
     public function delete(User $user, File $file): bool
     {
-        return $user->isAdmin() || $user->id === $file->user_id;
+        return $user->is_super_admin || $user->isAdmin() || $user->id === $file->user_id;
     }
 
     public function restore(User $user, File $file): bool
     {
-        return $user->isAdmin() || $user->id === $file->user_id;
+        return $user->is_super_admin || $user->isAdmin() || $user->id === $file->user_id;
     }
 
     public function download(User $user, File $file): bool
     {
         // Admins and Super-Admins can download any file
-        if ($user->isAdmin()) {
+        if ($user->is_super_admin || $user->isAdmin()) {
             return true;
         }
 

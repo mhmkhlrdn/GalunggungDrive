@@ -35,7 +35,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         disk_id: storageLocations.length ? storageLocations[0].id : undefined as number | undefined,
         description: '',
         tags: '',
-        visibility: isStaff ? 'public' : 'private', // Default to public for staff, private for others
+        visibility: 'public', // Default to public for staff, private for others
     });
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
