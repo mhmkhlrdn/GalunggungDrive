@@ -29,6 +29,7 @@ return [
     'allowed_mime_types' => [
         // Images
         'image/jpeg',
+	'image/jpg',
         'image/png',
         'image/gif',
         'image/webp',
@@ -54,6 +55,11 @@ return [
         'application/vnd.rar',
         'application/x-7z-compressed',
         'application/gzip',
+	'application/x-iso9660-image',
+	'application/x-cd-image',
+	'application/x-rar-compressed',
+	'application/octet-stream',
+
 
         // Videos
         'video/mp4',
