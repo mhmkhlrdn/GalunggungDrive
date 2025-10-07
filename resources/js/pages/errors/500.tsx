@@ -2,7 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { AlertCircle, Home, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function ServerError({ message }: { message?: string }) {
+export default function ServerError({ message, errorId }: { message?: string; errorId?: string }) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 flex items-center justify-center px-4">
             <Head title="Kesalahan Server - 500" />
@@ -28,6 +28,11 @@ export default function ServerError({ message }: { message?: string }) {
                     <p className="text-slate-600 dark:text-slate-300 mb-4">
                         {message || 'Maaf, terjadi kesalahan internal pada server.'}
                     </p>
+                    {errorId && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                            ID Kesalahan: <code className="font-mono">{errorId}</code>
+                        </div>
+                    )}
                     <div className="flex items-center justify-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                         <AlertCircle className="w-4 h-4" />
                         <span>Tim kami telah diberitahu tentang masalah ini.</span>
@@ -38,7 +43,13 @@ export default function ServerError({ message }: { message?: string }) {
                 <div className="space-y-3">
                     <Button
                         className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                        onClick={() => window.location.reload()}
+                        onClick={() => {
+                            if (errorId) {
+                                // Log details to the console to help debugging client-side issues
+                                console.error('500 Server Error', { errorId });
+                            }
+                            window.location.reload();
+                        }}
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Coba Lagi
