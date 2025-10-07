@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, Image, Video, Music, File, FileText, FileSpreadsheet, Presentation, Archive, Eye, Calendar, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import FilePreviewModal from '@/components/file-preview-modal';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -61,6 +62,8 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
     const [showEditModal, setShowEditModal] = useState(false);
     const [fileToEdit, setFileToEdit] = useState<File | null>(null);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [previewIndex, setPreviewIndex] = useState<number>(0);
 
     const handleMoveFile = (fileId: number, fileName: string) => {
         setFileToMove({ id: fileId, name: fileName });
@@ -285,7 +288,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2">
                                                                 <button
-                                                                    onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                                    onClick={() => { const idx = files.findIndex(f => f.id === file.id); if (idx >= 0) { setPreviewIndex(idx); setShowFilePreview(true); } }}
                                                                     className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate text-left"
                                                                     title="Klik untuk melihat file"
                                                                 >
@@ -317,7 +320,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button
-                                                            onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                            onClick={() => { const idx = files.findIndex(f => f.id === file.id); if (idx >= 0) { setPreviewIndex(idx); setShowFilePreview(true); } }}
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
@@ -406,6 +409,13 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                     </div>
                 )}
             </div>
+            <FilePreviewModal
+                isOpen={showFilePreview}
+                onClose={() => setShowFilePreview(false)}
+                loggedinUser={window.Auth.user}
+                filesInDirectory={files}
+                currentIndex={previewIndex}
+            />
 
             {/* File Upload Modal */}
             <FileUploadModal

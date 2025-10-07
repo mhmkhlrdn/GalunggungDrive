@@ -23,7 +23,9 @@ class CloudController extends Controller
         $folders = Folder::with('user')
             ->whereNull('parent_id')
             ->where(function ($q) use ($userId, $user) {
-                if ($user->isStaff() && !$user->isAdmin()) {
+                if ($user->is_super_admin || ($user->is_admin ?? false)) {
+                    // Super Admin/Admin: see all folders
+                } elseif (($user->role ?? null) === 'staff') {
                     // Staff users can only see their own folders
                     $q->where('user_id', $userId);
                 } else {
@@ -49,7 +51,9 @@ class CloudController extends Controller
                 $q->where('is_active', true);
             })
             ->where(function ($q) use ($userId, $user) {
-                if ($user->isStaff() && !$user->isAdmin()) {
+                if ($user->is_super_admin || ($user->is_admin ?? true)) {
+                    // Super Admin/Admin: see all files
+                } elseif (($user->role ?? null) === 'staff') {
                     // Staff users can only see their own files
                     $q->where('user_id', $userId);
                 } else {
@@ -75,7 +79,9 @@ class CloudController extends Controller
             })
             ->whereNull('folder_id')
             ->where(function ($q) use ($userId, $user) {
-                if ($user->isStaff() && !$user->isAdmin()) {
+                if ($user->is_super_admin || ($user->is_admin ?? false)) {
+                    // Super Admin/Admin: see all files
+                } elseif (($user->role ?? null) === 'staff') {
                     // Staff users can only see their own files
                     $q->where('user_id', $userId);
                 } else {

@@ -67,11 +67,13 @@ class FileController extends Controller
                 $q->where('is_active', true);
             });
 
-        if ($user->isStaff() && !$user->isAdmin()) {
+        if ($user->is_super_admin || ($user->is_admin ?? false)) {
+            // Super Admin/Admin: see all files
+        } elseif (($user->role ?? null) === 'staff') {
             // Staff users can only see their own files
             $query->where('user_id', $user->id);
         } else {
-            // Admins and regular users see their own files
+            // Regular users: own files only
             $query->where('user_id', $user->id);
         }
 

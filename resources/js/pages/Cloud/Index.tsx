@@ -1,6 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import FilePreview from '@/components/file-preview';
+import FileEditModal from '@/components/file-edit-modal';
+import FilePreviewModal from '@/components/file-preview-modal';
 import { FolderOpen, Download, Trash2, Search, Grid3X3, List, User, Calendar, HardDrive, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { fuzzyFilter } from '@/lib/utils';
@@ -50,12 +52,26 @@ interface Props {
 
 export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filters = {} }: Props) {
     const { user } = window.Auth;
+    const isSuperAdmin = Boolean(user?.role === 'super-admin');
+    const isAdmin = Boolean(user?.role === 'admin');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [search, setSearch] = useState(filters.search || '');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order || 'desc');
     const [draggingFileId, setDraggingFileId] = useState<number | null>(null);
     const [hoverFolderId, setHoverFolderId] = useState<number | null>(null);
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [previewIndex, setPreviewIndex] = useState<number>(0);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [fileToEdit, setFileToEdit] = useState<{
+        id: number;
+        name: string;
+        mime_type: string;
+        size: number;
+        description?: string;
+        tags?: string[];
+        visibility: 'private' | 'shared' | 'public';
+    } | null>(null);
 
     // Client-side fuzzy filtering for folders and files
     const filteredFolders = fuzzyFilter(
@@ -65,8 +81,8 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
         0.2
     );
 
-    // Use allFiles for search to include files from all folders, otherwise use root files
-    const filesToSearch = search.trim() ? allFiles : files.data;
+    // Super admin sees all files by default; others see root files unless searching
+    const filesToSearch = isSuperAdmin ? allFiles : (search.trim() ? allFiles : files.data);
     const filteredFiles = fuzzyFilter(
         filesToSearch,
         search,
@@ -179,7 +195,7 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                         <p className="text-slate-500 dark:text-slate-400">Tidak ada file.</p>
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {filteredFiles.map((file) => (
+                            {filteredFiles.map((file, idx) => (
                                 <div
                                     key={file.id}
                                     className={`group rounded-lg border p-4 dark:border-slate-700 ${draggingFileId === file.id ? 'opacity-60' : ''}`}
@@ -195,7 +211,7 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                                         <FilePreview file={file} size="md" />
                                         <div className="min-w-0 flex-1">
                                             <button
-                                                onClick={() => window.open(`/files/${file.id}/preview`)}
+                                                onClick={() => { setPreviewIndex(idx); setShowFilePreview(true); }}
                                                 className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate text-left w-full"
                                                 title="Click to preview file"
                                             >
@@ -224,10 +240,22 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                                         </div>
                                         <div className="flex flex-col items-center space-y-1">
                                             <button
-                                                onClick={() => router.get(`/files/${file.id}/edit`)}
-                                                className={`rounded bg-white p-2 ${user.is_super_admin || user.is_admin || user.id === file.user.id ? 'text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700' : 'text-slate-400 dark:text-slate-500 cursor-not-allowed'}`}
-                                                title={user.is_super_admin || user.is_admin || user.id === file.user.id ? "Edit file" : "You don't have permission to edit this file"}
-                                                disabled={!(user.is_super_admin || user.is_admin || user.id === file.user.id)}
+                                                onClick={() => {
+                                                    if (!(isSuperAdmin || isAdmin || user.id === file.user.id)) return;
+                                                    setFileToEdit({
+                                                        id: file.id,
+                                                        name: file.name,
+                                                        mime_type: file.mime_type,
+                                                        size: file.size,
+                                                        description: '',
+                    tags: [],
+                                                        visibility: 'public',
+                                                    });
+                                                    setShowEditModal(true);
+                                                }}
+                                                className={`rounded bg-white p-2 ${isSuperAdmin || isAdmin || user.id === file.user.id ? 'text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700' : 'text-slate-400 dark:text-slate-500 cursor-not-allowed'}`}
+                                                title={isSuperAdmin || isAdmin || user.id === file.user.id ? "Edit file" : "You don't have permission to edit this file"}
+                                                disabled={!(isSuperAdmin || isAdmin || user.id === file.user.id)}
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </button>
@@ -257,6 +285,34 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                     )}
                 </div>
             </div>
+            <FilePreviewModal
+                isOpen={showFilePreview}
+                onClose={() => setShowFilePreview(false)}
+                loggedinUser={user}
+                filesInDirectory={filteredFiles.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    mime_type: f.mime_type,
+                    size: String(f.size),
+                    created_at: new Date(f.updated_at).toISOString(),
+                }))}
+                currentIndex={previewIndex}
+            />
+            {fileToEdit && (
+                <FileEditModal
+                    isOpen={showEditModal}
+                    onClose={() => { setShowEditModal(false); setFileToEdit(null); }}
+                    file={{
+                        id: fileToEdit.id,
+                        name: fileToEdit.name,
+                        description: fileToEdit.description ?? '',
+                        tags: fileToEdit.tags ?? [],
+                        visibility: fileToEdit.visibility,
+                        mime_type: fileToEdit.mime_type,
+                        size: fileToEdit.size,
+                    }}
+                />
+            )}
         </AppLayout>
     );
 }

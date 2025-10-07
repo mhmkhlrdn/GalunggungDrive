@@ -9,8 +9,8 @@ class FilePolicy
 {
     public function view(User $user, File $file): bool
     {
-        // Admins and Super-Admins can view any file
-        if ($user->is_super_admin || $user->isAdmin()) {
+        // Super-Admins can view any file
+        if ($user->is_super_admin) {
             return true;
         }
 
@@ -19,8 +19,8 @@ class FilePolicy
             return $user->id === $file->user_id;
         }
 
-        // For regular users (non-staff, non-admin):
-        // Allow viewing if user owns the file
+        // Admins and regular users (non-staff):
+        // Allow viewing if user owns the file, or file is public, or has been shared
         if ($user->id === $file->user_id) {
             return true;
         }
@@ -44,12 +44,21 @@ class FilePolicy
 
     public function update(User $user, File $file): bool
     {
-        return $user->is_super_admin || $user->isAdmin() || $user->id === $file->user_id;
+        if ($user->is_super_admin) return true;
+        if ($user->isAdmin()) {
+            // Admins can edit files owned by staff users
+            return $file->user && $file->user->isStaff();
+        }
+        return $user->id === $file->user_id;
     }
 
     public function delete(User $user, File $file): bool
     {
-        return $user->is_super_admin || $user->isAdmin() || $user->id === $file->user_id;
+        if ($user->is_super_admin) return true;
+        if ($user->isAdmin()) {
+            return $file->user && $file->user->isStaff();
+        }
+        return $user->id === $file->user_id;
     }
 
     public function restore(User $user, File $file): bool
@@ -59,8 +68,8 @@ class FilePolicy
 
     public function download(User $user, File $file): bool
     {
-        // Admins and Super-Admins can download any file
-        if ($user->is_super_admin || $user->isAdmin()) {
+        // Super-Admins can download any file
+        if ($user->is_super_admin) {
             return true;
         }
 
@@ -69,8 +78,8 @@ class FilePolicy
             return $user->id === $file->user_id;
         }
 
-        // For regular users (non-staff, non-admin):
-        // Allow download if user owns the file
+        // Admins and regular users (non-staff):
+        // Allow download if user owns the file or file is public or shared with download/edit
         if ($user->id === $file->user_id) {
             return true;
         }

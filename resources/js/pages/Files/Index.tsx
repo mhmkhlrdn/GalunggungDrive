@@ -1,12 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { formatFileSize } from '@/lib/utils';
 import FileUploadModal from '@/components/file-upload-modal';
 import CreateFolderModal from '@/components/create-folder-modal';
 import MoveFileModal from '@/components/move-file-modal';
 import FileEditModal from '@/components/file-edit-modal';
 import ShareModal from '@/components/share-modal';
+import FilePreviewModal from '@/components/file-preview-modal';
 import FilePreview from '@/components/file-preview';
 import {
     Upload,
@@ -23,11 +24,6 @@ import {
     Eye,
     Edit,
     FileText,
-    Image,
-    Video,
-    Music,
-    Archive,
-    File,
     Move,
     Lock,
     Globe,
@@ -40,10 +36,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useInertiaOperations } from '@/hooks/use-inertia-operations';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/lib/messages';
 
-interface File {
+interface FileItem {
     id: number;
     name: string;
-    size: string;
+    size: number;
     mime_type: string;
     created_at: string;
     updated_at: string;
@@ -65,7 +61,7 @@ interface Folder {
 
 interface Props {
     files: {
-        data: File[];
+        data: FileItem[];
         current_page: number;
         last_page: number;
         per_page: number;
@@ -87,7 +83,7 @@ interface Props {
         name: string;
         email: string;
     }>;
-    disks?: Array<{ key: string; label: string }>;
+    disks?: Array<{ id: number; name: string }>;
 }
 
 export default function FilesIndex({ files, currentFolder, breadcrumbs, filters, folders, users = [], disks = [] }: Props) {
@@ -99,12 +95,14 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [fileToMove, setFileToMove] = useState<{id: number, name: string} | null>(null);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [fileToEdit, setFileToEdit] = useState<File | null>(null);
+    const [fileToEdit, setFileToEdit] = useState<FileItem | null>(null);
     const [showShareModal, setShowShareModal] = useState(false);
-    const [shareSelection, setShareSelection] = useState<File[]>([]);
+    const [shareSelection, setShareSelection] = useState<FileItem[]>([]);
     const [search, setSearch] = useState(filters.search || '');
-    const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order as any || 'desc');
+    const [sortBy] = useState(filters.sort_by || 'updated_at');
+    const [sortOrder] = useState<'asc' | 'desc'>((filters.sort_order as 'asc' | 'desc') || 'desc');
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [previewIndex, setPreviewIndex] = useState<number>(0);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -119,23 +117,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         }
     }, []);
 
-    const getFileIcon = (mimeType: string) => {
-        if (mimeType.startsWith('image/')) return Image;
-        if (mimeType.startsWith('video/')) return Video;
-        if (mimeType.startsWith('audio/')) return Music;
-        if (mimeType === 'application/pdf') return FileText;
-        if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return Archive;
-        return File;
-    };
-
-    const getFileColor = (mimeType: string) => {
-        if (mimeType.startsWith('image/')) return 'text-green-600';
-        if (mimeType.startsWith('video/')) return 'text-purple-600';
-        if (mimeType.startsWith('audio/')) return 'text-pink-600';
-        if (mimeType === 'application/pdf') return 'text-red-600';
-        if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return 'text-orange-600';
-        return 'text-slate-600';
-    };
+    // helpers not needed here; icons handled by FilePreview
 
     const toggleFileSelection = (fileId: number) => {
         setSelectedFiles(prev =>
@@ -187,16 +169,16 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         router.get('/files', { search, sort_by: sortBy, sort_order: sortOrder, page }, { preserveState: true, replace: true });
     };
 
-    const handleFileUpload = (uploadedFiles: globalThis.File[]) => {
+    const handleFileUpload = () => {
         router.reload();
     };
 
-    const handleFolderCreate = (name: string) => {
+    const handleFolderCreate = () => {
         router.reload();
     };
 
     // Per-file actions open modals or perform direct navigation as appropriate
-    const handleShareFile = (file: File) => {
+    const handleShareFile = (file: FileItem) => {
         setShareSelection([file]);
         setShowShareModal(true);
     };
@@ -213,15 +195,13 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         }
     };
 
-    const handleViewFile = (fileId: number) => {
-        window.open(`/files/${fileId}/preview`, '_blank');
-    };
+    // open preview modal is handled inline using index
 
     // Wire ShareModal -> backend
     const handleShare = (
         fileIds: number[],
         userIds: number[],
-        permission: 'view' | 'edit' | 'download',
+        permission: string,
         expiresAt?: string,
         isPublicLink?: boolean
     ) => {
@@ -251,8 +231,12 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         });
 
         // Refresh to reflect changes
-        router.reload({ preserveScroll: true });
+        router.reload();
     };
+    // Prepare modal-friendly arrays where size is string as expected by modal typings
+    type ModalFile = Omit<FileItem, 'size'> & { size: string };
+    const filesForModal: ModalFile[] = useMemo(() => files.data.map<ModalFile>(f => ({ ...f, size: String(f.size) })), [files.data]);
+    const shareSelectionForModal: ModalFile[] = useMemo(() => shareSelection.map<ModalFile>(f => ({ ...f, size: String(f.size) })), [shareSelection]);
 
     // Bulk actions
     const handleBulkDownload = () => {
@@ -282,11 +266,11 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
         setShowMoveModal(true);
     };
 
-    const handleFileMove = (folderId: number | null) => {
+    const handleFileMove = () => {
         router.reload();
     };
 
-    const handleEditFile = (file: File) => {
+    const handleEditFile = (file: FileItem) => {
         setFileToEdit(file);
         setShowEditModal(true);
     };
@@ -442,7 +426,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                         ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         : 'space-y-2'
                     }>
-                        {files.data.map((file) => {
+                        {files.data.map((file, idx) => {
                             const isSelected = selectedFiles.includes(file.id);
 
                             return (
@@ -483,7 +467,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <button
-                                                        onClick={() => handleViewFile(file.id)}
+                                                        onClick={() => { setPreviewIndex(idx); setShowFilePreview(true); }}
                                                         className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                                         title="Tampilkan file"
                                                     >
@@ -634,7 +618,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                     onUpload={handleFileUpload}
                     currentFolderId={currentFolder?.id}
                     currentFolderName={currentFolder?.name}
-                    storageLocations={(disks as any) as Array<{ id: number; name: string }>}
+                    storageLocations={disks ?? []}
                 />
                 <CreateFolderModal
                     isOpen={showCreateFolderModal}
@@ -675,12 +659,19 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                             setShareSelection([]);
                         }}
                         onShare={handleShare}
-                        files={files.data}
-                        selectedFiles={shareSelection}
+                        files={filesForModal}
+                        selectedFiles={shareSelectionForModal}
                         users={users}
                         mode="user-selection"
                     />
                 )}
+                <FilePreviewModal
+                    isOpen={showFilePreview}
+                    onClose={() => setShowFilePreview(false)}
+                    loggedinUser={window.Auth.user}
+                    filesInDirectory={filesForModal}
+                    currentIndex={previewIndex}
+                />
             </div>
         </AppLayout>
     );

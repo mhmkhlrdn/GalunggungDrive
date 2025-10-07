@@ -123,7 +123,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                     <AppearanceToggleTab className="scale-90" />
                                                 </div>
                                             </div>
-                                            
+
                                             {rightNavItems.map((item) => (
                                                 <a
                                                     key={item.title}
@@ -133,7 +133,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                             ? item.href
                                                             : item.href.url
                                                     }
-                                                    target="_blank"
+                                                    // target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex items-center space-x-2 font-medium"
                                                 >
@@ -205,7 +205,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <div className="flex items-center">
                             <AppearanceToggleTab className="scale-90" />
                         </div>
-                        
+
                         <div className="relative flex items-center space-x-1">
                             <Button
                                 variant="ghost"
@@ -229,7 +229,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                             ? item.href
                                                             : item.href.url
                                                     }
-                                                    target="_blank"
+                                                    // target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="group ml-1 inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium text-accent-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
                                                 >
@@ -252,7 +252,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 ))}
                             </div>
                         </div>
-                        
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button

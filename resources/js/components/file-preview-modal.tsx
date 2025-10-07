@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { route } from 'ziggy-js';
 // If you use a toast system, import it here. Example:
 // import { toast } from '@/components/ui/use-toast';
 import { formatFileSize } from '@/lib/utils';
@@ -11,8 +12,8 @@ import { User } from '@/types';
 interface FilePreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
-    loggedinUser: User;
-    file: {
+    loggedinUser?: User | null;
+    filesInDirectory: Array<{
         id: number;
         name: string;
         mime_type: string;
@@ -25,14 +26,54 @@ interface FilePreviewModalProps {
             name: string;
             email: string;
         };
-    } | null;
+    }>;
+    currentIndex: number;
 }
 
-export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, users = [] }: FilePreviewModalProps & { users?: Array<{ id: number; name: string; email: string }> }) {
+export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null, filesInDirectory = [], currentIndex = 0, users = [] }: FilePreviewModalProps & { users?: Array<{ id: number; name: string; email: string }> }) {
+    const clampIndex = (idx: number) => {
+        if (!Array.isArray(filesInDirectory) || filesInDirectory.length === 0) return 0;
+        if (idx < 0) return 0;
+        if (idx > filesInDirectory.length - 1) return filesInDirectory.length - 1;
+        return idx;
+    };
+    const [currentFileIndex, setCurrentFileIndex] = useState(clampIndex(currentIndex));
+    const file = Array.isArray(filesInDirectory) ? filesInDirectory[currentFileIndex] : undefined;
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showShareModal, setShowShareModal] = useState(false);
+    const touchStartXRef = useRef<number | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        setCurrentFileIndex(clampIndex(currentIndex));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentIndex, filesInDirectory?.length]);
+
+    const goPrev = useCallback(() => {
+        setCurrentFileIndex((idx) => (idx > 0 ? idx - 1 : idx));
+    }, []);
+
+    const goNext = useCallback(() => {
+        const maxIndex = (Array.isArray(filesInDirectory) ? filesInDirectory.length : 0) - 1;
+        setCurrentFileIndex((idx) => (idx < maxIndex ? idx + 1 : idx));
+    }, [filesInDirectory]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                goPrev();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                goNext();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, goPrev, goNext]);
 
     useEffect(() => {
         let timeout: NodeJS.Timeout;
@@ -42,11 +83,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
             setError(null);
             setPreviewUrl(null);
 
-            if (isVideo(file.mime_type)) {
-                // Redirect to the new video preview page
-                window.open(route('files.video-preview', { file: file.id }), '_blank');
-                onClose(); // Close the modal
-            } else if (isImage(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
+            if (isVideo(file.mime_type) || isImage(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
                 const url = route('files.preview', { file: file.id });
                 setPreviewUrl(url);
 
@@ -85,7 +122,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                 clearTimeout(timeout);
             }
         };
-    }, [file, isOpen]);
+    }, [file, isOpen, currentFileIndex]);
 
     const isImage = (mimeType: string) => mimeType.startsWith('image/');
     const isVideo = (mimeType: string) => mimeType.startsWith('video/');
@@ -134,7 +171,33 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto">
+                <div
+                    className="flex-1 overflow-y-auto relative"
+                    ref={containerRef}
+                    onTouchStart={(e) => {
+                        if (e.touches && e.touches.length === 1) {
+                            touchStartXRef.current = e.touches[0].clientX;
+                        }
+                    }}
+                    onTouchMove={(e) => {
+                        // prevent vertical scroll from being blocked; only act on horizontal swipes
+                    }}
+                    onTouchEnd={(e) => {
+                        const startX = touchStartXRef.current;
+                        touchStartXRef.current = null;
+                        if (startX == null) return;
+                        const endX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : startX;
+                        const deltaX = endX - startX;
+                        const threshold = 50; // px
+                        if (Math.abs(deltaX) >= threshold) {
+                            if (deltaX < 0) {
+                                goNext();
+                            } else {
+                                goPrev();
+                            }
+                        }
+                    }}
+                >
                     {loading && (
                         <div className="flex items-center justify-center h-64">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -178,6 +241,21 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                         }}
                                     />
                                 )}
+                                {isVideo(file.mime_type) && (
+                                    <div className="p-2">
+                                        <video
+                                            src={previewUrl}
+                                            controls
+                                            className="w-full max-h-96"
+                                            onLoadedData={() => setLoading(false)}
+                                            onError={() => {
+                                                setError('Failed to load video preview');
+                                                setLoading(false);
+                                            }}
+                                            preload="metadata"
+                                        />
+                                    </div>
+                                )}
                                 {isAudio(file.mime_type) && (
                                     <div className="p-8 text-center">
                                         <Music className="h-16 w-16 text-slate-400 mx-auto mb-4" />
@@ -220,13 +298,26 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                 )}
                             </div>
 
+                            {/* Navigation Controls */}
+                            <div className="flex items-center justify-between">
+                                <Button variant="outline" onClick={goPrev} disabled={currentFileIndex === 0}>
+                                    ← Sebelumnya
+                                </Button>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    {currentFileIndex + 1} / {filesInDirectory.length}
+                                </div>
+                                <Button variant="outline" onClick={goNext} disabled={currentFileIndex >= filesInDirectory.length - 1}>
+                                    Selanjutnya →
+                                </Button>
+                            </div>
+
                             {/* File Information */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                 <div>
                                     <h4 className="font-medium text-slate-900 dark:text-white mb-2">Informasi File</h4>
                                     <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
                                         <p><strong>Nama:</strong> {file.name}</p>
-                                        <p><strong>Ukuran:</strong> {formatFileSize(file.size)}</p>
+                                        <p><strong>Ukuran:</strong> {formatFileSize(Number(file.size) || 0)}</p>
                                         <p><strong>Jenis File:</strong> {file.mime_type}</p>
                                         <p><strong>Dibuat pada:</strong> {new Date(file.created_at).toLocaleDateString()}</p>
                                         {file.uploader && (
@@ -272,7 +363,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                             Download
                         </Button>
 
-                        {loggedinUser.id == file.uploader?.id &&
+                        {loggedinUser && loggedinUser.id === file.uploader?.id &&
                         <Button variant="outline" onClick={() => setShowShareModal(true)}>
                             <Share2 className="mr-2 h-4 w-4" />
                             Bagikan
