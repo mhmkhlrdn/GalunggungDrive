@@ -5,7 +5,6 @@ import { formatFileSize } from '@/lib/utils';
 import {
     FolderPlus,
     Search,
-    Filter,
     Grid3X3,
     List,
     MoreHorizontal,
@@ -17,8 +16,6 @@ import {
     Folder,
     FolderOpen,
     FileText,
-    Clock,
-    Users,
     Download,
     Calendar,
     HardDrive
@@ -29,6 +26,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import CreateFolderModal from '@/components/create-folder-modal';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface FolderItem {
     id: number;
@@ -62,7 +66,7 @@ interface Props {
         sort_order: string;
     };
     users: Array<{ id: number; name: string; email: string }>;
-    
+
 }
 
 export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filters, users }: Props) {
@@ -87,7 +91,9 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                 const newUrl = window.location.pathname + (query ? `?${query}` : '');
                 window.history.replaceState({}, '', newUrl);
             }
-        } catch {}
+        } catch (e) {
+            // console.error("Error parsing URL parameters:", e);
+        }
     }, []);
 
     const shareForm = useForm({
@@ -109,9 +115,9 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
         );
     };
 
-    const selectAllFolders = () => {
-        setSelectedFolders(folders.data.map(folder => folder.id));
-    };
+    // const selectAllFolders = () => {
+    //     setSelectedFolders(folders.data.map(folder => folder.id));
+    // };
 
     const clearSelection = () => {
         setSelectedFolders([]);
@@ -296,16 +302,72 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
+                                                    <Link
+                                                    href={`/folders/${folder.id}`}>
                                                 <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">
+
                                                     {folder.name}
                                                 </h3>
+                                                    </Link>
                                                 <div className="flex items-center space-x-1">
                                                     <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                                                         <Star className="h-4 w-4" />
                                                     </button>
-                                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link
+                                                                    href={`/folders/${folder.id}`}
+                                                                    className="flex items-center"
+                                                                >
+                                                                    <Eye className="mr-2 h-4 w-4" />
+                                                                    <span>Lihat</span>
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
+                                                                className="flex items-center"
+                                                            >
+                                                                <Download className="mr-2 h-4 w-4" />
+                                                                <span>Unduh</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setShareFolderId(folder.id);
+                                                                    setShowShareModal(true);
+                                                                }}
+                                                                className="flex items-center"
+                                                            >
+                                                                <Share2 className="mr-2 h-4 w-4" />
+                                                                <span>Bagikan</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setRenameFolder({ id: folder.id, name: folder.name });
+                                                                    renameForm.setData('name', folder.name);
+                                                                    setShowRenameModal(true);
+                                                                }}
+                                                                className="flex items-center"
+                                                            >
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                <span>Ganti Nama</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteFolder(folder.id)}
+                                                                className="flex items-center text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                <span>Hapus</span>
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                             <div className="mt-1 flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400">
@@ -326,52 +388,7 @@ export default function FoldersIndex({ folders, currentFolder, breadcrumbs, filt
                                     </div>
 
                                     {/* Quick Actions */}
-                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <div className="pointer-events-auto flex items-center space-x-2">
-                                            <Link
-                                                href={`/folders/${folder.id}`}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                                title="View folder"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Link>
-                                            <button
-                                                onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                                title="Download folder as ZIP"
-                                            >
-                                                <Download className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setShareFolderId(folder.id);
-                                                    setShowShareModal(true);
-                                                }}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                                title="Share folder"
-                                            >
-                                                <Share2 className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setRenameFolder({ id: folder.id, name: folder.name });
-                                                    renameForm.setData('name', folder.name);
-                                                    setShowRenameModal(true);
-                                                }}
-                                                className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50"
-                                                title="Rename folder"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteFolder(folder.id)}
-                                                className="rounded-full bg-white p-2 text-red-600 hover:bg-red-50"
-                                                title="Hapus folder"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </div>
+                                    {/* Removed the hover-activated quick actions */}
                                 </div>
                             );
                         })}

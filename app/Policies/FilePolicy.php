@@ -44,7 +44,7 @@ class FilePolicy
 
     public function update(User $user, File $file): bool
     {
-        return $user->isAdmin() || $user->id === $file->user_id;
+        return $user->is_super_admin || $user->isAdmin() || $user->id === $file->user_id;
     }
 
     public function delete(User $user, File $file): bool
