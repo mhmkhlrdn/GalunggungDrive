@@ -8,6 +8,21 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import { Ziggy } from './ziggy';
 import {route} from 'ziggy-js';
 
+declare global {
+    interface Window {
+        Ziggy: typeof Ziggy;
+        route: typeof route;
+        Inertia: {
+            onStart: (callback: () => void) => void;
+            cancel: () => void;
+            visit: (url: string, options?: object) => void;
+        };
+        Auth: import('./types').Auth;
+    }
+}
+
+
+
 const appName = import.meta.env.VITE_APP_NAME || 'Galunggung Drive';
 
 createInertiaApp({
@@ -24,6 +39,9 @@ createInertiaApp({
         window.Ziggy = Ziggy;
         window.route = route;
 
+        // Initialize window.Auth with user data
+        window.Auth = (props.initialPage.props as unknown as import('./types').SharedData).auth;
+
         root.render(
             <SnackbarProvider>
                 <App {...props} />
@@ -34,5 +52,10 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+// Cancel any previous Inertia requests when a new one starts
+if (window.Inertia) {
+    window.Inertia.onStart(() => window.Inertia.cancel());
+}
 
 initializeTheme();

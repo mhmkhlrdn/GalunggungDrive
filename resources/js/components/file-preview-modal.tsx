@@ -42,8 +42,12 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
             setError(null);
             setPreviewUrl(null);
 
-            if (isImage(file.mime_type) || isVideo(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
-                const url = `/files/${file.id}/preview`;
+            if (isVideo(file.mime_type)) {
+                // Redirect to the new video preview page
+                window.open(route('files.video-preview', { file: file.id }), '_blank');
+                onClose(); // Close the modal
+            } else if (isImage(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
+                const url = route('files.preview', { file: file.id });
                 setPreviewUrl(url);
 
                 timeout = setTimeout(() => {
@@ -172,19 +176,6 @@ export default function FilePreviewModal({ isOpen, onClose, file, loggedinUser, 
                                             setError('Failed to load image preview');
                                             setLoading(false);
                                         }}
-                                    />
-                                )}
-                                {isVideo(file.mime_type) && (
-                                    <video
-                                        src={previewUrl}
-                                        controls
-                                        className="w-full h-auto max-h-96"
-                                        onLoadedData={() => setLoading(false)}
-                                        onError={() => {
-                                            setError('Failed to load video preview');
-                                            setLoading(false);
-                                        }}
-                                        preload="metadata"
                                     />
                                 )}
                                 {isAudio(file.mime_type) && (

@@ -28,7 +28,7 @@ class CustomLoginController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
+            return back()->withErrors([
                 'email' => 'Kredensial yang diberikan tidak cocok dengan catatan kami.',
             ]);
         }
@@ -37,7 +37,7 @@ class CustomLoginController extends Controller
         if ($user->current_session_id && $user->current_session_id !== session()->getId()) {
             // Check if the session still exists
             $sessionExists = $this->checkSessionExists($user->current_session_id);
-            
+
             if ($sessionExists) {
                 return Inertia::render('auth/LoginBlocked', [
                     'message' => 'Akun ini sedang digunakan di perangkat lain. Silakan tunggu hingga pengguna lain keluar atau hubungi administrator.',
@@ -52,7 +52,7 @@ class CustomLoginController extends Controller
 
         // Generate new session ID
         $sessionId = session()->getId();
-        
+
         // Update user with new session info
         $user->update([
             'current_session_id' => $sessionId,
@@ -71,7 +71,7 @@ class CustomLoginController extends Controller
     public function logout(Request $request)
     {
         $user = Auth::user();
-        
+
         if ($user) {
             // Clear session tracking
             $user->update(['current_session_id' => null]);
@@ -90,7 +90,7 @@ class CustomLoginController extends Controller
         // Check if the session file exists in the session storage
         $sessionPath = storage_path('framework/sessions');
         $sessionFile = $sessionPath . '/sess_' . $sessionId;
-        
+
         if (file_exists($sessionFile)) {
             // Check if session is not expired
             $sessionData = file_get_contents($sessionFile);
@@ -102,7 +102,7 @@ class CustomLoginController extends Controller
                 }
             }
         }
-        
+
         return false;
     }
 
@@ -116,7 +116,7 @@ class CustomLoginController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
+            return back()->withErrors([
                 'email' => 'Kredensial yang diberikan tidak cocok dengan catatan kami.',
             ]);
         }
@@ -126,7 +126,7 @@ class CustomLoginController extends Controller
 
         // Generate new session ID
         $sessionId = session()->getId();
-        
+
         // Update user with new session info
         $user->update([
             'current_session_id' => $sessionId,

@@ -104,7 +104,6 @@ class TrashController extends Controller
     $user = Auth::user();
     $isAdmin = in_array($user->role, ['admin', 'super-admin']);
 
-    // Get the appropriate trashed files/folders
     $fileQuery = File::onlyTrashed();
     $folderQuery = Folder::onlyTrashed();
 
@@ -113,13 +112,11 @@ class TrashController extends Controller
         $folderQuery->where('user_id', $user->id);
     }
 
-    // Delete files and their versions
     $fileQuery->get()->each(function (File $file) {
         $this->deletePhysicalFileAndVersions($file);
         $file->forceDelete();
     });
 
-    // Delete folders
     $folderQuery->get()->each(function (Folder $folder) {
         $folder->forceDelete();
     });

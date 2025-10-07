@@ -21,12 +21,12 @@ export default function CreateFolderModal({ isOpen, onClose, onCreate, parentId 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         parent_id: parentId || null,
-        visibility: 'private' as 'private' | 'shared' | 'public',
+        visibility: 'public' as 'public' | 'shared' | 'private',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!data.name.trim()) {
             return;
         }

@@ -272,7 +272,6 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     </SidebarMenuItem>
                 </SidebarGroup>
 
-                {/* Admin Panel Section - Only for admins */}
                 {isAdmin && (
                     <SidebarGroup>
                         <SidebarGroupLabel className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
