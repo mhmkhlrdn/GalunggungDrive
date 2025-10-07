@@ -433,13 +433,51 @@ class FileController extends Controller
         try {
             $this->authorize('view', $file);
 
+            $errorId = (string) \Illuminate\Support\Str::uuid();
+            $user = \Illuminate\Support\Facades\Auth::user();
+
             if (!$file->storageLocation || !$file->storageLocation->is_active) {
+                \Illuminate\Support\Facades\Log::warning('Preview failed: inactive storage location', [
+                    'error_id' => $errorId,
+                    'file_id' => $file->id,
+                    'user_id' => $user?->id,
+                    'storage_location_id' => $file->storage_location_id,
+                ]);
                 abort(404, 'File not found');
             }
             $diskKey = $file->storageLocation->diskKey();
-            if (!Storage::disk($diskKey)->exists($file->path)) {
+            $exists = false;
+            try {
+                $exists = Storage::disk($diskKey)->exists($file->path);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Preview storage check threw exception', [
+                    'error_id' => $errorId,
+                    'file_id' => $file->id,
+                    'disk' => $diskKey,
+                    'path' => $file->path,
+                    'exception' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+            if (!$exists) {
+                \Illuminate\Support\Facades\Log::warning('Preview failed: file missing on disk', [
+                    'error_id' => $errorId,
+                    'file_id' => $file->id,
+                    'disk' => $diskKey,
+                    'path' => $file->path,
+                ]);
                 abort(404, 'File not found');
             }
+
+            \Illuminate\Support\Facades\Log::info('Preview request begin', [
+                'error_id' => $errorId,
+                'file_id' => $file->id,
+                'disk' => $diskKey,
+                'path' => $file->path,
+                'mime' => $file->mime_type,
+                'range' => request()->header('Range'),
+                'user_id' => $user?->id,
+            ]);
 
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -452,6 +490,7 @@ class FileController extends Controller
                 'details' => [
                     'file_name' => $file->name,
                     'mime_type' => $file->mime_type,
+                    'error_id' => $errorId,
                 ],
             ]);
 
@@ -490,6 +529,15 @@ class FileController extends Controller
             return response()->file($filePath, $headers);
 
         } catch (\Exception $e) {
+            $errorId = (string) ($errorId ?? \Illuminate\Support\Str::uuid());
+            \Illuminate\Support\Facades\Log::error('Preview exception', [
+                'error_id' => $errorId,
+                'file_id' => $file->id,
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'preview',
@@ -501,6 +549,7 @@ class FileController extends Controller
                 'details' => [
                     'file_name' => $file->name,
                     'error' => $e->getMessage(),
+                    'error_id' => $errorId,
                 ],
             ]);
 
