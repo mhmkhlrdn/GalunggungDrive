@@ -242,7 +242,7 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }
                                                         size: file.size,
                                                         description: '',
                     tags: [],
-                                                        visibility: 'public',
+                                                        visibility: file.visibility,
                                                     });
                                                     setShowEditModal(true);
                                                 }}
