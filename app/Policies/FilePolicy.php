@@ -10,12 +10,12 @@ class FilePolicy
     public function view(User $user, File $file): bool
     {
         // Super-Admins can view any file
-        if ($user->is_super_admin) {
+        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) {
             return true;
         }
 
         // Staff users can only view their own files
-        if ($user->isStaff()) {
+        if (method_exists($user, 'isStaff') ? $user->isStaff() : (($user->role ?? null) === 'staff')) {
             return $user->id === $file->user_id;
         }
 
@@ -44,19 +44,19 @@ class FilePolicy
 
     public function update(User $user, File $file): bool
     {
-        if ($user->is_super_admin) return true;
-        if ($user->isAdmin()) {
+        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) return true;
+        if (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false)) {
             // Admins can edit files owned by staff users
-            return $file->user && $file->user->isStaff();
+            return $file->user && (method_exists($file->user, 'isStaff') ? $file->user->isStaff() : (($file->user->role ?? null) === 'staff'));
         }
         return $user->id === $file->user_id;
     }
 
     public function delete(User $user, File $file): bool
     {
-        if ($user->is_super_admin) return true;
-        if ($user->isAdmin()) {
-            return $file->user && $file->user->isStaff();
+        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) return true;
+        if (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false)) {
+            return $file->user && (method_exists($file->user, 'isStaff') ? $file->user->isStaff() : (($file->user->role ?? null) === 'staff'));
         }
         return $user->id === $file->user_id;
     }
@@ -69,7 +69,7 @@ class FilePolicy
     public function download(User $user, File $file): bool
     {
         // Super-Admins can download any file
-        if ($user->is_super_admin) {
+        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) {
             return true;
         }
 
