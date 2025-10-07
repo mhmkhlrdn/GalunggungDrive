@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import { FolderOpen, FileText, Download, Trash2, Search, Grid3X3, List, Eye, User, Calendar, HardDrive } from 'lucide-react';
+import FilePreview from '@/components/file-preview';
+import { FolderOpen, Download, Trash2, Search, Grid3X3, List, User, Calendar, HardDrive, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { fuzzyFilter } from '@/lib/utils';
 
@@ -14,6 +15,8 @@ interface CloudFile {
     user: {
         id: number;
         name: string;
+        is_admin: boolean;
+        is_super_admin: boolean;
     };
     folder?: {
         id: number;
@@ -46,6 +49,7 @@ interface Props {
 }
 
 export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filters = {} }: Props) {
+    const { user } = window.Auth;
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [search, setSearch] = useState(filters.search || '');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
@@ -188,10 +192,10 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                                     onDragEnd={() => { setDraggingFileId(null); setHoverFolderId(null); }}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <FileText className="h-6 w-6 text-slate-600" />
+                                        <FilePreview file={file} size="md" />
                                         <div className="min-w-0 flex-1">
                                             <button
-                                                onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
+                                                onClick={() => window.open(`/files/${file.id}/preview`)}
                                                 className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate text-left w-full"
                                                 title="Click to preview file"
                                             >
@@ -220,11 +224,12 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
                                         </div>
                                         <div className="flex flex-col items-center space-y-1">
                                             <button
-                                                onClick={() => window.open(`/files/${file.id}/preview`, '_blank')}
-                                                className="rounded bg-white p-2 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"
-                                                title="Preview file"
+                                                onClick={() => router.get(`/files/${file.id}/edit`)}
+                                                className={`rounded bg-white p-2 ${user.is_super_admin || user.is_admin || user.id === file.user.id ? 'text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700' : 'text-slate-400 dark:text-slate-500 cursor-not-allowed'}`}
+                                                title={user.is_super_admin || user.is_admin || user.id === file.user.id ? "Edit file" : "You don't have permission to edit this file"}
+                                                disabled={!(user.is_super_admin || user.is_admin || user.id === file.user.id)}
                                             >
-                                                <Eye className="h-4 w-4" />
+                                                <Pencil className="h-4 w-4" />
                                             </button>
                                             <button
                                                 onClick={() => window.open(`/files/${file.id}/download`, '_blank')}

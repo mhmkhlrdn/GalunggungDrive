@@ -44,10 +44,10 @@ export default function ServerError({ message }: { message?: string }) {
                         Coba Lagi
                     </Button>
 
-                    <Link href="/dashboard">
+                    <Link href="/">
                         <Button variant="outline" className="w-full">
                             <Home className="w-4 h-4 mr-2" />
-                            Kembali ke Dashboard
+                            Kembali ke Landing Page
                         </Button>
                     </Link>
 
