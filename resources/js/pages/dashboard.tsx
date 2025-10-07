@@ -83,7 +83,7 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
     const [showFilePreview, setShowFilePreview] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<any>(null);
+    const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
     const { auth, users } = usePage().props as { auth?: any, users?: any };
     const currentUserId = auth?.user?.id;
 
@@ -109,10 +109,34 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
         router.reload();
     };
 
-    const handleFilePreview = (file: any) => {
-        setSelectedFile(file);
+    const handleFilePreview = (index: number) => {
+        setSelectedFileIndex(index);
         setShowFilePreview(true);
     };
+
+    const filesInDirectory = recentFiles.map((f) => {
+        // Map dashboard recent file shape to FilePreviewModal expectations
+        const mapTypeToMime = (type: string) => {
+            switch (type) {
+                case 'image': return 'image/*';
+                case 'video': return 'video/*';
+                case 'audio': return 'audio/*';
+                case 'pdf': return 'application/pdf';
+                case 'archive': return 'application/zip';
+                case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                default: return 'application/octet-stream';
+            }
+        };
+        return {
+            id: f.id,
+            name: f.name,
+            mime_type: mapTypeToMime(f.type),
+            size: f.size,
+            created_at: f.modified,
+            uploader: f.uploader,
+        };
+    });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -245,11 +269,11 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                             </Link>
                         </div>
                         <div className="space-y-3">
-                            {recentFiles.map((file) => (
+                            {recentFiles.map((file, idx) => (
                                 <div key={file.id} className="flex items-center space-x-3 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 group">
                                     <div className="text-2xl">{getFileIcon(file.type)}</div>
                                     <button
-                                        onClick={() => handleFilePreview(file)}
+                                        onClick={() => handleFilePreview(idx)}
                                         className="flex-1 min-w-0 text-left"
                                     >
                                         <div className="flex items-center space-x-2">
@@ -352,10 +376,11 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                     isOpen={showFilePreview}
                     onClose={() => {
                         setShowFilePreview(false);
-                        setSelectedFile(null);
+                        setSelectedFileIndex(null);
                     }}
                     loggedinUser={auth.user}
-                    file={selectedFile}
+                    filesInDirectory={filesInDirectory}
+                    currentIndex={selectedFileIndex ?? 0}
                     users={users}
                 />
             </div>
