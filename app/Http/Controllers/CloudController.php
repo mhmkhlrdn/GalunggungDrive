@@ -45,32 +45,8 @@ class CloudController extends Controller
             ->get(['id', 'name', 'parent_id', 'user_id', 'updated_at']);
 
 
-        // Get all files (including those in folders) for comprehensive search
-        $allFiles = File::with(['user', 'folder', 'storageLocation'])
-            ->whereHas('storageLocation', function ($q) {
-                $q->where('is_active', true);
-            })
-            ->where(function ($q) use ($userId, $user) {
-                if ($user->is_super_admin || ($user->is_admin ?? true)) {
-                    // Super Admin/Admin: see all files
-                } elseif (($user->role ?? null) === 'staff') {
-                    // Staff users can only see their own files
-                    $q->where('user_id', $userId);
-                } else {
-                    // Regular users and admins see their own, public, and shared files
-                    $q->where('user_id', $userId)
-                      ->orWhere('visibility', 'public')
-                      ->orWhereHas('shares', function ($shareQuery) use ($userId) {
-                          $shareQuery->where('shared_with', $userId)
-                                     ->where(function ($expireQuery) {
-                                         $expireQuery->whereNull('expires_at')
-                                                    ->orWhere('expires_at', '>', now());
-                                     });
-                      });
-                }
-            })
-            ->orderBy('updated_at', 'desc')
-            ->get();
+        // Do not send all files to the client to keep payloads small
+        $allFiles = collect();
 
         // Get root-level files for display
         $files = File::with(['user', 'storageLocation'])
@@ -133,25 +109,7 @@ class CloudController extends Controller
                 'per_page' => $files->perPage(),
                 'total' => $files->total(),
             ],
-            'allFiles' => $allFiles->map(function ($file) {
-                return [
-                    'id' => $file->id,
-                    'name' => $file->name,
-                    'size' => $file->size,
-                    'mime_type' => $file->mime_type,
-                    'updated_at' => $file->updated_at->toISOString(),
-                    'visibility' => $file->visibility,
-                    'starred' => $file->isStarredBy(Auth::user()),
-                    'user' => [
-                        'id' => $file->user->id,
-                        'name' => $file->user->name,
-                    ],
-                    'folder' => $file->folder ? [
-                        'id' => $file->folder->id,
-                        'name' => $file->folder->name,
-                    ] : null,
-                ];
-            }),
+            // allFiles removed for performance
             'breadcrumbs' => [
                 ['title' => 'Cloud', 'href' => route('cloud.index')],
             ],

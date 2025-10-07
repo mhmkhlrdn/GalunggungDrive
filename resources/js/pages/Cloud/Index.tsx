@@ -45,12 +45,11 @@ interface Props {
         per_page: number;
         total: number;
     };
-    allFiles: CloudFile[];
     breadcrumbs: Array<{ title: string; href: string }>;
     filters?: { search?: string; sort_by?: string; sort_order?: 'asc' | 'desc' };
 }
 
-export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filters = {} }: Props) {
+export default function CloudIndex({ folders, files, breadcrumbs, filters = {} }: Props) {
     const { user } = window.Auth;
     const isSuperAdmin = Boolean(user?.role === 'super-admin');
     const isAdmin = Boolean(user?.role === 'admin');
@@ -81,14 +80,8 @@ export default function CloudIndex({ folders, files, allFiles, breadcrumbs, filt
         0.2
     );
 
-    // Super admin sees all files by default; others see root files unless searching
-    const filesToSearch = isSuperAdmin ? allFiles : (search.trim() ? allFiles : files.data);
-    const filteredFiles = fuzzyFilter(
-        filesToSearch,
-        search,
-        (file) => `${file.name} ${file.user.name} ${file.folder?.name || ''}`,
-        0.2
-    );
+    // Filter current page only to keep client work minimal
+    const filteredFiles = fuzzyFilter(files.data, search, (file) => `${file.name} ${file.user.name} ${file.folder?.name || ''}`, 0.2);
 
     const formatFileSize = (bytes: number) => {
         const units = ['B', 'KB', 'MB', 'GB', 'TB'];

@@ -95,6 +95,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
     Route::get('storage', [StorageController::class, 'index'])->name('storage.index');
 
     Route::get('cloud', [CloudController::class, 'index'])->name('cloud.index');
+    Route::get('api/cloud/search', [CloudController::class, 'search'])->name('cloud.search');
 
     Route::middleware('admin')->group(function () {
         Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
