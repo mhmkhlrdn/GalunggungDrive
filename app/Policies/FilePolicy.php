@@ -10,36 +10,42 @@ class FilePolicy
     public function view(User $user, File $file): bool
     {
         // Super-Admins can view any file
-        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) {
+        if ($user->isSuperAdmin()) {
             return true;
+        }
+
+        // Admins can view any non-private file or any file they own or that's shared to them
+        if ($user->isAdmin()) {
+            if ($user->id === $file->user_id) return true;
+            if ($file->visibility && $file->visibility !== 'private') return true;
+            return $file->shares()
+                ->where('shared_with', $user->id)
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')
+                          ->orWhere('expires_at', '>', now());
+                })
+                ->exists();
         }
 
         // Staff users can only view their own files
-        if (method_exists($user, 'isStaff') ? $user->isStaff() : (($user->role ?? null) === 'staff')) {
+        if ($user->role === 'staff') {
             return $user->id === $file->user_id;
         }
 
-        // Admins and regular users (non-staff):
-        // Allow viewing if user owns the file, or file is public, or has been shared
+        // Regular users: own, public, or shared
         if ($user->id === $file->user_id) {
             return true;
         }
-
-        // Allow viewing if file is public
         if ($file->visibility === 'public') {
             return true;
         }
-
-        // Allow viewing if user has been granted access through sharing
-        $hasSharedAccess = $file->shares()
+        return $file->shares()
             ->where('shared_with', $user->id)
             ->where(function ($query) {
                 $query->whereNull('expires_at')
                       ->orWhere('expires_at', '>', now());
             })
             ->exists();
-
-        return $hasSharedAccess;
     }
 
     public function update(User $user, File $file): bool

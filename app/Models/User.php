@@ -109,8 +109,8 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        if (method_exists($this, 'isSuperAdmin') && $this->isSuperAdmin()) return true;
-        return (bool) ($this->is_admin ?? false) || in_array($this->role, ['admin']);
+        // Admin should NOT imply super-admin; keep separate
+        return (bool) ($this->is_admin ?? false) || $this->role === 'admin';
     }
 
     /**
@@ -118,7 +118,7 @@ class User extends Authenticatable
      */
     public function isStaff(): bool
     {
-        return $this->isAdmin() || in_array($this->role, ['staff']);
+        return $this->role === 'staff';
     }
 
     /**

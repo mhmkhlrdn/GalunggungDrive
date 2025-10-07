@@ -13,18 +13,27 @@ class CloudController extends Controller
 {
     public function index(): Response
     {
-        /** @var User $user */ // Add this line
         $user = Auth::user();
+        /** @var User $user */
         $userId = $user->id;
-
-
-        $user = Auth::user();
 
         $folders = Folder::with('user')
             ->whereNull('parent_id')
             ->where(function ($q) use ($userId, $user) {
-                if ($user->is_super_admin || ($user->is_admin ?? false)) {
-                    // Super Admin/Admin: see all folders
+                if ($user->isSuperAdmin()) {
+                    // Super Admin: see all folders
+                } elseif ($user->isAdmin()) {
+                    // Admin: see non-private and own and shared folders
+                    $q->where('user_id', $userId)
+                      ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
+                      ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                          $shareQuery->where('shared_with', $userId)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
                 } elseif (($user->role ?? null) === 'staff') {
                     // Staff users can only see their own folders
                     $q->where('user_id', $userId);
@@ -32,6 +41,7 @@ class CloudController extends Controller
                     // Regular users and admins see their own, public, and shared folders
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($userId) {
                           $shareQuery->where('shared_with', $userId)
                                      ->where(function ($expireQuery) {
@@ -55,15 +65,28 @@ class CloudController extends Controller
             })
             ->whereNull('folder_id')
             ->where(function ($q) use ($userId, $user) {
-                if ($user->is_super_admin || ($user->is_admin ?? false)) {
-                    // Super Admin/Admin: see all files
+                if ($user->isSuperAdmin()) {
+                    // Super Admin: see all files
+                } elseif ($user->isAdmin()) {
+                    // Admin: see own, non-private, and shared files
+                    $q->where('user_id', $userId)
+                      ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
+                      ->orWhereHas('shares', function ($shareQuery) use ($userId) {
+                          $shareQuery->where('shared_with', $userId)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
                 } elseif (($user->role ?? null) === 'staff') {
                     // Staff users can only see their own files
                     $q->where('user_id', $userId);
                 } else {
-                    // Regular users and admins see their own, public, and shared files
+                    // Regular users see their own, public, and shared files
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($userId) {
                           $shareQuery->where('shared_with', $userId)
                                      ->where(function ($expireQuery) {
