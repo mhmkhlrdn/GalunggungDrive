@@ -140,4 +140,35 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    .circular-loading-bar-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+        border-radius: 50%;
+        padding: 10px;
+    }
+
+    .circular-loading-bar-svg {
+        transform: rotate(-90deg);
+    }
+
+    .circular-loading-bar-bg {
+        stroke: var(--color-muted);
+        stroke-width: 4;
+        fill: transparent;
+    }
+
+    .circular-loading-bar-progress {
+        stroke: var(--color-primary);
+        stroke-width: 4;
+        fill: transparent;
+        transition: stroke-dashoffset 0.2s ease-out;
+    }
 }

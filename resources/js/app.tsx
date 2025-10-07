@@ -7,6 +7,7 @@ import { initializeTheme } from './hooks/use-appearance';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import { Ziggy } from './ziggy';
 import {route} from 'ziggy-js';
+import { LoadingBar } from './components/ui/loading-bar';
 
 declare global {
     interface Window {
@@ -44,13 +45,12 @@ createInertiaApp({
 
         root.render(
             <SnackbarProvider>
+                <LoadingBar />
                 <App {...props} />
             </SnackbarProvider>
         );
     },
-    progress: {
-        color: '#4B5563',
-    },
+    progress: false,
 });
 
 // Cancel any previous Inertia requests when a new one starts
