@@ -69,7 +69,9 @@ class TrashController extends Controller
     public function restoreFile(int $fileId): RedirectResponse
     {
         $file = File::withTrashed()->where('id', $fileId)->firstOrFail();
-        $this->authorize('restore', $file);
+        if (!Auth::user()->isSuperAdmin()) {
+            $this->authorize('restore', $file);
+        }
         $file->restore();
         return redirect()->back()->with('success', 'File restored successfully.');
     }
@@ -77,7 +79,9 @@ class TrashController extends Controller
     public function restoreFolder(int $folderId): RedirectResponse
     {
         $folder = Folder::withTrashed()->where('id', $folderId)->firstOrFail();
-        $this->authorize('restore', $folder);
+        if (!Auth::user()->isSuperAdmin()) {
+            $this->authorize('restore', $folder);
+        }
         $folder->restore();
         return redirect()->back()->with('success', 'Folder restored successfully.');
     }

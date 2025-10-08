@@ -31,7 +31,7 @@ export default defineConfig({
   port: 5173,
   strictPort:true,
   cors: {
-    origin: 'http://127.0.0.1:81',
+    origin: 'http://127.0.0.1',
     credentials: true,
   },
   hmr: {

@@ -197,7 +197,7 @@ export default function TrashIndex({ files, folders, filters }: Props) {
     const getCurrentData = () => {
         if (activeTab === 'files') return files;
         if (activeTab === 'folders') return folders;
-        return null; // For 'all' tab, we'll show both
+        return null;
     };
 
     const getTotalItems = () => {

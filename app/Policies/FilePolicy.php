@@ -60,10 +60,15 @@ class FilePolicy
 
     public function delete(User $user, File $file): bool
     {
-        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) return true;
+        if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) {
+            return true;
+        }
         if (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false)) {
+            // Admins can delete their own files or files owned by staff
+            if ($user->id === $file->user_id) return true;
             return $file->user && (method_exists($file->user, 'isStaff') ? $file->user->isStaff() : (($file->user->role ?? null) === 'staff'));
         }
+        // Staff and regular users can only delete their own files
         return $user->id === $file->user_id;
     }
 
