@@ -22,12 +22,21 @@ interface FileUploadModalProps {
     storageLocations?: StorageLocationOption[];
 }
 
+import { useEffect } from 'react';
+
 export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName, storageLocations = [] }: FileUploadModalProps) {
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
     const isStaff = user && user.role === 'staff';
 
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+    // Reset uploadedFiles only when modal is closed
+    useEffect(() => {
+        if (!isOpen) {
+            setUploadedFiles([]);
+        }
+    }, [isOpen]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         files: [] as File[],
@@ -39,8 +48,15 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
     });
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
-        setUploadedFiles(acceptedFiles);
-        setData('files', acceptedFiles);
+        setUploadedFiles((prev) => {
+            // Avoid duplicates by name and size
+            const newFiles = acceptedFiles.filter(
+                (file) => !prev.some((f) => f.name === file.name && f.size === file.size)
+            );
+            const allFiles = [...prev, ...newFiles];
+            setData('files', allFiles);
+            return allFiles;
+        });
     }, [setData]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -102,7 +118,6 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             forceFormData: true,
             onSuccess: () => {
                 onUpload(uploadedFiles);
-                setUploadedFiles([]);
                 reset();
                 onClose();
             },

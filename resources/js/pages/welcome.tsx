@@ -20,7 +20,7 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Galunggung Drive - Penyimpanan Cloud">
+            <Head title="Galunggung Cloud - Penyimpanan Cloud">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700"
@@ -166,25 +166,6 @@ export default function Welcome() {
                     </div>
                 </section>
 
-                {/* CTA Section */}
-                <section className="py-20 sm:py-32">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 px-8 py-16 sm:px-16">
-                            <div className="absolute inset-0 bg-white/10" />
-                            <div className="relative text-center">
-                                <h2 className="text-3xl font-bold text-white sm:text-4xl">
-                                    Siap mulai berbagi file?
-                                </h2>
-                                <p className="mx-auto mt-4 max-w-2xl text-lg text-blue-100">
-                                    Gabung dengan tim yang sudah pakai Galunggung Drive untuk berbagi file sehari-hari.
-                                    Lebih praktis dari email, lebih aman dari flashdisk.
-                                </p>
-
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 {/* Footer */}
                 <footer className="border-t border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
                     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -194,7 +175,7 @@ export default function Welcome() {
                                     <FolderOpen className="h-5 w-5 text-white" />
                                 </div>
                                 <span className="text-lg font-semibold text-slate-900 dark:text-white">
-                                    Galunggung Drive
+                                    Galunggung Cloud
                                 </span>
                             </div>
                             <p className="mt-4 text-slate-600 dark:text-slate-300">

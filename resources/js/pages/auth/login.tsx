@@ -32,7 +32,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
     return (
         <AuthLayout
-            title="Masuk ke Galunggung Drive"
+            title="Masuk ke Galunggung Cloud"
             description="Masukkan email dan password untuk mengakses file sharing internal"
         >
             <Head title="Masuk" />
@@ -81,17 +81,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     placeholder="Masukkan password"
                                 />
                                 <InputError message={errors.password} />
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    checked={data.remember}
-                                    onCheckedChange={(checked) => setData('remember', checked as boolean)}
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">Ingat saya</Label>
                             </div>
 
                             <Button

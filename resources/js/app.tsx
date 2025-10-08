@@ -24,7 +24,7 @@ declare global {
 
 
 
-const appName = import.meta.env.VITE_APP_NAME || 'Galunggung Drive';
+const appName = import.meta.env.VITE_APP_NAME || 'Galunggung Cloud';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

@@ -19,7 +19,52 @@ import {
     Trash,
     Folder
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+
+// MobileTrashActions: Dropdown for mobile quick actions
+function MobileTrashActions({ onRestore, onDelete }: { onRestore: () => void; onDelete: () => void }) {
+    const [open, setOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        function handleClick(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [open]);
+
+    return (
+        <div className="relative" ref={menuRef}>
+            <button
+                className="rounded-full bg-white p-2 text-slate-600 shadow hover:bg-slate-50"
+                onClick={() => setOpen((v) => !v)}
+                aria-label="More actions"
+            >
+                <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {open && (
+                <div className="absolute right-0 mt-2 w-32 rounded-lg bg-white shadow-lg ring-1 ring-black/10 z-50">
+                    <button
+                        onClick={() => { setOpen(false); onRestore(); }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                        <RotateCcw className="h-4 w-4" /> Pulihkan
+                    </button>
+                    <button
+                        onClick={() => { setOpen(false); onDelete(); }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                        <Trash className="h-4 w-4" /> Hapus
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
 
 interface File {
     id: number;
@@ -350,8 +395,8 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                         </div>
                                     </div>
 
-                                    {/* Quick Actions */}
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                    {/* Quick Actions - Desktop */}
+                                    <div className="absolute inset-0 items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 hidden sm:flex">
                                         <div className="flex items-center space-x-2">
                                             <button onClick={() => handleRestoreFile(file.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <RotateCcw className="h-4 w-4" />
@@ -360,6 +405,13 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                                 <Trash className="h-4 w-4" />
                                             </button>
                                         </div>
+                                    </div>
+                                    {/* Quick Actions - Mobile Dropdown */}
+                                    <div className="absolute top-2 right-2 flex sm:hidden">
+                                        <MobileTrashActions
+                                            onRestore={() => handleRestoreFile(file.id)}
+                                            onDelete={() => handleForceDeleteFile(file.id)}
+                                        />
                                     </div>
                                 </div>
                             );
@@ -405,8 +457,8 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                         </div>
                                     </div>
 
-                                    {/* Quick Actions */}
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                    {/* Quick Actions - Desktop */}
+                                    <div className="absolute inset-0 items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 hidden sm:flex">
                                         <div className="flex items-center space-x-2">
                                             <button onClick={() => handleRestoreFolder(folder.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
                                                 <RotateCcw className="h-4 w-4" />
@@ -415,6 +467,13 @@ export default function TrashIndex({ files, folders, filters }: Props) {
                                                 <Trash className="h-4 w-4" />
                                             </button>
                                         </div>
+                                    </div>
+                                    {/* Quick Actions - Mobile Dropdown */}
+                                    <div className="absolute top-2 right-2 flex sm:hidden">
+                                        <MobileTrashActions
+                                            onRestore={() => handleRestoreFolder(folder.id)}
+                                            onDelete={() => handleForceDeleteFolder(folder.id)}
+                                        />
                                     </div>
                                 </div>
                             );
