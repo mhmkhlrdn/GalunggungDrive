@@ -159,6 +159,9 @@ class FolderController extends Controller
                 $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public');
             })
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
             ->orderBy('updated_at', 'desc')
             ->get()
             ->map(function ($file) {
