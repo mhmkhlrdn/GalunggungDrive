@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\File;
 use App\Models\StorageLocation;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Inertia\Response;
 
 class StorageLocationController extends Controller
@@ -94,18 +97,88 @@ class StorageLocationController extends Controller
             ->with('success', 'Storage location updated successfully.');
     }
 
-    public function destroy(StorageLocation $storageLocation): RedirectResponse
+    private function deletePhysicalFileAndVersions(File $file): void
+    {
+        try {
+            if ($file->disk && $file->path) {
+                try { Storage::disk($file->disk)->delete($file->path); } catch (\Throwable $e) { /* ignore */ }
+            }
+
+            $file->versions()->each(function ($version) use ($file) {
+                if ($version->path) {
+                    try { Storage::disk($file->disk)->delete($version->path); } catch (\Throwable $e) { /* ignore */ }
+                }
+            });
+        } catch (\Throwable $e) {
+        }
+    }
+
+//     public function destroy(StorageLocation $storageLocation): RedirectResponse
+// {
+//     DB::beginTransaction();
+
+//     try {
+//         $files = File::where('disk_id', $storageLocation->id)->get();
+
+//         foreach ($files as $file) {
+//             $this->deletePhysicalFileAndVersions($file);
+//             $file->forceDelete();
+//         }
+
+//         $storageLocation->delete();
+
+//         DB::commit();
+
+//         return redirect()
+//             ->route('admin.storage-locations.index')
+//             ->with('success', 'Storage location and all its files deleted successfully.');
+//     } catch (\Exception $e) {
+//         DB::rollBack();
+
+//         return redirect()
+//             ->route('admin.storage-locations.index')
+//             ->with('error', 'Error deleting storage location: ' . $e->getMessage());
+//     }
+// }
+
+public function destroy(StorageLocation $storageLocation): RedirectResponse
 {
+    DB::beginTransaction();
+
     try {
-        $storageLocation->delete();
+        // Get all files that would be deleted
+        $files = File::where('disk_id', $storageLocation->id)->get();
+
+        // Log everything instead of deleting
+        info("=== [DRY RUN] Deleting storage location #{$storageLocation->id} ({$storageLocation->name}) ===");
+        info("Found {$files->count()} file(s) linked to this storage location.");
+
+        foreach ($files as $file) {
+            info("Would delete file ID: {$file->id}, name: {$file->name}, path: {$file->path}");
+
+            // Would delete physical file and versions
+            // $this->deletePhysicalFileAndVersions($file);
+
+            // Would permanently delete file record
+            // $file->forceDelete();
+        }
+
+        info("Would delete storage location record: {$storageLocation->name}");
+
+        // DO NOT actually delete anything yet
+        // $storageLocation->delete();
+
+        DB::rollBack(); // rollback just in case something else changes data
 
         return redirect()
             ->route('admin.storage-locations.index')
-            ->with('success', 'Storage location and its related files deleted successfully.');
+            ->with('success', '[DRY RUN] See logs for what would have been deleted.');
     } catch (\Exception $e) {
+        DB::rollBack();
+
         return redirect()
             ->route('admin.storage-locations.index')
-            ->with('error', 'Error deleting storage location: ' . $e->getMessage());
+            ->with('error', 'Error during dry-run delete: ' . $e->getMessage());
     }
 }
 
