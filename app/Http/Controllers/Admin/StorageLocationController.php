@@ -95,26 +95,20 @@ class StorageLocationController extends Controller
     }
 
     public function destroy(StorageLocation $storageLocation): RedirectResponse
-    {
-        // Check if this storage location is being used by any files
-        $filesCount = \App\Models\File::where('disk_id', $storageLocation->id)->count();
+{
+    try {
+        $storageLocation->delete();
 
-
-        if ($filesCount > 0) {
-            return redirect()->route('admin.storage-locations.index')
-                ->with('error', "Cannot delete storage location. It is being used by {$filesCount} file(s).");
-        }
-
-        try {
-            $storageLocation->delete();
-        } catch (\Exception $e) {
-            return redirect()->route('admin.storage-locations.index')
-                ->with('error', 'Error deleting storage location: ' . $e->getMessage());
-        }
-
-        return redirect()->route('admin.storage-locations.index')
-            ->with('success', 'Storage location deleted successfully.');
+        return redirect()
+            ->route('admin.storage-locations.index')
+            ->with('success', 'Storage location and its related files deleted successfully.');
+    } catch (\Exception $e) {
+        return redirect()
+            ->route('admin.storage-locations.index')
+            ->with('error', 'Error deleting storage location: ' . $e->getMessage());
     }
+}
+
 
     public function toggle(StorageLocation $storageLocation): RedirectResponse
     {

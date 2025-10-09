@@ -44,7 +44,10 @@ class DashboardController extends Controller
 
 
         $stats = [
-            'totalFiles' => File::count(),
+            'totalFiles' => File::whereHas('storageLocation', function ($query) {
+    $query->where('is_active', true);
+})->count(),
+,
             'totalFolders' => Folder::count(),
             'storageUsed' => $this->formatFileSize($totalUsedSpace),
             'storageLimit' => $this->formatFileSize($totalFreeSpace),
