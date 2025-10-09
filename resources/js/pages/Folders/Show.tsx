@@ -15,6 +15,7 @@ import FileEditModal from '@/components/file-edit-modal';
 import { formatFileSize, formatDate } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import CreateFolderModal from '@/components/create-folder-modal';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 interface File {
     id: number;
@@ -60,6 +61,7 @@ interface Props {
 }
 
 export default function FolderShow({ folder, files, folders, breadcrumbs, allFolders, from, storageLoc }: Props) {
+    const { showError, showSuccess } = useSnackbar();
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [fileToMove, setFileToMove] = useState<{ id: number; name: string } | null>(null);
@@ -274,7 +276,17 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                     if (confirm('Are you sure you want to delete this folder and its contents?')) {
                                                         router.delete(`/folders/${subfolder.id}` , {
                                                             preserveScroll: true,
-                                                            onSuccess: () => router.reload(),
+                                                            onSuccess: () => {
+                                                                showSuccess('Folder deleted successfully');
+                                                                router.reload();
+                                                            },
+                                                            onError: (errors) => {
+                                                                if (errors.folder) {
+                                                                    showError(errors.folder);
+                                                                } else {
+                                                                    showError('Failed to delete folder. Please try again.');
+                                                                }
+                                                            },
                                                         });
                                                     }
                                                 } }

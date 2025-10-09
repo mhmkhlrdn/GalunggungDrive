@@ -17,6 +17,7 @@ interface UserOption {
     email: string;
 }
 import { fuzzyFilter } from '@/lib/utils';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 interface CloudFile {
     id: number;
@@ -65,6 +66,7 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
     const { user } = window.Auth || {};
     const isSuperAdmin = Boolean(user?.role === 'super-admin');
     const isAdmin = Boolean(user?.role === 'admin');
+    const { showError, showSuccess } = useSnackbar();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [search, setSearch] = useState(filters.search || '');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
@@ -201,7 +203,32 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
                                                 <DropdownMenuItem onClick={(e) => { console.log('[FOLDER_ACTION] rename_click', { folderId: folder.id, from: 'cloud/index' }); e.preventDefault(); e.stopPropagation(); setFolderToRename({ id: folder.id, name: folder.name }); setRenameValue(folder.name); setShowRenameModal(true); }}>Edit</DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={(e) => { console.log('[FOLDER_ACTION] download_click', { folderId: folder.id, from: 'cloud/index', url: `/folders/${folder.id}/download` }); e.preventDefault(); e.stopPropagation(); window.open(`/folders/${folder.id}/download`, '_blank'); }}>Download</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={(e) => { console.log('[FOLDER_ACTION] delete_click', { folderId: folder.id, from: 'cloud/index', url: `/folders/${folder.id}` }); e.preventDefault(); e.stopPropagation(); if (confirm('Are you sure you want to delete this folder? All files and subfolders within it will also be deleted.')) { router.delete(`/folders/${folder.id}`, { preserveScroll: true, preserveState: false, replace: true, onSuccess: () => { console.log('[FOLDER_ACTION] delete_success', { folderId: folder.id }); router.get('/cloud', {}, { replace: true }); }, onError: (errors) => { console.error('[FOLDER_ACTION] delete_error', { folderId: folder.id, errors }); }, onFinish: () => { console.log('[FOLDER_ACTION] delete_finish', { folderId: folder.id }); } }); } }} className="text-red-600">Hapus</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (confirm('Are you sure you want to delete this folder? All files and subfolders within it will also be deleted.')) {
+                                                        router.delete(`/folders/${folder.id}`, {
+                                                            preserveScroll: true,
+                                                            preserveState: false,
+                                                            replace: true,
+                                                            onSuccess: () => {
+                                                                showSuccess('Folder deleted successfully');
+                                                                router.get('/cloud', {}, { replace: true });
+                                                            },
+                                                            onError: (errors) => {
+                                                                console.error('[FOLDER_ACTION] delete_error', { folderId: folder.id, errors });
+                                                                if (errors.folder) {
+                                                                    showError(errors.folder);
+                                                                } else {
+                                                                    showError('Failed to delete folder. Please try again.');
+                                                                }
+                                                            },
+                                                            onFinish: () => {
+                                                                console.log('[FOLDER_ACTION] delete_finish', { folderId: folder.id });
+                                                            }
+                                                        });
+                                                    }
+                                                }} className="text-red-600">Hapus</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>

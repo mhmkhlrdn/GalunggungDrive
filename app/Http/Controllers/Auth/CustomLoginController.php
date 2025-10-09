@@ -33,6 +33,13 @@ class CustomLoginController extends Controller
             ]);
         }
 
+        // Check if user is soft deleted
+        if ($user->trashed()) {
+            return back()->withErrors([
+                'email' => 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator untuk informasi lebih lanjut.',
+            ]);
+        }
+
         // Check if user is approved
         if (!$user->approved) {
             return back()->withErrors([
@@ -125,6 +132,13 @@ class CustomLoginController extends Controller
         if (!$user || !Hash::check($request->password, $user->password)) {
             return back()->withErrors([
                 'email' => 'Kredensial yang diberikan tidak cocok dengan catatan kami.',
+            ]);
+        }
+
+        // Check if user is soft deleted
+        if ($user->trashed()) {
+            return back()->withErrors([
+                'email' => 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator untuk informasi lebih lanjut.',
             ]);
         }
 

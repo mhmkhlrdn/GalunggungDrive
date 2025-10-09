@@ -167,22 +167,30 @@ class UserController extends Controller
                 'error' => 'Cannot delete the last admin user.'
             ]);
         }
+        // With soft delete, we don't need to handle files specially
+        // The user record will be soft deleted, but all relationships remain intact
+        // Only delete private files physically, but keep database records
         foreach ($user->files as $file) {
-            if ($file->storageLocation) {
-                $diskKey = $file->storageLocation->diskKey();
-                if (Storage::disk($diskKey)->exists($file->path)) {
-                    Storage::disk($diskKey)->delete($file->path);
-                }
-            }
             if ($file->visibility === 'private') {
-                $file->forceDelete();
+                // Delete private files physically but keep database record
+                if ($file->storageLocation) {
+                    $diskKey = $file->storageLocation->diskKey();
+                    if (Storage::disk($diskKey)->exists($file->path)) {
+                        Storage::disk($diskKey)->delete($file->path);
+                    }
+                }
+                // Soft delete the file record
+                $file->delete();
             }
+            // Public/shared files remain untouched - they stay in the database
         }
 
+        // Soft delete folders (this will cascade to subfolders and files)
         foreach ($user->folders as $folder) {
-            $folder->forceDelete();
+            $folder->delete();
         }
 
+        // Soft delete the user
         $user->delete();
 
         return redirect()->route('admin.users.index')
@@ -209,5 +217,12 @@ class UserController extends Controller
         $status = $user->approved ? 'approved' : 'disapproved';
 
         return redirect()->back()->with('success', "User {$status} successfully.");
+    }
+
+    public function getUnapprovedCount(): \Illuminate\Http\JsonResponse
+    {
+        $count = User::where('approved', false)->count();
+
+        return response()->json(['count' => $count]);
     }
 }

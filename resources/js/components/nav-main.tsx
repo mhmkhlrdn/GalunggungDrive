@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
+import { UnapprovedUsersBadge } from '@/components/unapproved-users-badge';
 import {
     Home,
     Folder,
@@ -294,6 +295,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     <Link href="/admin/users" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                         <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                         <span className="text-sm font-medium">Pengguna</span>
+                                        <UnapprovedUsersBadge className="ml-auto" />
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>

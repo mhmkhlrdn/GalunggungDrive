@@ -51,6 +51,7 @@ class FilePolicy
     public function update(User $user, File $file): bool
     {
         if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) return true;
+
         if (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false)) {
             // Admins can edit their own files or files owned by staff users
             if ($user->id === $file->user_id) return true;
@@ -64,6 +65,7 @@ class FilePolicy
         if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) {
             return true;
         }
+
         if (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false)) {
             // Admins can delete their own files or files owned by staff
             if ($user->id === $file->user_id) return true;

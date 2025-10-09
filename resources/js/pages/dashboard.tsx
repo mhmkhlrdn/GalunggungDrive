@@ -13,7 +13,6 @@ import {
     Upload,
     Download,
     Share2,
-    Activity,
     HardDrive,
     Star,
     Search,
@@ -31,6 +30,7 @@ import {
     Trash2
 } from 'lucide-react';
 import { useState } from 'react';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -79,14 +79,14 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ stats, recentFiles, recentFolders, disks = [] }: DashboardProps) {
+    const { showError, showSuccess } = useSnackbar();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
-    const { auth, users } = usePage().props as { auth?: any, users?: any };
-    const currentUserId = auth?.user?.id;
+    const { auth, users } = usePage().props as { auth?: { user?: { id: number } }, users?: Array<{ id: number; name: string; email: string }> };
 
     const getFileIcon = (type: string) => {
         switch (type) {
@@ -369,7 +369,18 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                         <button
                                             onClick={() => {
                                                 if (confirm('Are you sure you want to delete this folder?')) {
-                                                    router.delete(`/folders/${folder.id}`);
+                                                    router.delete(`/folders/${folder.id}`, {
+                                                        onSuccess: () => {
+                                                            showSuccess('Folder deleted successfully');
+                                                        },
+                                                        onError: (errors) => {
+                                                            if (errors.folder) {
+                                                                showError(errors.folder);
+                                                            } else {
+                                                                showError('Failed to delete folder. Please try again.');
+                                                            }
+                                                        },
+                                                    });
                                                 }
                                             }}
                                             className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300"
@@ -391,7 +402,22 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                                                 <DropdownMenuItem onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}>
                                                     Download ZIP
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { if (confirm('Are you sure you want to delete this folder?')) { router.delete(`/folders/${folder.id}`); } }} className="text-red-600">
+                                                <DropdownMenuItem onClick={() => {
+                                                    if (confirm('Are you sure you want to delete this folder?')) {
+                                                        router.delete(`/folders/${folder.id}`, {
+                                                            onSuccess: () => {
+                                                                showSuccess('Folder deleted successfully');
+                                                            },
+                                                            onError: (errors) => {
+                                                                if (errors.folder) {
+                                                                    showError(errors.folder);
+                                                                } else {
+                                                                    showError('Failed to delete folder. Please try again.');
+                                                                }
+                                                            },
+                                                        });
+                                                    }
+                                                }} className="text-red-600">
                                                     Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -409,7 +435,7 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                     isOpen={showUploadModal}
                     onClose={() => setShowUploadModal(false)}
                     onUpload={handleFileUpload}
-                    disks={disks}
+                    storageLocations={disks}
                 />
                 <CreateFolderModal
                     isOpen={showCreateFolderModal}
