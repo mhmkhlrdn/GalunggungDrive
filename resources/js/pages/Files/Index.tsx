@@ -668,7 +668,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                 <FilePreviewModal
                     isOpen={showFilePreview}
                     onClose={() => setShowFilePreview(false)}
-                    loggedinUser={window.Auth.user}
+                    loggedinUser={window.Auth?.user}
                     filesInDirectory={filesForModal}
                     currentIndex={previewIndex}
                 />

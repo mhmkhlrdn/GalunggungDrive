@@ -37,6 +37,7 @@ interface User {
     email: string;
     role: 'admin' | 'staff';
     is_active: boolean;
+    approved: boolean;
     storage_limit: number;
     storage_used: number;
     created_at: string;
@@ -50,6 +51,8 @@ interface Stats {
     adminUsers: number;
     staffUsers: number;
     regularUsers: number;
+    approvedUsers: number;
+    unapprovedUsers: number;
 }
 
 interface Props {
@@ -64,6 +67,7 @@ interface Props {
     filters: {
         search: string;
         role: string;
+        approved: string;
         sort_by: string;
         sort_order: string;
     };
@@ -72,6 +76,7 @@ interface Props {
 export default function UsersIndex({ users, stats, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [role, setRole] = useState(filters.role || 'all');
+    const [approved, setApproved] = useState(filters.approved || 'all');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'created_at');
     const [sortOrder, setSortOrder] = useState(filters.sort_order || 'desc');
 
@@ -79,6 +84,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
         router.get('/admin/users', {
             search,
             role: role === 'all' ? '' : role,
+            approved: approved === 'all' ? '' : approved,
             sort_by: sortBy,
             sort_order: sortOrder,
         }, {
@@ -94,6 +100,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
         router.get('/admin/users', {
             search,
             role: role === 'all' ? '' : role,
+            approved: approved === 'all' ? '' : approved,
             sort_by: field,
             sort_order: newOrder,
         }, {
@@ -104,6 +111,10 @@ export default function UsersIndex({ users, stats, filters }: Props) {
 
     const handleToggleStatus = (userId: number) => {
         router.post(`/admin/users/${userId}/toggle-status`);
+    };
+
+    const handleToggleApproval = (userId: number) => {
+        router.post(`/admin/users/${userId}/toggle-approval`);
     };
 
     const handleDelete = (userId: number, userName: string) => {
@@ -167,7 +178,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Pengguna</CardTitle>
@@ -193,6 +204,24 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.staffUsers}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Disetujui</CardTitle>
+                            <UserCheck className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.approvedUsers}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Belum Disetujui</CardTitle>
+                            <UserX className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.unapprovedUsers}</div>
                         </CardContent>
                     </Card>
 
@@ -228,6 +257,19 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                         <SelectItem value="all">Semua peran</SelectItem>
                                         <SelectItem value="admin">Admin</SelectItem>
                                         <SelectItem value="staff">Staf</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="sm:w-48">
+                                <Label htmlFor="approved">Persetujuan</Label>
+                                <Select value={approved || "all"} onValueChange={(value) => setApproved(value === "all" ? "" : value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Semua status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua status</SelectItem>
+                                        <SelectItem value="1">Disetujui</SelectItem>
+                                        <SelectItem value="0">Belum Disetujui</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -267,6 +309,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                         <TableHead>Penyimpanan</TableHead>
                                         <TableHead>File</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Persetujuan</TableHead>
                                         <TableHead
                                             className="cursor-pointer hover:bg-muted/50"
                                             onClick={() => handleSort('created_at')}
@@ -334,6 +377,17 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                                     />
                                                     <span className="text-sm">
                                                         {user.is_active ? 'Aktif' : 'Tidak Aktif'}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center space-x-2">
+                                                    <Switch
+                                                        checked={user.approved}
+                                                        onCheckedChange={() => handleToggleApproval(user.id)}
+                                                    />
+                                                    <span className="text-sm">
+                                                        {user.approved ? 'Disetujui' : 'Belum Disetujui'}
                                                     </span>
                                                 </div>
                                             </TableCell>

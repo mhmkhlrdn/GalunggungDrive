@@ -62,7 +62,7 @@ interface Props {
 }
 
 export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, users = [] }: Props) {
-    const { user } = window.Auth;
+    const { user } = window.Auth || {};
     const isSuperAdmin = Boolean(user?.role === 'super-admin');
     const isAdmin = Boolean(user?.role === 'admin');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -194,7 +194,7 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/folders/${folder.id}?from=cloud`} onClick={(e) => { console.log('[FOLDER_ACTION] open', { folderId: folder.id, from: 'cloud/index', href: `/folders/${folder.id}?from=cloud` }); }}>
+                                                    <Link href={`/folders/${folder.id}?from=cloud`} onClick={() => { console.log('[FOLDER_ACTION] open', { folderId: folder.id, from: 'cloud/index', href: `/folders/${folder.id}?from=cloud` }); }}>
                                                         Buka
                                                     </Link>
                                                 </DropdownMenuItem>
@@ -264,21 +264,21 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
                                         <div className="flex flex-col items-center space-y-1">
                                             <button
                                                 onClick={() => {
-                                                    if (!(isSuperAdmin || isAdmin || user.id === file.user.id)) return;
+                                                    if (!(isSuperAdmin || isAdmin || (user && user.id === file.user.id))) return;
                                                     setFileToEdit({
                                                         id: file.id,
                                                         name: file.name,
                                                         mime_type: file.mime_type,
                                                         size: file.size,
                                                         description: '',
-                    tags: [],
+                                                        tags: [],
                                                         visibility: file.visibility,
                                                     });
                                                     setShowEditModal(true);
                                                 }}
-                                                className={`rounded bg-white p-2 ${isSuperAdmin || isAdmin || user.id === file.user.id ? 'text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700' : 'text-slate-400 dark:text-slate-500 cursor-not-allowed'}`}
-                                                title={isSuperAdmin || isAdmin || user.id === file.user.id ? "Edit file" : "You don't have permission to edit this file"}
-                                                disabled={!(isSuperAdmin || isAdmin || user.id === file.user.id)}
+                                                className={`rounded bg-white p-2 ${isSuperAdmin || isAdmin || (user && user.id === file.user.id) ? 'text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700' : 'text-slate-400 dark:text-slate-500 cursor-not-allowed'}`}
+                                                title={isSuperAdmin || isAdmin || (user && user.id === file.user.id) ? "Edit file" : "You don't have permission to edit this file"}
+                                                disabled={!(isSuperAdmin || isAdmin || (user && user.id === file.user.id))}
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </button>
@@ -407,7 +407,7 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
                                             return;
                                         }
                                         setVisibilityWarning('');
-                                        const payload: any = { name: renameValue.trim(), visibility: visibilityValue };
+                                        const payload: { name: string; visibility: string; shared_with?: number[] } = { name: renameValue.trim(), visibility: visibilityValue };
                                         if (visibilityValue === 'shared') payload.shared_with = sharedWith;
                                         router.put(`/folders/${folderToRename.id}`, payload, {
                                             preserveScroll: true,

@@ -450,7 +450,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
         <FilePreviewModal
             isOpen={showFilePreview}
             onClose={() => setShowFilePreview(false)}
-            loggedinUser={window.Auth.user}
+            loggedinUser={window.Auth?.user}
             filesInDirectory={files.map(f => ({
                 id: f.id,
                 name: f.name,

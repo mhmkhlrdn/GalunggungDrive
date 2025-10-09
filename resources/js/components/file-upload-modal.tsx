@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, File, Folder, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage, router } from '@inertiajs/react';
+import { SharedData } from '@/types';
+
 
 interface StorageLocationOption {
     id: number;
@@ -22,38 +24,44 @@ interface FileUploadModalProps {
     storageLocations?: StorageLocationOption[];
 }
 
+interface UploadEntry {
+    file: File;
+    relativePath: string;
+}
+
 import { useEffect } from 'react';
 
 export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName, storageLocations = [] }: FileUploadModalProps) {
     const { auth } = usePage<SharedData>().props;
-    const user = auth.user;
+    const user = auth?.user;
     const isStaff = user && user.role === 'staff';
 
-    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [uploadedFiles, setUploadedFiles] = useState<UploadEntry[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const folderInputRef = useRef<HTMLInputElement>(null);
 
-    // Reset uploadedFiles only when modal is closed
+
     useEffect(() => {
         if (!isOpen) {
             setUploadedFiles([]);
         }
     }, [isOpen]);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        files: [] as File[],
+    const { data, setData, processing, errors, reset } = useForm({
+        files: [] as UploadEntry[],
         folder_id: currentFolderId || null,
         disk_id: storageLocations.length ? storageLocations[0].id : undefined as number | undefined,
         description: '',
         tags: '',
-        visibility: 'public', // Default to public for staff, private for others
+        visibility: 'public',
     });
+
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         setUploadedFiles((prev) => {
-            // Avoid duplicates by name and size
-            const newFiles = acceptedFiles.filter(
-                (file) => !prev.some((f) => f.name === file.name && f.size === file.size)
-            );
-            const allFiles = [...prev, ...newFiles];
+            const newEntries = acceptedFiles.map(file => ({ file, relativePath: file.name }));
+
+            const allFiles = [...prev, ...newEntries.filter(entry => !prev.some(f => f.file.name === entry.file.name && f.file.size === entry.file.size))];
             setData('files', allFiles);
             return allFiles;
         });
@@ -62,11 +70,12 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         multiple: true,
+        noClick: true,
         accept: {
-            // Images
+
             'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'],
 
-            // Documents
+
             'application/pdf': ['.pdf'],
             'application/msword': ['.doc'],
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
@@ -83,7 +92,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             'text/javascript': ['.js'],
             'application/javascript': ['.js'],
 
-            // Archives
+
             'application/zip': ['.zip'],
             'application/x-zip-compressed': ['.zip'],
             'application/x-compressed-zip': ['.zip'],
@@ -92,7 +101,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             'application/x-7z-compressed': ['.7z'],
             'application/gzip': ['.gz'],
 
-            // Videos
+
             'video/mp4': ['.mp4'],
             'video/x-matroska': ['.mkv'],
             'video/webm': ['.webm'],
@@ -101,7 +110,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             'video/wmv': ['.wmv'],
             'video/flv': ['.flv'],
 
-            // Audio
+
             'audio/mp3': ['.mp3'],
             'audio/mpeg': ['.mp3'],
             'audio/wav': ['.wav'],
@@ -114,14 +123,26 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
     const handleUpload = () => {
         if (uploadedFiles.length === 0) return;
 
-        post('/files', {
+
+        const formData = new FormData();
+        uploadedFiles.forEach((entry, index) => {
+            formData.append(`files[${index}]`, entry.file);
+            formData.append(`relative_paths[${index}]`, entry.relativePath);
+        });
+        formData.append('folder_id', data.folder_id ? String(data.folder_id) : '');
+        formData.append('disk_id', data.disk_id ? String(data.disk_id) : '');
+        formData.append('description', data.description);
+        formData.append('tags', data.tags);
+        formData.append('visibility', data.visibility);
+
+        router.post('/files', formData, {
             forceFormData: true,
             onSuccess: () => {
-                onUpload(uploadedFiles);
+                onUpload(uploadedFiles.map(e => e.file));
                 reset();
                 onClose();
             },
-            onError: (errors) => {
+            onError: (errors: Record<string, string>) => {
                 console.error('Upload error:', errors);
             },
         });
@@ -165,7 +186,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                     {/* Dropzone */}
                     <div
                         {...getRootProps()}
-                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                             isDragActive
                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                 : 'border-slate-300 hover:border-slate-400 dark:border-slate-600'
@@ -179,15 +200,76 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                             </p>
                         ) : (
                             <div>
-                                <p className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                                    Seret & lepaskan file di sini, atau klik untuk memilih
+                                <p className="text-lg font-medium text-slate-900 dark:text-white mb-4">
+                                    Seret & lepaskan file di sini, atau pilih file/folder
                                 </p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                <div className="flex gap-3 justify-center">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <File className="h-4 w-4" />
+                                        Pilih File
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => folderInputRef.current?.click()}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Folder className="h-4 w-4" />
+                                        Pilih Folder
+                                    </Button>
+                                </div>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">
                                     Supports: Images, PDF, Word, Excel, PowerPoint, Text, Archives
                                 </p>
                             </div>
                         )}
                     </div>
+
+                    {/* Hidden inputs */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                            const files = Array.from(e.target.files || []);
+                            setUploadedFiles(prev => {
+                                const newEntries = files.map(f => ({
+                                    file: f,
+                                    relativePath: f.name
+                                }));
+
+                                const allFiles = [...prev, ...newEntries.filter(entry => !prev.some(f => f.file.name === entry.file.name && f.file.size === entry.file.size && f.relativePath === entry.relativePath))];
+                                setData('files', allFiles);
+                                return allFiles;
+                            });
+                        }}
+                    />
+                    <input
+                        ref={folderInputRef}
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+                        onChange={e => {
+                            const files = Array.from(e.target.files || []);
+                            setUploadedFiles(prev => {
+                                const newEntries = files.map(f => ({
+                                    file: f,
+                                    relativePath: (typeof f === 'object' && 'webkitRelativePath' in f && f.webkitRelativePath) ? f.webkitRelativePath : f.name
+                                }));
+
+                                const allFiles = [...prev, ...newEntries.filter(entry => !prev.some(f => f.file.name === entry.file.name && f.file.size === entry.file.size && f.relativePath === entry.relativePath))];
+                                setData('files', allFiles);
+                                return allFiles;
+                            });
+                        }}
+                    />
 
                     {/* File List */}
                     {uploadedFiles.length > 0 && (
@@ -196,7 +278,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                                 File untuk diunggah ({uploadedFiles.length})
                             </h4>
                             <div className="max-h-32 overflow-y-auto space-y-2">
-                                {uploadedFiles.map((file, index) => (
+                                {uploadedFiles.map((entry, index) => (
                                     <div
                                         key={index}
                                         className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg"
@@ -205,10 +287,10 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                                             <File className="h-5 w-5 text-slate-500" />
                                             <div>
                                                 <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                    {file.name}
+                                                    {entry.relativePath}
                                                 </p>
                                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                    {formatFileSize(file.size)}
+                                                    {formatFileSize(entry.file.size)}
                                                 </p>
                                             </div>
                                         </div>

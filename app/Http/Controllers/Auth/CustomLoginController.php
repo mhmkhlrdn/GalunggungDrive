@@ -33,6 +33,13 @@ class CustomLoginController extends Controller
             ]);
         }
 
+        // Check if user is approved
+        if (!$user->approved) {
+            return back()->withErrors([
+                'email' => 'Akun Anda belum disetujui oleh administrator. Silakan hubungi administrator untuk mengaktifkan akun Anda.',
+            ]);
+        }
+
         // Check if user is already logged in elsewhere
         if ($user->current_session_id && $user->current_session_id !== session()->getId()) {
             // Check if the session still exists
@@ -118,6 +125,13 @@ class CustomLoginController extends Controller
         if (!$user || !Hash::check($request->password, $user->password)) {
             return back()->withErrors([
                 'email' => 'Kredensial yang diberikan tidak cocok dengan catatan kami.',
+            ]);
+        }
+
+        // Check if user is approved
+        if (!$user->approved) {
+            return back()->withErrors([
+                'email' => 'Akun Anda belum disetujui oleh administrator. Silakan hubungi administrator untuk mengaktifkan akun Anda.',
             ]);
         }
 

@@ -52,7 +52,8 @@ class FilePolicy
     {
         if (method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : (bool) ($user->is_super_admin ?? false)) return true;
         if (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false)) {
-            // Admins can edit files owned by staff users
+            // Admins can edit their own files or files owned by staff users
+            if ($user->id === $file->user_id) return true;
             return $file->user && (method_exists($file->user, 'isStaff') ? $file->user->isStaff() : (($file->user->role ?? null) === 'staff'));
         }
         return $user->id === $file->user_id;

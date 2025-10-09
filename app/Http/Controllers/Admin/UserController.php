@@ -19,6 +19,7 @@ class UserController extends Controller
     {
         $search = $request->get('search');
         $role = $request->get('role');
+        $approved = $request->get('approved');
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
 
@@ -35,6 +36,10 @@ class UserController extends Controller
             $query->where('role', $role);
         }
 
+        if ($approved !== null && $approved !== '') {
+            $query->where('approved', $approved === '1');
+        }
+
         $users = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
         // Get statistics
@@ -43,6 +48,8 @@ class UserController extends Controller
             'adminUsers' => User::whereIn('role', ['admin', 'super-admin'])->count(),
             'staffUsers' => User::where('role', 'staff')->count(),
             'regularUsers' => User::where('role', 'user')->count(),
+            'approvedUsers' => User::where('approved', true)->count(),
+            'unapprovedUsers' => User::where('approved', false)->count(),
         ];
 
         return Inertia::render('Admin/Users/Index', [
@@ -51,6 +58,7 @@ class UserController extends Controller
             'filters' => [
                 'search' => $search,
                 'role' => $role,
+                'approved' => $approved,
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
             ],
@@ -81,6 +89,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'storage_limit' => $request->storage_limit ?? 1073741824, // 1GB default
+            'approved' => true, // Admin-created users are approved by default
         ]);
 
         return redirect()->route('admin.users.index')
@@ -147,37 +156,34 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
-        // Prevent admin from deleting themselves
         if ($user->id === Auth::id()) {
             return redirect()->back()->withErrors([
                 'error' => 'You cannot delete your own account.'
             ]);
         }
 
-        // Prevent deleting the last admin
         if (in_array($user->role, ['admin', 'super-admin']) && User::whereIn('role', ['admin', 'super-admin'])->count() <= 1) {
             return redirect()->back()->withErrors([
                 'error' => 'Cannot delete the last admin user.'
             ]);
         }
-
-        // Delete all files uploaded by the user from storage
         foreach ($user->files as $file) {
-            if ($file->storageLocation && $file->storageLocation->is_active) {
+            if ($file->storageLocation) {
                 $diskKey = $file->storageLocation->diskKey();
                 if (Storage::disk($diskKey)->exists($file->path)) {
                     Storage::disk($diskKey)->delete($file->path);
                 }
             }
-            $file->forceDelete(); // Permanently delete file record from database
+            if ($file->visibility === 'private') {
+                $file->forceDelete();
+            }
         }
 
-        // Delete all folders created by the user
         foreach ($user->folders as $folder) {
-            $folder->forceDelete(); // Permanently delete folder record from database
+            $folder->forceDelete();
         }
 
-        $user->delete(); // Soft delete the user
+        $user->delete();
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User deleted successfully.');
@@ -190,6 +196,17 @@ class UserController extends Controller
         ]);
 
         $status = $user->is_active ? 'activated' : 'deactivated';
+
+        return redirect()->back()->with('success', "User {$status} successfully.");
+    }
+
+    public function toggleApproval(User $user): RedirectResponse
+    {
+        $user->update([
+            'approved' => !$user->approved,
+        ]);
+
+        $status = $user->approved ? 'approved' : 'disapproved';
 
         return redirect()->back()->with('success', "User {$status} successfully.");
     }

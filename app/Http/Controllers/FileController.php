@@ -68,19 +68,18 @@ class FileController extends Controller
             });
 
         if ($user->is_super_admin || ($user->is_admin ?? false)) {
-            // Super Admin/Admin: see all files
+
         } elseif (($user->role ?? null) === 'staff') {
-            // Staff users can only see their own files
+
             $query->where('user_id', $user->id);
         } else {
-            // Regular users: own files only
+
             $query->where('user_id', $user->id);
         }
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
         }
-        // If no specific folder is requested, show all user's files (don't filter by folder_id)
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -115,7 +114,7 @@ class FileController extends Controller
             ->select('id', 'name', 'email')
             ->get();
 
-        // Provide active and serving storage locations for uploads
+
         $activeServingLocations = StorageLocation::serving()
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -144,6 +143,8 @@ class FileController extends Controller
         $validationRules = [
             'files' => 'required|array|min:1',
             'files.*' => 'file',
+            'relative_paths' => 'nullable|array',
+            'relative_paths.*' => 'string',
             'folder_id' => 'nullable|exists:folders,id',
             'disk_id' => 'required|integer|exists:storage_locations,id',
             'description' => 'nullable|string|max:1000',
@@ -151,9 +152,23 @@ class FileController extends Controller
             'visibility' => 'required|in:private,shared,public',
         ];
 
-        // Log uploaded file info before validation
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $uploadedFile) {
+
+        $allFiles = $request->allFiles();
+        $filesArr = $allFiles['files'] ?? [];
+
+        // Debug logging
+        Log::info('File upload debug', [
+            'all_files_keys' => array_keys($allFiles),
+            'files_array_structure' => is_array($filesArr) ? array_keys($filesArr) : gettype($filesArr),
+            'files_count' => is_array($filesArr) ? count($filesArr) : 0,
+        ]);
+
+        // Flatten the array of uploaded files, handling nested arrays from folder uploads
+        $flattenedFiles = [];
+        $this->flattenFilesArray($filesArr, $flattenedFiles);
+
+        if (count($flattenedFiles)) {
+            foreach ($flattenedFiles as $uploadedFile) {
                 Log::info('Upload attempt', [
                     'original_name' => $uploadedFile->getClientOriginalName(),
                     'mime_type' => $uploadedFile->getMimeType(),
@@ -175,10 +190,10 @@ class FileController extends Controller
         ];
 
         if ($user && $user->isAdmin()) {
-            // Admins and Super-Admins can upload any file type, so no specific mimetypes validation is added here.
+
         } elseif ($user && $user->isStaff()) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $staffAllowedMimeTypes);
-            // Staff users can only upload public files
+
             $validationRules['visibility'] = 'required|in:public';
         } elseif (!empty($uploadConfig['allowed_mime_types'])) {
             $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
@@ -193,7 +208,7 @@ class FileController extends Controller
             throw $e;
         }
 
-        // Ensure selected storage location is active and can serve uploads
+
         $storageLocation = StorageLocation::active()->where('id', $validated['disk_id'])->first();
         if (!$storageLocation) {
             Log::error('Storage location not active', ['disk_id' => $validated['disk_id']]);
@@ -208,15 +223,42 @@ class FileController extends Controller
 
         $uploadedFiles = [];
 
-        foreach ($request->file('files') as $uploadedFile) {
+    $relativePaths = $request->input('relative_paths', []);
+        
+        // Create folder hierarchy if we have relative paths
+        $folderMap = [];
+        if (!empty($relativePaths)) {
+            $folderMap = $this->createFolderHierarchy($relativePaths, $request->folder_id, $request->visibility);
+        }
+
+    // Use the flattened files array for processing
+    $files = $flattenedFiles;
+    foreach ($files as $i => $uploadedFile) {
             $storagePath = $uploadConfig['storage_path'] ?? 'files';
+            // If relative path is present and not just the filename, append to storage path
+            // The relative path for a file within a folder upload is typically provided by the browser.
+            // If it's a single file upload, relative_paths[$i] might be just the filename or empty.
+            $relativePath = isset($relativePaths[$i]) ? $relativePaths[$i] : $uploadedFile->getClientOriginalName();
+            $targetPath = $storagePath;
+            if ($relativePath && $relativePath !== $uploadedFile->getClientOriginalName()) {
+                // Extract the directory part from the relative path
+                $directory = dirname($relativePath);
+                if ($directory === '.') { // If dirname returns '.', it means it's just a filename
+                    $targetPath = $storagePath;
+                } else {
+                    $targetPath = rtrim($storagePath, '/') . '/' . ltrim($directory, '/');
+                }
+            }
             Log::info('Attempting to store file', [
-                'storage_path' => $storagePath,
+                'storage_path' => $targetPath,
                 'storage_disk' => $storageDisk,
                 'original_name' => $uploadedFile->getClientOriginalName(),
+                'relative_path' => $relativePath,
             ]);
             try {
-                $path = $uploadedFile->store($storagePath, $storageDisk);
+                // Ensure directory exists
+                Storage::disk($storageDisk)->makeDirectory($targetPath);
+                $path = $uploadedFile->storeAs($targetPath, basename($uploadedFile->getClientOriginalName()), $storageDisk);
                 Log::info('File stored successfully', ['path' => $path, 'disk' => $storageDisk]);
             } catch (\Exception $e) {
                 Log::error('File storage failed due to exception', [
@@ -231,7 +273,7 @@ class FileController extends Controller
             if ($path === false) {
                 Log::error('File storage returned false', [
                     'original_name' => $uploadedFile->getClientOriginalName(),
-                    'storage_path' => $storagePath,
+                    'storage_path' => $targetPath,
                     'storage_disk' => $storageDisk,
                     'message' => 'This often indicates a permissions issue or an invalid path on the filesystem. Check web server write permissions for the target directory and mount options for the FAT32 drive.',
                 ]);
@@ -241,7 +283,7 @@ class FileController extends Controller
             if (is_null($path)) {
                 Log::error('File path is null after successful storage operation (unexpected)', [
                     'original_name' => $uploadedFile->getClientOriginalName(),
-                    'storage_path' => $storagePath,
+                    'storage_path' => $targetPath,
                     'storage_disk' => $storageDisk,
                 ]);
                 return redirect()->back()->withErrors(['upload' => 'Gagal mendapatkan path file setelah diunggah (path null).']);
@@ -249,9 +291,28 @@ class FileController extends Controller
 
             $checksum = hash_file('sha256', $uploadedFile->getRealPath());
 
+            // Determine the correct folder_id for this file
+            $fileFolderId = $request->folder_id; // Default to parent folder
+            $directory = '.';
+            if ($relativePath && $relativePath !== $uploadedFile->getClientOriginalName()) {
+                // File is in a subfolder, find the correct folder_id
+                $directory = dirname($relativePath);
+                if ($directory !== '.') {
+                    $fileFolderId = $folderMap[$directory] ?? $request->folder_id;
+                }
+            }
+
+            Log::info('File folder assignment', [
+                'file_name' => $uploadedFile->getClientOriginalName(),
+                'relative_path' => $relativePath,
+                'directory' => $directory,
+                'folder_id' => $fileFolderId,
+                'folder_map' => $folderMap,
+            ]);
+
             $file = File::create([
                 'user_id' => Auth::id(),
-                'folder_id' => $request->folder_id,
+                'folder_id' => $fileFolderId,
                 'name' => $uploadedFile->getClientOriginalName(),
                 'path' => $path,
                 'disk_id' => $storageLocation->id,
@@ -288,7 +349,7 @@ class FileController extends Controller
             ]);
 
             $uploadedFiles[] = $file;
-    }
+        }
 
         return redirect()->back()->with('success',
             count($uploadedFiles) . ' file berhasil diunggah.'
@@ -415,7 +476,7 @@ class FileController extends Controller
             ],
         ]);
 
-        // Block access if storage location is inactive
+
         if (!$file->storageLocation || !$file->storageLocation->is_active) {
             abort(404, 'File not found');
         }
@@ -506,7 +567,7 @@ class FileController extends Controller
 
             $range = request()->header('Range');
 
-            if ($range && Str::startsWith($mimeType, 'video/')) { // Only handle range requests for video
+            if ($range && Str::startsWith($mimeType, 'video/')) {
                 list($start, $end) = $this->parseRangeHeader($range, $fileSize);
 
                 if ($start !== null && $end !== null) {
@@ -525,7 +586,7 @@ class FileController extends Controller
                 }
             }
 
-            // For other file types or if range header is not present/valid for video
+
             return response()->file($filePath, $headers);
 
         } catch (\Exception $e) {
@@ -572,7 +633,7 @@ class FileController extends Controller
         $start = (int) ($parts[0] ?? 0);
         $end = (int) ($parts[1] ?? $fileSize - 1);
 
-        // Ensure range is valid
+
         if ($start > $end || $start < 0 || $end >= $fileSize) {
             return null;
         }
@@ -610,7 +671,7 @@ class FileController extends Controller
             'folder_id' => 'nullable|exists:folders,id',
         ]);
 
-        // Check if the target folder is accessible to the user (owned by user or public)
+
         if ($request->folder_id) {
             $folder = Folder::where('id', $request->folder_id)
                 ->where(function ($q) {
@@ -626,7 +687,7 @@ class FileController extends Controller
             }
         }
 
-        // Check if trying to move to the same folder
+
         if ($file->folder_id == $request->folder_id) {
             return redirect()->back()->withErrors([
                 'folder_id' => 'File is already in this folder.'
@@ -766,6 +827,84 @@ class FileController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Recursively flatten files array to handle nested folder uploads
+     */
+    private function flattenFilesArray($filesArray, &$flattenedFiles)
+    {
+        foreach ($filesArray as $item) {
+            if (is_array($item)) {
+                // Recursively process nested arrays
+                $this->flattenFilesArray($item, $flattenedFiles);
+            } elseif ($item instanceof \Illuminate\Http\UploadedFile) {
+                // Add UploadedFile objects to the flattened array
+                $flattenedFiles[] = $item;
+            }
+        }
+    }
+
+    /**
+     * Create folder hierarchy from relative paths and return folder ID mapping
+     */
+    private function createFolderHierarchy(array $relativePaths, int $parentFolderId = null, string $visibility = 'public'): array
+    {
+        $folderMap = []; // Maps folder path to folder ID
+        $createdFolders = []; // Tracks created folders to avoid duplicates
+
+        foreach ($relativePaths as $relativePath) {
+            $pathParts = explode('/', $relativePath);
+            $filename = array_pop($pathParts); // Remove filename, keep only directory parts
+            
+            if (empty($pathParts)) {
+                continue; // File is in root, no folders to create
+            }
+
+            $currentPath = '';
+            $currentParentId = $parentFolderId;
+
+            foreach ($pathParts as $folderName) {
+                $currentPath = $currentPath ? $currentPath . '/' . $folderName : $folderName;
+                
+                // Check if folder already exists in our map
+                if (!isset($folderMap[$currentPath])) {
+                    // Check if folder already exists in database
+                    $existingFolder = \App\Models\Folder::where('name', $folderName)
+                        ->where('parent_id', $currentParentId)
+                        ->where('user_id', Auth::id())
+                        ->first();
+
+                    if ($existingFolder) {
+                        $folderMap[$currentPath] = $existingFolder->id;
+                        $currentParentId = $existingFolder->id;
+                    } else {
+                        // Create new folder
+                        $folder = \App\Models\Folder::create([
+                            'user_id' => Auth::id(),
+                            'parent_id' => $currentParentId,
+                            'name' => $folderName,
+                            'visibility' => $visibility,
+                        ]);
+
+                        $folderMap[$currentPath] = $folder->id;
+                        $currentParentId = $folder->id;
+                        $createdFolders[] = $folder;
+
+                        Log::info('Created folder', [
+                            'folder_id' => $folder->id,
+                            'name' => $folderName,
+                            'parent_id' => $currentParentId,
+                            'path' => $currentPath,
+                        ]);
+                    }
+                } else {
+                    $currentParentId = $folderMap[$currentPath];
+                }
+            }
+        }
+
+        return $folderMap;
     }
 }
 

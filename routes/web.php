@@ -101,7 +101,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
         Route::post('activity/clear', [ActivityController::class, 'clear'])->name('activity.clear');
     });
-    // Route::resource('register', RegisteredUserController::class);
+    Route::resource('register', RegisteredUserController::class);
 
     Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
     Route::post('trash/empty', [TrashController::class, 'empty'])->name('trash.empty');
@@ -120,6 +120,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::middleware(SuperAdminMiddleware::class)->group(function () {
             Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
             Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
+            Route::post('users/{user}/toggle-approval', [\App\Http\Controllers\Admin\UserController::class, 'toggleApproval'])->name('users.toggle-approval');
 
         });
 

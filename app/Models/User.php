@@ -30,6 +30,7 @@ class User extends Authenticatable
         'current_session_id',
         'last_login_at',
         'last_login_ip',
+        'approved',
     ];
 
     /**
