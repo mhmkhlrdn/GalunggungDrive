@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Folder;
 use App\Models\ActivityLog;
 use App\Models\File;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,7 @@ class FolderController extends Controller
 {
     public function index(Request $request): Response
     {
+        $user = Auth::user();
         $activeServingLocations = StorageLocation::serving()->orderBy('name')->get(['id', 'name']);
         $parentId = $request->get('parent_id');
         $search = $request->get('search');
@@ -151,13 +153,44 @@ class FolderController extends Controller
 
     public function show(Request $request, Folder $folder)
     {
+        $user = Auth::user();
+        /** @var User $user */
         $this->authorize('view', $folder);
 
-        // Get files in this folder
         $files = File::where('folder_id', $folder->id)
-            ->where(function ($q) {
-                $q->where('user_id', Auth::id())
-                  ->orWhere('visibility', 'public');
+            ->where(function ($q) use ($user){
+                if ($user->isSuperAdmin()) {
+                    // Super Admin: see all files
+                } elseif ($user->isAdmin()) {
+                    // Admin: see own, non-private, and shared files
+                    $q->where('user_id', Auth::id())
+                      ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
+                      ->orWhereHas('shares', function ($shareQuery) {
+                          $shareQuery->where('shared_with', Auth::id())
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                } elseif ((Auth::user()->role ?? null) === 'staff') {
+                    // Staff users can only see their own files
+                    $q->where('user_id', Auth::id());
+                } else {
+                    // Regular users and admins see their own, public, and shared files
+                    $q->where('user_id', Auth::id())
+                      ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
+                      ->orWhereHas('shares', function ($shareQuery) {
+                          $shareQuery->where('shared_with', Auth::id())
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                }
+                // $q->where('user_id', Auth::id())
+                //   ->orWhere('visibility', 'public');
             })
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
@@ -210,7 +243,6 @@ class FolderController extends Controller
         // Get breadcrumbs
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
-        // Get all folders for move functionality (include current folder to show its subfolders)
         $allFolders = Folder::where(function ($q) {
                 $q->where('user_id', Auth::id())
                   ->orWhere('visibility', 'public');
