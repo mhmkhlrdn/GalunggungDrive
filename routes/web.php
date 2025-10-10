@@ -119,9 +119,8 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
 
         Route::middleware(SuperAdminMiddleware::class)->group(function () {
             Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
-            Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
             Route::post('users/{user}/toggle-approval', [\App\Http\Controllers\Admin\UserController::class, 'toggleApproval'])->name('users.toggle-approval');
-            Route::get('users/unapproved-count', [\App\Http\Controllers\Admin\UserController::class, 'getUnapprovedCount'])->name('users.unapproved-count');
+            Route::get('count', [\App\Http\Controllers\Admin\UserController::class, 'getUnapprovedCount'])->name('users.unapproved-count');
         });
 
         Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');

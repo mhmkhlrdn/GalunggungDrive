@@ -21,8 +21,6 @@ import {
     Shield,
     User,
     UserCheck,
-    Calendar,
-    HardDrive,
     FileText,
     Folder,
     Mail,
@@ -108,14 +106,17 @@ export default function UsersIndex({ users, stats, filters }: Props) {
             replace: true,
         });
     };
+   const handleToggleApproval = (userId: number) => {
+    router.post(`/admin/users/${userId}/toggle-approval`, {}, {
+        onSuccess: () => {
+            window.dispatchEvent(new Event('user-approval-toggled'));
+        },
+        onError: (errors) => {
+            console.error('Failed to toggle approval:', errors);
+        },
+    });
+};
 
-    const handleToggleStatus = (userId: number) => {
-        router.post(`/admin/users/${userId}/toggle-status`);
-    };
-
-    const handleToggleApproval = (userId: number) => {
-        router.post(`/admin/users/${userId}/toggle-approval`);
-    };
 
     const handleDelete = (userId: number, userName: string) => {
         if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
@@ -178,7 +179,7 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Pengguna</CardTitle>
@@ -367,17 +368,6 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                                         <Folder className="h-3 w-3" />
                                                         <span>{user.folders_count}</span>
                                                     </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center space-x-2">
-                                                    <Switch
-                                                        checked={user.is_active}
-                                                        onCheckedChange={() => handleToggleStatus(user.id)}
-                                                    />
-                                                    <span className="text-sm">
-                                                        {user.is_active ? 'Aktif' : 'Tidak Aktif'}
-                                                    </span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>

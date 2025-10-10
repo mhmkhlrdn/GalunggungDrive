@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 
 interface UnapprovedUsersBadgeProps {
     className?: string;
@@ -9,29 +9,36 @@ export function UnapprovedUsersBadge({ className = '' }: UnapprovedUsersBadgePro
     const [count, setCount] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchCount = async () => {
-            try {
-                const response = await fetch('/admin/users/unapproved-count', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
+    const fetchCount = async () => {
+        try {
+            const response = await fetch(route('admin.users.unapproved-count'), {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setCount(data.count);
-                }
-            } catch (error) {
-                console.error('Failed to fetch unapproved users count:', error);
-            } finally {
-                setLoading(false);
+            if (response.ok) {
+                const data = await response.json();
+                setCount(data.count);
             }
-        };
+        } catch (error) {
+            console.error('Failed to fetch unapproved users count:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchCount();
+
+        const handler = () => fetchCount();
+        window.addEventListener('user-approval-toggled', handler);
+
+        return () => {
+            window.removeEventListener('user-approval-toggled', handler);
+        };
     }, []);
 
     if (loading || count === null || count === 0) {

@@ -3,9 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     ArrowLeft,
     Edit,
@@ -21,7 +19,6 @@ import {
     Shield,
     UserCheck,
     UserX,
-    Activity,
     Clock
 } from 'lucide-react';
 
@@ -66,10 +63,6 @@ interface Props {
 }
 
 export default function UserShow({ user, recentFiles, recentFolders }: Props) {
-    const handleToggleStatus = () => {
-        router.post(`/admin/users/${user.id}/toggle-status`);
-    };
-
     const handleDelete = () => {
         if (confirm(`Are you sure you want to delete user "${user.name}"? This action cannot be undone.`)) {
             router.delete(`/admin/users/${user.id}`);
@@ -183,17 +176,6 @@ export default function UserShow({ user, recentFiles, recentFolders }: Props) {
                             <CardTitle className="text-sm font-medium">Status</CardTitle>
                             {user.is_active ? <UserCheck className="h-4 w-4 text-green-600" /> : <UserX className="h-4 w-4 text-red-600" />}
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    checked={user.is_active}
-                                    onCheckedChange={handleToggleStatus}
-                                />
-                                <span className="text-sm">
-                                    {user.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                            </div>
-                        </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

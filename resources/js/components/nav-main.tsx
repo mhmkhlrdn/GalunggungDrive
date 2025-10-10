@@ -4,9 +4,6 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
@@ -26,46 +23,9 @@ import {
     FolderPlus,
     Users,
     Shield,
-    History,
-    Download,
-    Eye,
-    Edit,
-    Archive,
-    Search,
-    Filter,
-    MoreHorizontal,
-    ChevronRight,
-    ChevronDown,
-    Plus,
-    FileUp,
-    FolderOpen,
     Globe,
-    Lock,
-    Unlock,
-    UserCheck,
-    Link as LinkIcon,
-    Calendar,
-    BarChart3,
     Database,
-    Server,
-    Zap,
-    Cloud,
-    Sparkles,
-    Layers,
-    Grid3X3,
-    TrendingUp,
-    FolderTree,
-    FileImage,
-    FileType,
-    Archive as ArchiveIcon,
-    Crown,
-    Rocket,
-    Folder as FileFolderIcon,
-    Handshake,
-    Zap as ZapIcon,
-    Cog,
-    Crown as CrownIcon
-} from 'lucide-react';
+    Folder as FileFolderIcon} from 'lucide-react';
 import { useState } from 'react';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
