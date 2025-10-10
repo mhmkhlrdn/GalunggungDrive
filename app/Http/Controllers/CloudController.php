@@ -21,9 +21,9 @@ class CloudController extends Controller
             ->whereNull('parent_id')
             ->where(function ($q) use ($userId, $user) {
                 if ($user->isSuperAdmin()) {
-                    // Super Admin: see all folders
+                    
                 } elseif ($user->isAdmin()) {
-                    // Admin: see non-private and own and shared folders
+                    
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -35,10 +35,8 @@ class CloudController extends Controller
                                      });
                       });
                 } elseif (($user->role ?? null) === 'staff') {
-                    // Staff users can only see their own folders
                     $q->where('user_id', $userId);
                 } else {
-                    // Regular users and admins see their own, public, and shared folders
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -55,10 +53,10 @@ class CloudController extends Controller
             ->get(['id', 'name', 'parent_id', 'user_id', 'updated_at']);
 
 
-        // Do not send all files to the client to keep payloads small
+        
         $allFiles = collect();
 
-        // Get root-level files for display
+        
         $files = File::with(['user', 'storageLocation'])
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
@@ -66,9 +64,9 @@ class CloudController extends Controller
             ->whereNull('folder_id')
             ->where(function ($q) use ($userId, $user) {
                 if ($user->isSuperAdmin()) {
-                    // Super Admin: see all files
+                    
                 } elseif ($user->isAdmin()) {
-                    // Admin: see own, non-private, and shared files
+                    
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -80,10 +78,10 @@ class CloudController extends Controller
                                      });
                       });
                 } elseif (($user->role ?? null) === 'staff') {
-                    // Staff users can only see their own files
+                    
                     $q->where('user_id', $userId);
                 } else {
-                    // Regular users see their own, public, and shared files
+                    
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -99,7 +97,7 @@ class CloudController extends Controller
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
 
-        // Users list for share modal (exclude current user)
+        
         $users = \App\Models\User::where('id', '!=', $userId)
             ->select('id', 'name', 'email')
             ->orderBy('name')
@@ -138,7 +136,7 @@ class CloudController extends Controller
                 'per_page' => $files->perPage(),
                 'total' => $files->total(),
             ],
-            // allFiles removed for performance
+            
             'breadcrumbs' => [
                 ['title' => 'Cloud', 'href' => route('cloud.index')],
             ],

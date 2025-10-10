@@ -46,7 +46,7 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
-        // Transform folders to include files_count and total_size
+        
         $folders->getCollection()->transform(function ($folder) {
             $filesCount = File::where('folder_id', $folder->id)
                 ->whereHas('storageLocation', function ($q) {
@@ -74,8 +74,8 @@ class FolderController extends Controller
             return $folder;
         });
 
-        // Users list for share modal
-        $users = \App\Models\User::where('id', '!=', Auth::id())
+        
+        $users = User::where('id', '!=', Auth::id())
             ->select('id', 'name', 'email')
             ->orderBy('name')
             ->get();
@@ -115,7 +115,7 @@ class FolderController extends Controller
             'visibility' => 'nullable|in:private,shared,public',
         ]);
 
-        // Check if folder with same name exists in parent
+        
         $existingFolder = Folder::where('user_id', Auth::id())
             ->where('parent_id', $request->parent_id)
             ->where('name', $request->name)
@@ -160,9 +160,9 @@ class FolderController extends Controller
         $files = File::where('folder_id', $folder->id)
             ->where(function ($q) use ($user){
                 if ($user->isSuperAdmin()) {
-                    // Super Admin: see all files
+                    
                 } elseif ($user->isAdmin()) {
-                    // Admin: see own, non-private, and shared files
+                    
                     $q->where('user_id', Auth::id())
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -174,10 +174,10 @@ class FolderController extends Controller
                                      });
                       });
                 } elseif ((Auth::user()->role ?? null) === 'staff') {
-                    // Staff users can only see their own files
+                    
                     $q->where('user_id', Auth::id());
                 } else {
-                    // Regular users and admins see their own, public, and shared files
+                    
                     $q->where('user_id', Auth::id())
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -189,8 +189,8 @@ class FolderController extends Controller
                                      });
                       });
                 }
-                // $q->where('user_id', Auth::id())
-                //   ->orWhere('visibility', 'public');
+                
+                
             })
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
@@ -212,7 +212,7 @@ class FolderController extends Controller
                 ];
             });
 
-        // Get subfolders
+        
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
@@ -240,7 +240,7 @@ class FolderController extends Controller
                 ];
             });
 
-        // Get breadcrumbs
+        
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
         $allFolders = Folder::where(function ($q) {
@@ -307,30 +307,30 @@ class FolderController extends Controller
     {
         $this->authorize('view', $folder);
 
-        // Get all files in this folder and subfolders
+        
         $files = $this->getAllFilesInFolder($folder);
 
         if ($files->isEmpty()) {
             return redirect()->back()->with('error', 'Folder is empty.');
         }
 
-        // Create a temporary ZIP file
+        
         $zipFileName = 'folder_' . $folder->name . '_' . time() . '.zip';
         $zipPath = storage_path('app/temp/' . $zipFileName);
 
-        // Ensure temp directory exists
+        
         if (!file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
-        // Create ZIP file
+        
         $zip = new \ZipArchive();
         if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
             return redirect()->back()->with('error', 'Cannot create ZIP file.');
         }
 
         foreach ($files as $file) {
-            // Use storageLocation to resolve the correct disk
+            
             $storageLocation = $file->storageLocation;
             if (!$storageLocation || !$storageLocation->is_active) {
                 continue;
@@ -344,7 +344,7 @@ class FolderController extends Controller
 
         $zip->close();
 
-        // Log download activity
+        
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action' => 'download',
@@ -359,7 +359,7 @@ class FolderController extends Controller
             ],
         ]);
 
-        // Return the ZIP file for download
+        
         return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
     }
 
@@ -367,7 +367,7 @@ class FolderController extends Controller
     {
         $files = collect();
 
-        // Get files directly in this folder
+        
         $directFiles = File::where('folder_id', $folder->id)
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
@@ -376,7 +376,7 @@ class FolderController extends Controller
             ->get();
         $files = $files->merge($directFiles);
 
-        // Get files from subfolders recursively
+        
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
@@ -403,7 +403,7 @@ class FolderController extends Controller
                 'shared_with.*' => 'integer|exists:users,id',
             ]);
 
-            // Check if folder with same name exists in parent
+            
             $existingFolder = Folder::where('user_id', $folder->user_id)
                 ->where('parent_id', $folder->parent_id)
                 ->where('name', $request->name)
@@ -426,12 +426,12 @@ class FolderController extends Controller
                 'visibility' => $request->visibility,
             ]);
 
-            // Handle sharing if visibility is 'shared' and users are selected
+            
             if ($request->visibility === 'shared' && $request->has('shared_with')) {
-                // Remove existing shares
+                
                 $folder->shares()->delete();
 
-                // Create new shares
+                
                 foreach ($request->shared_with as $userId) {
                     $folder->shares()->create([
                         'shared_with' => $userId,
@@ -440,11 +440,11 @@ class FolderController extends Controller
                     ]);
                 }
             } elseif ($request->visibility !== 'shared') {
-                // Remove all shares if not shared
+                
                 $folder->shares()->delete();
             }
 
-            // Log the activity
+            
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'edit',
@@ -478,7 +478,7 @@ class FolderController extends Controller
     {
         $this->authorize('delete', $folder);
 
-        // Check if folder has children or files
+        
         if ($folder->children()->count() > 0 || $folder->files()->count() > 0) {
             return redirect()->back()->withErrors([
                 'folder' => 'Cannot delete folder that contains files or subfolders.'
