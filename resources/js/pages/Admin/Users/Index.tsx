@@ -34,7 +34,6 @@ interface User {
     name: string;
     email: string;
     role: 'admin' | 'staff';
-    is_active: boolean;
     approved: boolean;
     storage_limit: number;
     storage_used: number;
@@ -309,7 +308,6 @@ export default function UsersIndex({ users, stats, filters }: Props) {
                                         </TableHead>
                                         <TableHead>Penyimpanan</TableHead>
                                         <TableHead>File</TableHead>
-                                        <TableHead>Status</TableHead>
                                         <TableHead>Persetujuan</TableHead>
                                         <TableHead
                                             className="cursor-pointer hover:bg-muted/50"
