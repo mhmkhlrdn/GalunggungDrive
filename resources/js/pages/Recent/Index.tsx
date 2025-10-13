@@ -1,12 +1,17 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatFileSize, fuzzyFilter } from '@/lib/utils';
+import FileUploadModal from '@/components/file-upload-modal';
+import CreateFolderModal from '@/components/create-folder-modal';
+import MoveFileModal from '@/components/move-file-modal';
+import FileEditModal from '@/components/file-edit-modal';
+import ShareModal from '@/components/share-modal';
+import FilePreviewModal from '@/components/file-preview-modal';
 import FilePreview from '@/components/file-preview';
 import {
     Search,
-    Filter,
     Grid3X3,
     List,
     MoreHorizontal,
@@ -16,25 +21,28 @@ import {
     Trash2,
     Eye,
     Edit,
-    FileText,
-    Image,
-    Video,
-    Music,
-    Archive,
-    File,
+    Move,
+    Lock,
+    Globe,
+    Users,
+    FolderOpen,
+    Home,
     Clock,
     Calendar,
     User,
-    HardDrive,
-    FolderOpen
+    HardDrive
 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
-import { router } from '@inertiajs/react';
+import { useState, useMemo } from 'react';
+import { useInertiaOperations } from '@/hooks/use-inertia-operations';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/lib/messages';
 
-interface File {
+interface FileItem {
+    created_at: string;
+    description?: string;
+    tags?: string[];
     id: number;
     name: string;
-    size: string;
+    size: number; // Changed to number to match Files/Index.tsx
     mime_type: string;
     updated_at: string;
     starred: boolean;
@@ -46,11 +54,18 @@ interface File {
         id: number;
         name: string;
     };
+    visibility: 'private' | 'shared' | 'public'; // Added visibility
+}
+
+interface Folder {
+    id: number;
+    name: string;
+    parent_id?: number;
 }
 
 interface Props {
     files: {
-        data: File[];
+        data: FileItem[];
         current_page: number;
         last_page: number;
         per_page: number;
@@ -61,16 +76,32 @@ interface Props {
         sort_by: string;
         sort_order: string;
     };
+    folders: Folder[]; // Added folders
+    users?: Array<{
+        id: number;
+        name: string;
+        email: string;
+    }>;
+    disks?: Array<{ id: number; name: string }>;
 }
 
-export default function RecentIndex({ files, filters }: Props) {
+export default function RecentIndex({ files, filters, folders, users = [], disks = [] }: Props) {
+    const { destroy, post } = useInertiaOperations();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [fileToMove, setFileToMove] = useState<{id: number, name: string} | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [fileToEdit, setFileToEdit] = useState<FileItem | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [shareSelection, setShareSelection] = useState<FileItem[]>([]);
     const [search, setSearch] = useState(filters.search || '');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'updated_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order as 'asc' | 'desc' || 'desc');
-
-    const searchDebounceRef = useRef<number | null>(null);
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [previewIndex, setPreviewIndex] = useState<number>(0);
 
     // Client-side fuzzy filtering
     const filteredFiles = fuzzyFilter(
@@ -82,7 +113,7 @@ export default function RecentIndex({ files, filters }: Props) {
 
     // Apply sorting to filtered results
     const sortedFiles = [...filteredFiles].sort((a, b) => {
-        let aValue: any, bValue: any;
+        let aValue: string | number | Date, bValue: string | number | Date;
 
         switch (sortBy) {
             case 'name':
@@ -90,8 +121,8 @@ export default function RecentIndex({ files, filters }: Props) {
                 bValue = b.name.toLowerCase();
                 break;
             case 'size':
-                aValue = parseInt(a.size);
-                bValue = parseInt(b.size);
+                aValue = a.size;
+                bValue = b.size;
                 break;
             case 'created_at':
                 aValue = new Date(a.updated_at);
@@ -109,24 +140,6 @@ export default function RecentIndex({ files, filters }: Props) {
         }
     });
 
-    const getFileIcon = (mimeType: string) => {
-        if (mimeType.startsWith('image/')) return Image;
-        if (mimeType.startsWith('video/')) return Video;
-        if (mimeType.startsWith('audio/')) return Music;
-        if (mimeType === 'application/pdf') return FileText;
-        if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return Archive;
-        return File;
-    };
-
-    const getFileColor = (mimeType: string) => {
-        if (mimeType.startsWith('image/')) return 'text-green-600';
-        if (mimeType.startsWith('video/')) return 'text-purple-600';
-        if (mimeType.startsWith('audio/')) return 'text-pink-600';
-        if (mimeType === 'application/pdf') return 'text-red-600';
-        if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return 'text-orange-600';
-        return 'text-slate-600';
-    };
-
     const toggleFileSelection = (fileId: number) => {
         setSelectedFiles(prev =>
             prev.includes(fileId)
@@ -135,42 +148,128 @@ export default function RecentIndex({ files, filters }: Props) {
         );
     };
 
+    const selectAllFiles = () => {
+        setSelectedFiles(files.data.map(file => file.id));
+    };
+
     const clearSelection = () => {
         setSelectedFiles([]);
     };
 
-    const handleStarToggle = (fileId: number) => {
-        router.post(`/files/${fileId}/star`, {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Optionally show a success message
+    const toggleSelectAll = () => {
+        if (selectedFiles.length === files.data.length) {
+            clearSelection();
+        } else {
+            selectAllFiles();
+        }
+    };
+
+    const handleFileUpload = () => {
+        router.reload();
+    };
+
+    const handleFolderCreate = () => {
+        router.reload();
+    };
+
+    const handleShareFile = (file: FileItem) => {
+        setShareSelection([file]);
+        setShowShareModal(true);
+    };
+
+    const handleDeleteFile = (fileId: number) => {
+        if (confirm('Apakah Anda yakin ingin menghapus file ini?')) {
+            destroy(`/files/${fileId}`, {
+                successMessage: SUCCESS_MESSAGES.FILE_DELETED,
+                errorMessage: ERROR_MESSAGES.FILE_DELETE_FAILED,
+                onSuccess: () => {
+                    router.reload();
+                }
+            });
+        }
+    };
+
+    const handleShare = (
+        fileIds: number[],
+        userIds: number[],
+        permission: string,
+        expiresAt?: string,
+        isPublicLink?: boolean
+    ) => {
+        fileIds.forEach((fileId) => {
+            if (isPublicLink) {
+                post(`/files/${fileId}/share`, {
+                    is_public_link: true,
+                    permission,
+                    expires_at: expiresAt
+                }, {
+                    successMessage: SUCCESS_MESSAGES.FILE_SHARED,
+                    errorMessage: ERROR_MESSAGES.FILE_SHARE_FAILED
+                });
+            } else {
+                userIds.forEach((userId) => {
+                    post(`/files/${fileId}/share`, {
+                        shared_with: userId,
+                        permission,
+                        expires_at: expiresAt
+                    }, {
+                        successMessage: SUCCESS_MESSAGES.FILE_SHARED,
+                        errorMessage: ERROR_MESSAGES.FILE_SHARE_FAILED
+                    });
+                });
+            }
+        });
+        router.reload();
+    };
+
+    type ModalFile = Omit<FileItem, 'size'> & { size: string };
+    const filesForModal: ModalFile[] = useMemo(() => files.data.map<ModalFile>(f => ({ ...f, size: String(f.size) })), [files.data]);
+    const shareSelectionForModal: ModalFile[] = useMemo(() => shareSelection.map<ModalFile>(f => ({ ...f, size: String(f.size) })), [shareSelection]);
+
+    const handleBulkDownload = () => {
+        files.data.forEach(f => {
+            if (selectedFiles.includes(f.id)) {
+                window.open(`/files/${f.id}/download`, '_blank');
             }
         });
     };
 
-    const handleDownload = (fileId: number) => {
-        window.open(`/files/${fileId}/download`, '_blank');
-    };
-
-    const handleBulkDownload = () => {
-        if (selectedFiles.length === 0) return;
-
-        selectedFiles.forEach(fileId => {
-            window.open(`/files/${fileId}/download`, '_blank');
-        });
+    const handleBulkShare = () => {
+        const filesToShare = files.data.filter(f => selectedFiles.includes(f.id));
+        if (filesToShare.length === 0) return;
+        setShareSelection(filesToShare);
+        setShowShareModal(true);
     };
 
     const handleBulkDelete = () => {
         if (selectedFiles.length === 0) return;
+        if (!confirm(`Hapus ${selectedFiles.length} file terpilih?`)) return;
+        selectedFiles.forEach(id => router.delete(`/files/${id}`));
+        router.reload();
+    };
 
-        if (confirm(`Apakah Anda yakin ingin menghapus ${selectedFiles.length} file?`)) {
-            selectedFiles.forEach(fileId => {
-                router.delete(`/files/${fileId}`, {
-                    preserveScroll: true,
-                });
-            });
-            setSelectedFiles([]);
-        }
+    const handleMoveFile = (fileId: number, fileName: string) => {
+        setFileToMove({ id: fileId, name: fileName });
+        setShowMoveModal(true);
+    };
+
+    const handleFileMove = () => {
+        router.reload();
+    };
+
+    const handleEditFile = (file: FileItem) => {
+        setFileToEdit(file);
+        setShowEditModal(true);
+    };
+
+    const handleToggleStar = (fileId: number) => {
+        post(`/files/${fileId}/toggle-star`, {}, {
+            successMessage: SUCCESS_MESSAGES.FILE_STARRED,
+            errorMessage: ERROR_MESSAGES.FILE_STAR_FAILED,
+            onSuccess: () => {
+                window.location.reload();
+            }
+        });
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -339,15 +438,6 @@ export default function RecentIndex({ files, filters }: Props) {
                                                     {file.name}
                                                 </h3>
                                                 <div className="flex items-center space-x-1">
-                                                    <button
-                                                        onClick={() => handleStarToggle(file.id)}
-                                                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                                    >
-                                                        <Star className={`h-4 w-4 ${file.starred ? 'text-yellow-500 fill-current' : ''}`} />
-                                                    </button>
-                                                    <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </button>
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -373,42 +463,45 @@ export default function RecentIndex({ files, filters }: Props) {
                                         </div>
                                     </div>
 
-                                    {/* Quick Actions */}
-                                    {/* Desktop hover actions */}
-                                    <div className="absolute inset-0 hidden sm:flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <div className="flex items-center space-x-2">
-                                            <Link href={`/files/${file.id}`} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
-                                                <Eye className="h-4 w-4" />
-                                            </Link>
-                                            <button onClick={() => handleDownload(file.id)} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
-                                                <Download className="h-4 w-4" />
-                                            </button>
-                                            <Link href={`/files/${file.id}/share`} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
-                                                <Share2 className="h-4 w-4" />
-                                            </Link>
-                                            <Link href={`/files/${file.id}/edit`} className="rounded-full bg-white p-2 text-slate-600 hover:bg-slate-50">
-                                                <Edit className="h-4 w-4" />
-                                            </Link>
-                                        </div>
-                                    </div>
-                                    {/* Mobile dropdown actions */}
-                                    <div className="sm:hidden absolute top-2 right-2">
+                                    {/* Actions Dropdown */}
+                                    <div className="absolute top-2 right-2">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button className="rounded bg-white/90 p-2 text-slate-600 shadow-sm">
+                                                <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/files/${file.id}`}>Lihat</Link>
+                                                <DropdownMenuItem onClick={() => { const idx = files.data.findIndex(f => f.id === file.id); if (idx >= 0) { setPreviewIndex(idx); setShowFilePreview(true); } }}>
+                                                    <Eye className="h-4 w-4 mr-2" />
+                                                    Lihat
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDownload(file.id)}>Download</DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/files/${file.id}/share`}>Bagikan</Link>
+                                                <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
+                                                    <Star className={`h-4 w-4 mr-2 ${file.starred ? 'text-yellow-500 fill-current' : ''}`} />
+                                                    {file.starred ? 'Hapus dari favorit' : 'Tambahkan ke favorit'}
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/files/${file.id}/edit`}>Edit</Link>
+                                                <DropdownMenuItem onClick={() => window.open(`/files/${file.id}/download`, '_blank')}>
+                                                    <Download className="h-4 w-4 mr-2" />
+                                                    Download
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleMoveFile(file.id, file.name)}>
+                                                    <Move className="h-4 w-4 mr-2" />
+                                                    Pindah
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleEditFile(file)}>
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleShareFile(file)}>
+                                                    <Share2 className="h-4 w-4 mr-2" />
+                                                    Bagikan
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDeleteFile(file.id)}
+                                                    className="text-red-600"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Hapus
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -418,6 +511,68 @@ export default function RecentIndex({ files, filters }: Props) {
                         })}
                     </div>
                 )}
+
+                {/* Modals */}
+                <FileUploadModal
+                    isOpen={showUploadModal}
+                    onClose={() => setShowUploadModal(false)}
+                    onUpload={handleFileUpload}
+                    currentFolderId={undefined} // Recent files don't have a current folder context for upload
+                    currentFolderName="Recent"
+                    storageLocations={disks ?? []}
+                />
+                <CreateFolderModal
+                    isOpen={showCreateFolderModal}
+                    onClose={() => setShowCreateFolderModal(false)}
+                    onCreate={handleFolderCreate}
+                    parentId={undefined} // Recent files don't have a current folder context for create folder
+                />
+                {fileToMove && (
+                    <MoveFileModal
+                        isOpen={showMoveModal}
+                        onClose={() => {
+                            setShowMoveModal(false);
+                            setFileToMove(null);
+                        }}
+                        onMove={handleFileMove}
+                        fileId={fileToMove.id}
+                        fileName={fileToMove.name}
+                        currentFolderId={undefined} // Recent files don't have a current folder context for move
+                        folders={folders}
+                    />
+                )}
+                {fileToEdit && (
+                    <FileEditModal
+                        isOpen={showEditModal}
+                        onClose={() => {
+                            setShowEditModal(false);
+                            setFileToEdit(null);
+                        }}
+                        file={fileToEdit}
+                        users={users}
+                    />
+                )}
+                {shareSelection.length > 0 && (
+                    <ShareModal
+                        isOpen={showShareModal}
+                        onClose={() => {
+                            setShowShareModal(false);
+                            setShareSelection([]);
+                        }}
+                        onShare={handleShare}
+                        files={filesForModal}
+                        selectedFiles={shareSelectionForModal}
+                        users={users}
+                        mode="user-selection"
+                    />
+                )}
+                <FilePreviewModal
+                    isOpen={showFilePreview}
+                    onClose={() => setShowFilePreview(false)}
+                    loggedinUser={window.Auth?.user}
+                    filesInDirectory={filesForModal}
+                    currentIndex={previewIndex}
+                />
 
                 {/* Pagination */}
                 {files.last_page > 1 && (
