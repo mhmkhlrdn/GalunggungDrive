@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,7 @@ class CustomLoginController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+
             return back()->withErrors([
                 'email' => 'Kredensial yang diberikan tidak cocok dengan catatan kami.',
             ]);
@@ -36,7 +38,7 @@ class CustomLoginController extends Controller
         // Check if user is soft deleted
         if ($user->trashed()) {
             return back()->withErrors([
-                'email' => 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator untuk informasi lebih lanjut.',
+                'email' => 'Akun Anda telah dihapus. Silakan hubungi administrator untuk informasi lebih lanjut.',
             ]);
         }
 
@@ -47,36 +49,48 @@ class CustomLoginController extends Controller
             ]);
         }
 
-        // Check if user is already logged in elsewhere
-        if ($user->current_session_id && $user->current_session_id !== session()->getId()) {
-            // Check if the session still exists
-            $sessionExists = $this->checkSessionExists($user->current_session_id);
+        // // Check if user is already logged in elsewhere
+        // if ($user->current_session_id && $user->current_session_id !== session()->getId()) {
+        //     // Check if the session still exists
+        //     $sessionExists = $this->checkSessionExists($user->current_session_id);
 
-            if ($sessionExists) {
-                return Inertia::render('auth/LoginBlocked', [
-                    'message' => 'Akun ini sedang digunakan di perangkat lain. Silakan tunggu hingga pengguna lain keluar atau hubungi administrator.',
-                    'lastLoginAt' => $user->last_login_at,
-                    'lastLoginIp' => $user->last_login_ip,
-                ]);
-            } else {
-                // Session doesn't exist, clear the session ID
-                $user->update(['current_session_id' => null]);
-            }
-        }
+            // if ($sessionExists) {
+            //     return Inertia::render('auth/LoginBlocked', [
+            //         'message' => 'Akun ini sedang digunakan di perangkat lain. Silakan tunggu hingga pengguna lain keluar atau hubungi administrator.',
+            //         'lastLoginAt' => $user->last_login_at,
+            //         'lastLoginIp' => $user->last_login_ip,
+            //     ]);
+            // } else {
+            //     // Session doesn't exist, clear the session ID
+            //     $user->update(['current_session_id' => null]);
+            // }
+        // }
 
         // Generate new session ID
-        $sessionId = session()->getId();
+        // $sessionId = session()->getId();
 
         // Update user with new session info
-        $user->update([
-            'current_session_id' => $sessionId,
-            'last_login_at' => now(),
-            'last_login_ip' => $request->ip(),
-        ]);
+        // $user->update([
+        //     'current_session_id' => $sessionId,
+        //     'last_login_at' => now(),
+        //     'last_login_ip' => $request->ip(),
+        // ]);
 
         // Log the user in
         Auth::login($user, $request->boolean('remember'));
 
+
+        if (Auth::check()) {
+            ActivityLog::create([
+            'user_id' => Auth::id(),
+                'action' => 'login',
+                'target_type' => 'auth',
+                'target_id' => null,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'success' => true,
+        ]);
+}
         $request->session()->regenerate();
 
         return redirect()->intended('/dashboard');
@@ -87,6 +101,16 @@ class CustomLoginController extends Controller
         $user = Auth::user();
 
         if ($user) {
+            ActivityLog::create([
+            'user_id' => Auth::id(),
+                'action' => 'logout',
+                'target_type' => 'auth',
+                'target_id' => null,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'success' => true,
+        ]);
+
             // Clear session tracking
             $user->update(['current_session_id' => null]);
         }
