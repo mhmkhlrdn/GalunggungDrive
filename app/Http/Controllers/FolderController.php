@@ -46,7 +46,7 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
-        
+
         $folders->getCollection()->transform(function ($folder) {
             $filesCount = File::where('folder_id', $folder->id)
                 ->whereHas('storageLocation', function ($q) {
@@ -74,7 +74,7 @@ class FolderController extends Controller
             return $folder;
         });
 
-        
+
         $users = User::where('id', '!=', Auth::id())
             ->select('id', 'name', 'email')
             ->orderBy('name')
@@ -115,7 +115,7 @@ class FolderController extends Controller
             'visibility' => 'nullable|in:private,shared,public',
         ]);
 
-        
+
         $existingFolder = Folder::where('user_id', Auth::id())
             ->where('parent_id', $request->parent_id)
             ->where('name', $request->name)
@@ -160,9 +160,9 @@ class FolderController extends Controller
         $files = File::where('folder_id', $folder->id)
             ->where(function ($q) use ($user){
                 if ($user->isSuperAdmin()) {
-                    
+
                 } elseif ($user->isAdmin()) {
-                    
+
                     $q->where('user_id', Auth::id())
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -174,10 +174,10 @@ class FolderController extends Controller
                                      });
                       });
                 } elseif ((Auth::user()->role ?? null) === 'staff') {
-                    
+
                     $q->where('user_id', Auth::id());
                 } else {
-                    
+
                     $q->where('user_id', Auth::id())
                       ->orWhere('visibility', 'public')
                       ->orWhere('visibility', 'shared')
@@ -189,8 +189,8 @@ class FolderController extends Controller
                                      });
                       });
                 }
-                
-                
+
+
             })
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
@@ -212,7 +212,7 @@ class FolderController extends Controller
                 ];
             });
 
-        
+
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
@@ -240,7 +240,7 @@ class FolderController extends Controller
                 ];
             });
 
-        
+
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
         $allFolders = Folder::where(function ($q) {
@@ -307,30 +307,30 @@ class FolderController extends Controller
     {
         $this->authorize('view', $folder);
 
-        
+
         $files = $this->getAllFilesInFolder($folder);
 
         if ($files->isEmpty()) {
             return redirect()->back()->with('error', 'Folder is empty.');
         }
 
-        
+
         $zipFileName = 'folder_' . $folder->name . '_' . time() . '.zip';
         $zipPath = storage_path('app/temp/' . $zipFileName);
 
-        
+
         if (!file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
-        
+
         $zip = new \ZipArchive();
         if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
             return redirect()->back()->with('error', 'Cannot create ZIP file.');
         }
 
         foreach ($files as $file) {
-            
+
             $storageLocation = $file->storageLocation;
             if (!$storageLocation || !$storageLocation->is_active) {
                 continue;
@@ -344,7 +344,7 @@ class FolderController extends Controller
 
         $zip->close();
 
-        
+
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action' => 'download',
@@ -359,7 +359,7 @@ class FolderController extends Controller
             ],
         ]);
 
-        
+
         return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
     }
 
@@ -367,7 +367,7 @@ class FolderController extends Controller
     {
         $files = collect();
 
-        
+
         $directFiles = File::where('folder_id', $folder->id)
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
@@ -376,7 +376,7 @@ class FolderController extends Controller
             ->get();
         $files = $files->merge($directFiles);
 
-        
+
         $subfolders = Folder::where('parent_id', $folder->id)
             ->where(function ($q) {
                 $q->where('user_id', Auth::id())
@@ -403,7 +403,7 @@ class FolderController extends Controller
                 'shared_with.*' => 'integer|exists:users,id',
             ]);
 
-            
+
             $existingFolder = Folder::where('user_id', $folder->user_id)
                 ->where('parent_id', $folder->parent_id)
                 ->where('name', $request->name)
@@ -426,12 +426,12 @@ class FolderController extends Controller
                 'visibility' => $request->visibility,
             ]);
 
-            
+
             if ($request->visibility === 'shared' && $request->has('shared_with')) {
-                
+
                 $folder->shares()->delete();
 
-                
+
                 foreach ($request->shared_with as $userId) {
                     $folder->shares()->create([
                         'shared_with' => $userId,
@@ -440,11 +440,11 @@ class FolderController extends Controller
                     ]);
                 }
             } elseif ($request->visibility !== 'shared') {
-                
+
                 $folder->shares()->delete();
             }
 
-            
+
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'edit',
@@ -478,12 +478,13 @@ class FolderController extends Controller
     {
         $this->authorize('delete', $folder);
 
-        
-        if ($folder->children()->count() > 0 || $folder->files()->count() > 0) {
-            return redirect()->back()->withErrors([
-                'folder' => 'Cannot delete folder that contains files or subfolders.'
-            ]);
-        }
+
+       if ($folder->children()->count() > 0 || $folder->files()->count() > 0) {
+    return redirect()->back()->withErrors([
+        'folder' => 'Tidak bisa menghapus folder ' . $folder->name . ' karena masih memiliki file/folder di dalamnya. Mohon kosongkan folder ' . $folder->name . ' terlebih dahulu.'
+    ]);
+}
+
 
         ActivityLog::create([
             'user_id' => Auth::id(),
@@ -500,7 +501,7 @@ class FolderController extends Controller
 
         $folder->delete();
 
-        return redirect()->back()->with('success', 'Folder deleted successfully.');
+        return redirect()->back()->with('success', 'Folder berhasil dihapus.');
     }
 
     public function restore(Folder $folder): RedirectResponse
@@ -551,15 +552,65 @@ class FolderController extends Controller
 
         return $breadcrumbs;
     }
+private function formatFileSize($bytes)
+{
+    if ($bytes === 0) return '0 Bytes';
+    $k = 1024;
+    $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    $i = floor(log($bytes) / log($k));
+    return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+}
 
-    private function formatFileSize($bytes)
-    {
-        if ($bytes === 0) return '0 Bytes';
-        $k = 1024;
-        $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        $i = floor(log($bytes) / log($k));
-        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+public function emptyFolder(Folder $folder): RedirectResponse
+{
+    $this->authorize('update', $folder);
+
+    try {
+        $this->deleteFolderContents($folder);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'empty_folder',
+            'target_type' => 'folder',
+            'target_id' => $folder->id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'success' => true,
+            'details' => [
+                'folder_name' => $folder->name,
+            ],
+        ]);
+
+        return redirect()->back()->with('success', 'Folder berhasil dikosongkan.');
+    } catch (\Exception $e) {
+        Log::error('Failed to empty folder: ' . $e->getMessage(), [
+            'folder_id' => $folder->id,
+            'user_id' => Auth::id(),
+            'exception' => $e,
+        ]);
+        return redirect()->back();
     }
 }
 
+private function deleteFolderContents(Folder $folder): void
+{
+    // Delete all files in the current folder
+    foreach ($folder->files as $file) {
+        $storageLocation = $file->storageLocation;
+        if ($storageLocation && $storageLocation->is_active) {
+            $diskKey = method_exists($storageLocation, 'diskKey') ? $storageLocation->diskKey() : $storageLocation->disk;
+            if ($diskKey && Storage::disk($diskKey)->exists($file->path)) {
+                Storage::disk($diskKey)->delete($file->path);
+            }
+        }
+        $file->delete();
+    }
+
+    // Recursively delete all subfolders and their contents
+    foreach ($folder->children as $subfolder) {
+        $this->deleteFolderContents($subfolder);
+        $subfolder->delete();
+    }
+}
+}
 

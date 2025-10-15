@@ -75,10 +75,11 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::resource('folders', FolderController::class);
         Route::post('folders/{folder}/restore', [FolderController::class, 'restore'])->name('folders.restore');
         Route::get('folders/{folder}/download', [FolderController::class, 'download'])->name('folders.download');
+        Route::delete('folders/{folder}/empty', [FolderController::class, 'emptyFolder'])->name('folders.empty');
         Route::get('f/{token}', [FolderController::class, 'view'])->name('folders.view');
 
-        Route::get('folders/{folder}/share', [App\Http\Controllers\FolderShareController::class, 'create'])->name('folders.share');
-        Route::post('folders/{folder}/share', [App\Http\Controllers\FolderShareController::class, 'store'])->name('folders.share.store');
+         Route::get('folders/{folder}/share', [App\Http\Controllers\FolderShareController::class, 'create'])->name('folders.share');
+         Route::post('folders/{folder}/share', [App\Http\Controllers\FolderShareController::class, 'store'])->name('folders.share.store');
         Route::put('folder-shares/{folderShare}', [App\Http\Controllers\FolderShareController::class, 'update'])->name('folder-shares.update');
         Route::delete('folder-shares/{folderShare}', [App\Http\Controllers\FolderShareController::class, 'destroy'])->name('folder-shares.destroy');
 

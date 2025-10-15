@@ -76,9 +76,28 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
     const [renamingFolderId, setRenamingFolderId] = useState<number | null>(null);
     const [visibilityWarning, setVisibilityWarning] = useState('');
 
-    const handleMoveFile = (fileId: number, fileName: string) => {
-        setFileToMove({ id: fileId, name: fileName });
-        setShowMoveModal(true);
+    const handleEmptyFolder = () => {
+        if (confirm('Are you sure you want to empty this folder? All files and subfolders will be permanently deleted.')) {
+            router.delete(`/folders/${folder.id}/empty`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    showSuccess('Folder emptied successfully');
+                    router.reload();
+                },
+                onError: (errors) => {
+                    if (errors.folder) {
+                        showError(errors.folder);
+                    } else {
+                        showError('Failed to empty folder. Please try again.');
+                    }
+                },
+            });
+        }
+    };
+
+     const handleMoveFile = (fileId: number, fileName: string) => {
+         setFileToMove({ id: fileId, name: fileName });
+         setShowMoveModal(true);
     };
 
     const handleFileMove = () => {
@@ -149,6 +168,13 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                         >
                             <Upload className="h-4 w-4 mr-2" />
                             Upload File
+                        </Button>
+                        <Button
+                            onClick={() => handleEmptyFolder()}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Kosongkan Folder
                         </Button>
                         <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
                             <Plus className="h-4 w-4 mr-2" />
