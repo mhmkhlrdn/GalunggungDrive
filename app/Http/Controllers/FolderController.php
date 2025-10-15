@@ -123,7 +123,7 @@ class FolderController extends Controller
 
         if ($existingFolder) {
             return redirect()->back()->withErrors([
-                'name' => 'A folder with this name already exists in this location.'
+                'name' => 'Folder dengan nama yang sama sudah ada di lokasi ini.'
             ]);
         }
 
@@ -148,7 +148,7 @@ class FolderController extends Controller
             ],
         ]);
 
-        return redirect()->back()->with('success', 'Folder created successfully.');
+        return redirect()->back()->with('success', 'Folder berhasil dibuat.');
     }
 
     public function show(Request $request, Folder $folder)
@@ -311,7 +311,7 @@ class FolderController extends Controller
         $files = $this->getAllFilesInFolder($folder);
 
         if ($files->isEmpty()) {
-            return redirect()->back()->with('error', 'Folder is empty.');
+            return redirect()->back()->with('error', 'Folder kosong.');
         }
 
 
@@ -326,7 +326,7 @@ class FolderController extends Controller
 
         $zip = new \ZipArchive();
         if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
-            return redirect()->back()->with('error', 'Cannot create ZIP file.');
+            return redirect()->back()->with('error', 'Tidak dapat membuat file ZIP.');
         }
 
         foreach ($files as $file) {
@@ -412,7 +412,7 @@ class FolderController extends Controller
 
             if ($existingFolder) {
                 return redirect()->back()->withErrors([
-                    'name' => 'A folder with this name already exists in this location.'
+                    'name' => 'Folder dengan nama yang sama sudah ada di lokasi ini.'
                 ]);
             }
 
@@ -470,7 +470,7 @@ class FolderController extends Controller
                 'request_data' => $request->all(),
                 'exception' => $e,
             ]);
-            return redirect()->back()->withErrors(['error' => 'An unexpected error occurred while updating the folder. Please check the logs for more details.']);
+            return redirect()->back()->withErrors(['error' => 'Terjadi kesalahan, tolong hubungi developer.']);
         }
     }
 
@@ -523,7 +523,7 @@ class FolderController extends Controller
             ],
         ]);
 
-        return redirect()->back()->with('success', 'Folder restored successfully.');
+        return redirect()->back()->with('success', 'Folder berhasil dipulihkan.');
     }
 
     private function getBreadcrumbs(?Folder $folder): array
@@ -583,7 +583,7 @@ public function emptyFolder(Folder $folder): RedirectResponse
 
         return redirect()->back()->with('success', 'Folder berhasil dikosongkan.');
     } catch (\Exception $e) {
-        Log::error('Failed to empty folder: ' . $e->getMessage(), [
+        Log::error('Gagal mengkosongkan folder: ' . $e->getMessage(), [
             'folder_id' => $folder->id,
             'user_id' => Auth::id(),
             'exception' => $e,

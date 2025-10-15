@@ -156,14 +156,14 @@ class FileController extends Controller
         $allFiles = $request->allFiles();
         $filesArr = $allFiles['files'] ?? [];
 
-        // Debug logging
+
         Log::info('File upload debug', [
             'all_files_keys' => array_keys($allFiles),
             'files_array_structure' => is_array($filesArr) ? array_keys($filesArr) : gettype($filesArr),
             'files_count' => is_array($filesArr) ? count($filesArr) : 0,
         ]);
 
-        // Flatten the array of uploaded files, handling nested arrays from folder uploads
+
         $flattenedFiles = [];
         $this->flattenFilesArray($filesArr, $flattenedFiles);
 
@@ -224,26 +224,23 @@ class FileController extends Controller
         $uploadedFiles = [];
 
     $relativePaths = $request->input('relative_paths', []);
-        
-        // Create folder hierarchy if we have relative paths
+
+
         $folderMap = [];
         if (!empty($relativePaths)) {
             $folderMap = $this->createFolderHierarchy($relativePaths, $request->folder_id, $request->visibility);
         }
 
-    // Use the flattened files array for processing
+
     $files = $flattenedFiles;
     foreach ($files as $i => $uploadedFile) {
             $storagePath = $uploadConfig['storage_path'] ?? 'files';
-            // If relative path is present and not just the filename, append to storage path
-            // The relative path for a file within a folder upload is typically provided by the browser.
-            // If it's a single file upload, relative_paths[$i] might be just the filename or empty.
             $relativePath = isset($relativePaths[$i]) ? $relativePaths[$i] : $uploadedFile->getClientOriginalName();
             $targetPath = $storagePath;
             if ($relativePath && $relativePath !== $uploadedFile->getClientOriginalName()) {
-                // Extract the directory part from the relative path
+
                 $directory = dirname($relativePath);
-                if ($directory === '.') { // If dirname returns '.', it means it's just a filename
+                if ($directory === '.') {
                     $targetPath = $storagePath;
                 } else {
                     $targetPath = rtrim($storagePath, '/') . '/' . ltrim($directory, '/');
@@ -256,7 +253,7 @@ class FileController extends Controller
                 'relative_path' => $relativePath,
             ]);
             try {
-                // Ensure directory exists
+
                 Storage::disk($storageDisk)->makeDirectory($targetPath);
                 $path = $uploadedFile->storeAs($targetPath, basename($uploadedFile->getClientOriginalName()), $storageDisk);
                 Log::info('File stored successfully', ['path' => $path, 'disk' => $storageDisk]);
@@ -291,11 +288,11 @@ class FileController extends Controller
 
             $checksum = hash_file('sha256', $uploadedFile->getRealPath());
 
-            // Determine the correct folder_id for this file
-            $fileFolderId = $request->folder_id; // Default to parent folder
+
+            $fileFolderId = $request->folder_id;
             $directory = '.';
             if ($relativePath && $relativePath !== $uploadedFile->getClientOriginalName()) {
-                // File is in a subfolder, find the correct folder_id
+
                 $directory = dirname($relativePath);
                 if ($directory !== '.') {
                     $fileFolderId = $folderMap[$directory] ?? $request->folder_id;
@@ -836,10 +833,10 @@ class FileController extends Controller
     {
         foreach ($filesArray as $item) {
             if (is_array($item)) {
-                // Recursively process nested arrays
+
                 $this->flattenFilesArray($item, $flattenedFiles);
             } elseif ($item instanceof \Illuminate\Http\UploadedFile) {
-                // Add UploadedFile objects to the flattened array
+
                 $flattenedFiles[] = $item;
             }
         }
@@ -850,15 +847,15 @@ class FileController extends Controller
      */
     private function createFolderHierarchy(array $relativePaths, int $parentFolderId = null, string $visibility = 'public'): array
     {
-        $folderMap = []; // Maps folder path to folder ID
-        $createdFolders = []; // Tracks created folders to avoid duplicates
+        $folderMap = [];
+        $createdFolders = [];
 
         foreach ($relativePaths as $relativePath) {
             $pathParts = explode('/', $relativePath);
-            $filename = array_pop($pathParts); // Remove filename, keep only directory parts
-            
+            $filename = array_pop($pathParts);
+
             if (empty($pathParts)) {
-                continue; // File is in root, no folders to create
+                continue;
             }
 
             $currentPath = '';
@@ -866,10 +863,10 @@ class FileController extends Controller
 
             foreach ($pathParts as $folderName) {
                 $currentPath = $currentPath ? $currentPath . '/' . $folderName : $folderName;
-                
-                // Check if folder already exists in our map
+
+
                 if (!isset($folderMap[$currentPath])) {
-                    // Check if folder already exists in database
+
                     $existingFolder = \App\Models\Folder::where('name', $folderName)
                         ->where('parent_id', $currentParentId)
                         ->where('user_id', Auth::id())
@@ -879,7 +876,7 @@ class FileController extends Controller
                         $folderMap[$currentPath] = $existingFolder->id;
                         $currentParentId = $existingFolder->id;
                     } else {
-                        // Create new folder
+
                         $folder = \App\Models\Folder::create([
                             'user_id' => Auth::id(),
                             'parent_id' => $currentParentId,

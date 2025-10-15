@@ -265,7 +265,7 @@ export default function Dashboard({ stats, recentFiles, recentFolders, disks = [
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">File Terbaru
 
                             </h3>
-                            <Link href="/files" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                            <Link href="/recent" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
                                 Lihat semua
                             </Link>
                         </div>
