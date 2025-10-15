@@ -111,21 +111,16 @@ class DashboardController extends Controller
                 ];
             });
 
-        $availableDisks = collect(config('filesystems.disks', []))
-            ->map(function ($config, $key) {
-                return [
-                    'key' => $key,
-                    'label' => ucfirst($key),
-                ];
-            })
-            ->values();
+        $availableDisks = StorageLocation::serving()
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return Inertia::render('dashboard', [
             'stats' => $stats,
             'users' => $users,
             'recentFiles' => $recentFiles,
             'recentFolders' => $recentFolders,
-            'disks' => $availableDisks,
+            'disks' => $availableDisks->map(function ($loc) { return ['id' => $loc->id, 'name' => $loc->name]; }),
         ]);
     }
 

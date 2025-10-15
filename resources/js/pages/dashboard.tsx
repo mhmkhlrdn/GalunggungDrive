@@ -74,7 +74,7 @@ interface DashboardProps {
             email: string;
         };
     }>;
-    disks?: Array<{ key: string; label: string }>;
+    disks?: Array<{ id: number; name: string }>;
     users: Array<{ id: number; name: string; email: string }>;
 }
 
