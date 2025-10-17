@@ -23,7 +23,6 @@ import {
     Trash
 } from 'lucide-react';
 import { useState } from 'react';
-import { fuzzyFilter } from '@/lib/utils';
 
 interface ActivityLog {
     id: number;
@@ -54,41 +53,27 @@ interface Props {
     filters: {
         search: string;
         action: string;
+        actor: number;
         date_from: string;
         date_to: string;
     };
+    allActors: {
+        id: number;
+        name: string;
+    }[];
 }
 
-export default function ActivityIndex({ activities, availableActions, filters }: Props) {
+export default function ActivityIndex({ activities, availableActions, filters, allActors }: Props) {
     const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
     const [search, setSearch] = useState(filters.search || '');
     const [actionFilter, setActionFilter] = useState(filters.action || '');
+    const [actorFilter, setActorFilter] = useState(filters.actor || '');
     const [dateFromFilter, setDateFromFilter] = useState(filters.date_from || '');
     const [dateToFilter, setDateToFilter] = useState(filters.date_to || '');
 
-    // Client-side fuzzy filtering for activities
-    const filteredActivities = fuzzyFilter(
-        activities.data,
-        search,
-        (activity) => {
-            // Create searchable text from activity details
-            const searchableText = [
-                activity.details?.file_name || '',
-                activity.details?.folder_name || '',
-                activity.details?.target_name || '',
-                activity.user?.name || '',
-                activity.action || '',
-                activity.target_type || ''
-            ].filter(Boolean).join(' ');
-            return searchableText;
-        },
-        0.2
-    );
-
-    // Apply action filter if selected
-    const finalFilteredActivities = actionFilter
-        ? filteredActivities.filter(activity => activity.action === actionFilter)
-        : filteredActivities;
+    const getActorName = (name: string) => {
+        return name;
+    };
 
     const getActionIcon = (action: string) => {
         switch (action) {
@@ -198,7 +183,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                             Log Aktivitas
                         </h1>
                         <p className="mt-1 text-slate-600 dark:text-slate-300">
-                            {search || actionFilter ? `${finalFilteredActivities.length} dari ${activities.total}` : activities.total} aktivitas • Pantau semua aktivitas file dan sistem
+                            {search || actionFilter || actorFilter || dateFromFilter || dateToFilter ? `${activities.data.length} dari ${activities.total}` : activities.total} aktivitas • Pantau semua aktivitas file dan sistem
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -230,6 +215,23 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                                     className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
                                 />
                             </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Pelaku
+                            </label>
+                            <select
+                                value={actorFilter}
+                                onChange={(e) => setActorFilter(e.target.value)}
+                                className="w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            >
+                                <option value="">Semua Pelaku</option>
+                                {allActors.map((actor) => (
+                                    <option key={actor.id} value={actor.id}>
+                                        {getActorName(actor.name)}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -274,7 +276,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                     <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                             <button
-                                onClick={() => router.get(route('activity.index', { search, action: actionFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
+                                onClick={() => router.get(route('activity.index', { search, action: actionFilter, actor: actorFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
                                 className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                             >
                                 <Filter className="mr-2 h-4 w-4" />
@@ -294,7 +296,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                 </div>
 
                 {/* Activities List */}
-                {finalFilteredActivities.length === 0 ? (
+                {activities.data.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12">
                         <div className="rounded-full bg-slate-100 p-6 dark:bg-slate-800">
                             <Activity className="h-12 w-12 text-slate-400" />
@@ -311,7 +313,7 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {finalFilteredActivities.map((activity) => {
+                        {activities.data.map((activity) => {
                             const ActionIcon = getActionIcon(activity.action);
                             const TargetIcon = getTargetIcon(activity.target_type);
                             const SuccessIcon = getSuccessIcon(activity.success);
@@ -402,14 +404,14 @@ export default function ActivityIndex({ activities, availableActions, filters }:
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
-                                onClick={() => router.get(route('activity.index', { page: activities.current_page - 1, search, action: actionFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
+                                onClick={() => router.get(route('activity.index', { page: activities.current_page - 1, search, action: actionFilter, actor: actorFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
                                 disabled={activities.current_page === 1}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Sebelumnya
                             </button>
                             <button
-                                onClick={() => router.get(route('activity.index', { page: activities.current_page + 1, search, action: actionFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
+                                onClick={() => router.get(route('activity.index', { page: activities.current_page + 1, search, action: actionFilter, actor: actorFilter, date_from: dateFromFilter, date_to: dateToFilter }))}
                                 disabled={activities.current_page === activities.last_page}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                             >

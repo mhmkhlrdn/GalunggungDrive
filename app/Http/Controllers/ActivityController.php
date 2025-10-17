@@ -15,6 +15,7 @@ class ActivityController extends Controller
         $user = auth()->user();
         $search = $request->get('search');
         $action = $request->get('action');
+        $actor = $request->get('actor');
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
 
@@ -31,6 +32,10 @@ class ActivityController extends Controller
             $query->where('action', $action);
         }
 
+        if ($actor) {
+            $query->where('user_id', $actor);
+        }
+
         if ($dateFrom) {
             $query->whereDate('created_at', '>=', $dateFrom);
         }
@@ -42,10 +47,18 @@ class ActivityController extends Controller
         $activities = $query->with('user')->orderBy('created_at', 'desc')->paginate(20);
 
 
-        $availableActions = ActivityLog::where('user_id', $user->id)
-            ->distinct()
-            ->pluck('action')
-            ->sort()
+        $availableActions = ActivityLog::distinct()
+    ->pluck('action')
+    ->sort()
+    ->values();
+        $allActors = ActivityLog::distinct()
+            ->with('user')
+            ->get()
+            ->map(function ($log) {
+                return $log->user;
+            })
+            ->unique('id')
+            ->sortBy('name')
             ->values();
 
         return Inertia::render('activity/index', [
@@ -54,9 +67,11 @@ class ActivityController extends Controller
             'filters' => [
                 'search' => $search,
                 'action' => $action,
+                'actor' => $actor,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
             ],
+            'allActors' => $allActors
         ]);
     }
 
