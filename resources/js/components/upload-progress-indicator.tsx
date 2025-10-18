@@ -36,7 +36,7 @@ export default function UploadProgressIndicator() {
         <div className="fixed bottom-4 right-4 z-50 w-80">
             <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-t-lg shadow-lg">
             <span className="text-sm font-medium text-slate-900 dark:text-white">
-                {uploads.length} Upload(s)
+                Upload {uploads.length}
             </span>
             <Button variant="ghost" size="sm" onClick={() => setCollapsed(!collapsed)}>
                 {collapsed ? <ChevronUp /> : <ChevronDown />}
