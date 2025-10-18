@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { File, Image, Video, Music, FileText, Archive } from 'lucide-react';
 
 interface FilePreviewProps {
@@ -14,6 +14,16 @@ interface FilePreviewProps {
 export default function FilePreview({ file, size = 'md', className = '' }: FilePreviewProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        // Reset loading and error states when file changes
+        setIsLoading(true);
+        setHasError(false);
+    }, [file.id]);
+
+    useEffect(() => {
+        console.log(`[FilePreview] File ID: ${file.id}, Name: ${file.name}, isLoading: ${isLoading}, hasError: ${hasError}`);
+    }, [isLoading, hasError, file.id, file.name]);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
