@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ShareModal from '@/components/share-modal';
 import { User } from '@/types';
+import { router } from '@inertiajs/react';
 
 interface FilePreviewModalProps {
     isOpen: boolean;
@@ -233,12 +234,13 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                                     <img
                                         src={previewUrl}
                                         alt={file.name}
-                                        className="w-full h-auto max-h-96 object-contain"
+                                        className="w-full h-auto max-h-96 object-contain hover:cursor-pointer"
                                         onLoad={() => setLoading(false)}
                                         onError={() => {
                                             setError('Failed to load image preview');
                                             setLoading(false);
                                         }}
+                                        onClick={() => window.open(previewUrl, '_blank')}
                                     />
                                 )}
                                 {isVideo(file.mime_type) && (
