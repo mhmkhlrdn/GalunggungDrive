@@ -49,16 +49,19 @@ export default function VideoPreview({ file }: VideoPreviewProps) {
                     ) : (
                         <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                             <video
-                                ref={videoRef}
-                                controls
-                                autoPlay
-                                className="absolute top-0 left-0 w-full h-full rounded-lg"
-                                src={`/files/${file.id}/preview`}
-                                onError={handleVideoError}
-                                preload="auto"
-                            >
-                                Your browser does not support the video tag.
-                            </video>
+    ref={videoRef}
+    controls
+    autoPlay
+    muted
+    playsInline
+    preload="auto"
+    className="absolute top-0 left-0 w-full h-full rounded-lg"
+    src={`/files/${file.id}/preview`}
+    onError={handleVideoError}
+>
+    Your browser does not support the video tag.
+</video>
+
                         </div>
                     )}
 

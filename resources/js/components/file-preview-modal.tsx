@@ -243,17 +243,27 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                                 )}
                                 {isVideo(file.mime_type) && (
                                     <div className="p-2">
-                                        <video
-                                            src={previewUrl}
-                                            controls
-                                            className="w-full max-h-96"
-                                            onLoadedData={() => setLoading(false)}
-                                            onError={() => {
-                                                setError('Failed to load video preview');
-                                                setLoading(false);
-                                            }}
-                                            preload="metadata"
-                                        />
+              <video
+            id="video-preview"
+            src={previewUrl}
+            controls
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            className="w-full max-h-96"
+            onLoadedData={() => setLoading(false) }
+            onError={() => {
+                setError('Failed to load video preview');
+                setLoading(false);
+            }}
+            onClick={(e) => {
+                const video = e.currentTarget;
+                if (video.muted) {
+                    video.muted = false;
+                }
+            }}
+        />
                                     </div>
                                 )}
                                 {isAudio(file.mime_type) && (
