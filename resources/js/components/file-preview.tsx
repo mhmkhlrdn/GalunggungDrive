@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { File, Image, Video, Music, FileText, Archive } from 'lucide-react';
 
 interface FilePreviewProps {
@@ -11,6 +12,9 @@ interface FilePreviewProps {
 }
 
 export default function FilePreview({ file, size = 'md', className = '' }: FilePreviewProps) {
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
         if (mimeType.startsWith('video/')) return Video;
@@ -57,38 +61,46 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
 
     const isImage = file.mime_type.startsWith('image/');
     const isVideo = file.mime_type.startsWith('video/');
-    const showPreview = isImage || isVideo;
+    const showPreview = (isImage || isVideo) && !hasError;
     const IconComponent = getFileIcon(file.mime_type);
 
-    if (showPreview) {
+    const handleLoad = () => setIsLoading(false);
+    const handleError = () => { setIsLoading(false); setHasError(true); };
+
+    if (isImage || isVideo) {
         return (
             <div className={`relative ${getSizeClasses()} rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center ${className}`}>
-                {isImage ? (
-                    <img
-                        src={`/files/${file.id}/preview`}
-                        alt={file.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            // Fallback to icon if preview fails
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling.style.display = 'block';
-                        }}
-                    />
-                ) : isVideo ? (
-                    <video
-                        src={`/files/${file.id}/preview`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            // Fallback to icon if preview fails
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling.style.display = 'block';
-                        }}
-                    />
-                ) : null}
-                <IconComponent 
-                    className={`${getIconSizeClasses()} ${getFileColor(file.mime_type)} absolute`}
-                    style={{ display: 'none' }}
-                />
+                {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-t-2 border-blue-500" />
+                    </div>
+                )}
+                {showPreview ? (
+                    isImage ? (
+                        <img
+                            src={`/files/${file.id}/preview`}
+                            alt={file.name}
+                            className={`w-full h-full object-cover ${isLoading ? 'hidden' : ''}`}
+                            onLoad={handleLoad}
+                            onError={handleError}
+                            loading="lazy"
+                        />
+                    ) : (
+                        <video
+                            src={`/files/${file.id}/preview`}
+                            className={`w-full h-full object-cover ${isLoading ? 'hidden' : ''}`}
+                            onLoad={handleLoad}
+                            onError={handleError}
+                            controls={false}
+                            muted
+                            loop
+                            playsInline
+                            preload="none"
+                        />
+                    )
+                ) : (
+                    <IconComponent className={`${getIconSizeClasses()} ${getFileColor(file.mime_type)}`} />
+                )}
             </div>
         );
     }
