@@ -16,6 +16,7 @@ import { formatFileSize, formatDate } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import CreateFolderModal from '@/components/create-folder-modal';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import FilePreview from '@/components/file-preview';
 
 interface File {
     id: number;
@@ -359,8 +360,9 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                     {files.map((file) => (
                                         <tr key={file.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <span className="text-2xl mr-3">{getFileIcon(file.mime_type)}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <FilePreview file={file} size="sm"/>
+                                                    {/* <span className="text-2xl mr-3">{getFileIcon(file.mime_type)}</span> */}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2">
                                                             <button

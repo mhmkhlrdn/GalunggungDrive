@@ -44,16 +44,27 @@ class Folder extends Model
         return $this->hasMany(FolderShare::class);
     }
 
+    public function scopeVisibleTo($query, User $user)
+{
+    return $query->where('user_id', $user->id)
+        ->orWhere('visibility', 'public')
+        ->orWhereHas('shares', function ($shareQuery) use ($user) {
+            $shareQuery->where('shared_with', $user->id)
+                ->where(fn($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+        });
+}
+
+
     public function getPathAttribute(): string
     {
         $path = collect([$this->name]);
         $parent = $this->parent;
-        
+
         while ($parent) {
             $path->prepend($parent->name);
             $parent = $parent->parent;
         }
-        
+
         return $path->implode('/');
     }
 
@@ -66,9 +77,7 @@ class Folder extends Model
     {
         $filesSize = $this->files()->sum('size');
         $childrenSize = $this->children()->withSum('files', 'size')->get()->sum('files_sum_size');
-        
+
         return $filesSize + $childrenSize;
     }
 }
-
-

@@ -157,88 +157,30 @@ class FolderController extends Controller
         /** @var User $user */
         $this->authorize('view', $folder);
 
-        $files = File::where('folder_id', $folder->id)
-            ->where(function ($q) use ($user){
-                if ($user->isSuperAdmin()) {
-
-                } elseif ($user->isAdmin()) {
-
-                    $q->where('user_id', Auth::id())
-                      ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
-                      ->orWhereHas('shares', function ($shareQuery) {
-                          $shareQuery->where('shared_with', Auth::id())
-                                     ->where(function ($expireQuery) {
-                                         $expireQuery->whereNull('expires_at')
-                                                    ->orWhere('expires_at', '>', now());
-                                     });
-                      });
-                } elseif ((Auth::user()->role ?? null) === 'staff') {
-
-                    $q->where('user_id', Auth::id());
-                } else {
-
-                    $q->where('user_id', Auth::id())
-                      ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
-                      ->orWhereHas('shares', function ($shareQuery) {
-                          $shareQuery->where('shared_with', Auth::id())
-                                     ->where(function ($expireQuery) {
-                                         $expireQuery->whereNull('expires_at')
-                                                    ->orWhere('expires_at', '>', now());
-                                     });
-                      });
-                }
-
-
-            })
-            ->whereHas('storageLocation', function ($q) {
-                $q->where('is_active', true);
-            })
-            ->orderBy('updated_at', 'desc')
-            ->get()
-            ->map(function ($file) {
-                return [
-                    'id' => $file->id,
-                    'name' => $file->name,
-                    'size' => $file->size,
-                    'mime_type' => $file->mime_type,
-                    'created_at' => $file->created_at->toISOString(),
-                    'updated_at' => $file->updated_at->toISOString(),
-                    'folder_id' => $file->folder_id,
-                    'starred' => $file->isStarredBy(Auth::user()),
-                    'description' => $file->description,
-                    'tags' => $file->tags ?? [],
-                ];
-            });
+        $files = File::with(['user', 'storageLocation'])
+    ->where('folder_id', $folder->id)
+    ->visibleTo($user)
+    ->whereHas('storageLocation', fn($q) => $q->where('is_active', true))
+    ->latest('updated_at')
+    ->get()
+            ->map->toFrontend();
 
 
         $subfolders = Folder::where('parent_id', $folder->id)
-            ->where(function ($q) {
-                $q->where('user_id', Auth::id())
-                  ->orWhere('visibility', 'public');
-            })
-            ->orderBy('name')
-            ->get()
-            ->map(function ($subfolder) {
-                $filesCount = File::where('folder_id', $subfolder->id)
-                    ->where(function ($q) {
-                        $q->where('user_id', Auth::id())
-                          ->orWhere('visibility', 'public');
-                    })
-                    ->count();
-                $foldersCount = Folder::where('parent_id', $subfolder->id)->count();
+    ->visibleTo($user)
+    ->withCount(['files', 'children as folders_count'])
+    ->orderBy('name')
+    ->get()
+    ->map(fn($subfolder) => [
+        'id' => $subfolder->id,
+        'name' => $subfolder->name,
+        'parent_id' => $subfolder->parent_id,
+        'created_at' => $subfolder->created_at->toISOString(),
+        'updated_at' => $subfolder->updated_at->toISOString(),
+        'files_count' => $subfolder->files_count,
+        'folders_count' => $subfolder->folders_count,
+    ]);
 
-                return [
-                    'id' => $subfolder->id,
-                    'name' => $subfolder->name,
-                    'parent_id' => $subfolder->parent_id,
-                    'created_at' => $subfolder->created_at->toISOString(),
-                    'updated_at' => $subfolder->updated_at->toISOString(),
-                    'files_count' => $filesCount,
-                    'folders_count' => $foldersCount,
-                ];
-            });
 
 
         $breadcrumbs = $this->getBreadcrumbs($folder);
@@ -613,4 +555,3 @@ private function deleteFolderContents(Folder $folder): void
     }
 }
 }
-

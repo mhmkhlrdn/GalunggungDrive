@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -55,6 +56,34 @@ class File extends Model
     public function shares(): HasMany
     {
         return $this->hasMany(FileShare::class);
+    }
+public function toFrontend()
+{
+    return [
+        'id' => $this->id,
+        'name' => $this->name,
+        'size' => $this->size,
+        'mime_type' => $this->mime_type,
+        'created_at' => $this->created_at->toISOString(),
+        'updated_at' => $this->updated_at->toISOString(),
+        'folder_id' => $this->folder_id,
+        'starred' => $this->isStarredBy(Auth::user()),
+        'description' => $this->description,
+        'tags' => $this->tags ?? [],
+    ];
+}
+    public function scopeVisibleTo($query, $user)
+    {
+        return $query->where('user_id', $user->id)
+            ->orWhere('visibility', 'public')
+            ->orWhere('visibility', 'shared')
+            ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                $shareQuery->where('shared_with', $user->id)
+                           ->where(function ($expireQuery) {
+                               $expireQuery->whereNull('expires_at')
+                                           ->orWhere('expires_at', '>', now());
+                           });
+            });
     }
 
     public function starredBy(): BelongsToMany
