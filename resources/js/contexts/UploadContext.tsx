@@ -29,7 +29,7 @@ const UploadContext = createContext<UploadContextType | undefined>(undefined);
 export const UploadProvider = ({ children }: { children: ReactNode }) => {
     const [uploads, setUploads] = useState<UploadFile[]>([]);
 
-    const uploadFiles = useCallback(async (files: File[], formData: FormData) => {
+    const uploadFiles = useCallback(async (files: File[], commonFormData: FormData) => {
         const newUploads: UploadFile[] = files.map(file => ({
             id: uuidv4(),
             name: file.name,
@@ -42,14 +42,28 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
 
         setUploads(prev => [...prev, ...newUploads]);
 
-        for (const upload of newUploads) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const upload = newUploads[i];
+
+            const fileFormData = new FormData();
+            fileFormData.append('files[0]', file);
+            fileFormData.append('relative_paths[0]', commonFormData.get(`relative_paths[${i}]`) || file.name);
+
+            // Append other common data from the original formData
+            fileFormData.append('folder_id', commonFormData.get('folder_id') || '');
+            fileFormData.append('disk_id', commonFormData.get('disk_id') || '');
+            fileFormData.append('description', commonFormData.get('description') || '');
+            fileFormData.append('tags', commonFormData.get('tags') || '');
+            fileFormData.append('visibility', commonFormData.get('visibility') || '');
+
             const source = axios.CancelToken.source();
             upload.cancelSource = () => source.cancel('Upload cancelled by user.');
 
             setUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'uploading', startTime: Date.now() } : u));
 
             try {
-                await axios.post('/files', formData, {
+                await axios.post('/files', fileFormData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                     },

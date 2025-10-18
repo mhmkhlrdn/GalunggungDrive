@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useUpload, UploadFile } from '@/contexts/UploadContext';
-import { X, CheckCircle, AlertCircle, Loader, Clock } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Loader, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress'; // Assuming you have a Progress component
 
@@ -24,7 +24,7 @@ const formatTimeRemaining = (seconds?: number) => {
 
 export default function UploadProgressIndicator() {
     const { uploads, cancelUpload, clearCompletedUploads } = useUpload();
-
+    const [collapsed, setCollapsed] = useState(false);
     const activeUploads = uploads.filter(upload => upload.status === 'uploading' || upload.status === 'pending');
     const completedUploads = uploads.filter(upload => upload.status === 'completed' || upload.status === 'failed' || upload.status === 'cancelled');
 
@@ -33,7 +33,19 @@ export default function UploadProgressIndicator() {
     }
 
     return (
-        <div className="fixed bottom-4 right-4 z-50 w-80 space-y-3">
+        <div className="fixed bottom-4 right-4 z-50 w-80">
+            <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-t-lg shadow-lg">
+            <span className="text-sm font-medium text-slate-900 dark:text-white">
+                {uploads.length} Upload(s)
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setCollapsed(!collapsed)}>
+                {collapsed ? <ChevronUp /> : <ChevronDown />}
+            </Button>
+        </div>
+{ !collapsed && (
+
+             <div className="max-h-[70vh] overflow-y-auto space-y-3 p-2 bg-white dark:bg-slate-800 rounded-b-lg shadow-lg">
+
             {activeUploads.map((upload) => (
                 <div key={upload.id} className="rounded-lg bg-white p-4 shadow-lg dark:bg-slate-800">
                     <div className="flex items-center justify-between">
@@ -92,6 +104,9 @@ export default function UploadProgressIndicator() {
                     </div>
                 </div>
             )}
+                 </div>
+ )}
+
         </div>
     );
 }
