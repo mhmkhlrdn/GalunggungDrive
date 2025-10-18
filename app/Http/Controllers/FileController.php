@@ -345,7 +345,19 @@ class FileController extends Controller
                 ],
             ]);
 
+            // Dispatch video processing job if it's a video file
+            if (Str::startsWith($file->mime_type, 'video/')) {
+                \App\Jobs\ProcessVideo::dispatch($file);
+                Log::info("Dispatched ProcessVideo job for file {$file->id}");
+            }
+
             $uploadedFiles[] = $file;
+
+            // Dispatch video processing job if it's a video file
+            if (Str::startsWith($file->mime_type, 'video/')) {
+                \App\Jobs\ProcessVideo::dispatch($file);
+                Log::info("Dispatched ProcessVideo job for file {$file->id}. Mime type: {$file->mime_type}");
+            }
         }
 
         return redirect()->back()->with('success',
@@ -535,6 +547,8 @@ class FileController extends Controller
                 'mime' => $file->mime_type,
                 'range' => request()->header('Range'),
                 'user_id' => $user?->id,
+                'hls_manifest_path' => $file->hls_manifest_path, // Add HLS manifest path to log
+                'transcoding_status' => $file->transcoding_status, // Add transcoding status to log
             ]);
 
             ActivityLog::create([
@@ -551,6 +565,25 @@ class FileController extends Controller
                     'error_id' => $errorId,
                 ],
             ]);
+
+            if (Str::startsWith($file->mime_type, 'video/') && $file->transcoding_status === 'ready' && $file->hls_manifest_path) {
+                $hlsManifestPath = Storage::disk('local')->path($file->hls_manifest_path);
+                if (!file_exists($hlsManifestPath)) {
+                    Log::warning('HLS manifest not found for transcoded video', [
+                        'error_id' => $errorId,
+                        'file_id' => $file->id,
+                        'hls_manifest_path' => $file->hls_manifest_path,
+                    ]);
+                    abort(404, 'Video manifest not found');
+                }
+
+                // Serve the HLS master manifest
+                return response()->file($hlsManifestPath, [
+                    'Content-Type' => 'application/x-mpegURL',
+                    'Content-Disposition' => 'inline; filename="master.m3u8"',
+                    'Cache-Control' => 'public, max-age=3600',
+                ]);
+            }
 
             $filePath = Storage::disk($diskKey)->path($file->path);
             $fileSize = Storage::disk($diskKey)->size($file->path);
@@ -582,7 +615,6 @@ class FileController extends Controller
                     }, 206, $headers);
                 }
             }
-
 
             return response()->file($filePath, $headers);
 

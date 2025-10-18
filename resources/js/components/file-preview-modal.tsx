@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { route } from 'ziggy-js';
-// If you use a toast system, import it here. Example:
+import Hls from 'hls.js';
 // import { toast } from '@/components/ui/use-toast';
 import { formatFileSize } from '@/lib/utils';
 import { X, Download, Share2, Eye, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ShareModal from '@/components/share-modal';
 import { User } from '@/types';
 
@@ -26,8 +27,10 @@ interface FilePreviewModalProps {
             name: string;
             email: string;
         };
+        hls_manifest_path?: string;
+        transcoding_status?: 'pending' | 'processing' | 'ready' | 'failed';
     }>;
-    currentIndex: number;
+currentIndex: number;
 }
 
 export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null, filesInDirectory = [], currentIndex = 0, users = [] }: FilePreviewModalProps & { users?: Array<{ id: number; name: string; email: string }> }) {
@@ -43,8 +46,11 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [selectedQuality, setSelectedQuality] = useState<string>('auto'); // Default quality
     const touchStartXRef = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const hlsRef = useRef<Hls | null>(null);
 
     useEffect(() => {
         setCurrentFileIndex(clampIndex(currentIndex));
@@ -83,7 +89,69 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
             setError(null);
             setPreviewUrl(null);
 
-            if (isVideo(file.mime_type) || isImage(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+            }
+
+            if (isVideo(file.mime_type) && file.transcoding_status === 'ready' && file.hls_manifest_path) {
+                const hlsUrl = route('files.preview', { file: file.id });
+                setPreviewUrl(hlsUrl);
+                setLoading(false); // HLS will handle its own loading state
+
+                if (Hls.isSupported() && videoRef.current) {
+                    const hls = new Hls();
+                    hls.loadSource(hlsUrl);
+                    hls.attachMedia(videoRef.current);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                        setLoading(false);
+                        if (selectedQuality !== 'auto' && videoRef.current) {
+                            const level = hls.levels.findIndex((l: any) => l.height === parseInt(selectedQuality.replace('p', '')));
+                            if (level !== -1) {
+                                hls.currentLevel = level;
+                            }
+                        }
+                    });
+                    hls.on(Hls.Events.ERROR, function (event, data) {
+                        if (data.fatal) {
+                            switch(data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    setError('Network error while loading video. Trying to recover...');
+                                    hls.recoverMediaError();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    setError('Media error while playing video. Trying to recover...');
+                                    hls.recoverMediaError();
+                                    break;
+                                default:
+                                    setError('An unrecoverable video error occurred.');
+                                    hls.destroy();
+                                    break;
+                            }
+                        }
+                        setLoading(false);
+                    });
+                    hlsRef.current = hls;
+                } else if (videoRef.current && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS support
+                    videoRef.current.src = hlsUrl;
+                    videoRef.current.addEventListener('loadedmetadata', () => setLoading(false));
+                    videoRef.current.addEventListener('error', () => {
+                        setError('Failed to load HLS video natively.');
+                        setLoading(false);
+                    });
+                } else {
+                    setError('Your browser does not support HLS playback.');
+                    setLoading(false);
+                }
+            } else if (isVideo(file.mime_type) && (file.transcoding_status === 'pending' || file.transcoding_status === 'processing')) {
+                setPreviewUrl(null);
+                setLoading(false);
+                setError('Video is currently being processed. Please try again later.');
+            } else if (isVideo(file.mime_type) && file.transcoding_status === 'failed') {
+                setPreviewUrl(null);
+                setLoading(false);
+                setError('Video transcoding failed. Please contact support.');
+            } else if (isImage(file.mime_type) || isAudio(file.mime_type) || isPdf(file.mime_type) || isText(file.mime_type)) {
                 const url = route('files.preview', { file: file.id });
                 setPreviewUrl(url);
 
@@ -121,8 +189,12 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
             if (timeout) {
                 clearTimeout(timeout);
             }
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+                hlsRef.current = null;
+            }
         };
-    }, [file, isOpen, currentFileIndex]);
+    }, [file, isOpen, currentFileIndex, selectedQuality]);
 
     const isImage = (mimeType: string) => mimeType.startsWith('image/');
     const isVideo = (mimeType: string) => mimeType.startsWith('video/');
@@ -179,7 +251,7 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                             touchStartXRef.current = e.touches[0].clientX;
                         }
                     }}
-                    onTouchMove={(e) => {
+                    onTouchMove={() => {
                         // prevent vertical scroll from being blocked; only act on horizontal swipes
                     }}
                     onTouchEnd={(e) => {
@@ -243,17 +315,51 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                                 )}
                                 {isVideo(file.mime_type) && (
                                     <div className="p-2">
-                                        <video
-                                            src={previewUrl}
-                                            controls
-                                            className="w-full max-h-96"
-                                            onLoadedData={() => setLoading(false)}
-                                            onError={() => {
-                                                setError('Failed to load video preview');
-                                                setLoading(false);
-                                            }}
-                                            preload="metadata"
-                                        />
+                                        {file.transcoding_status === 'ready' && file.hls_manifest_path ? (
+                                            <>
+                                                <video
+                                                    ref={videoRef}
+                                                    src={previewUrl}
+                                                    controls
+                                                    className="w-full max-h-96"
+                                                    onLoadedData={() => setLoading(false)}
+                                                    onError={() => {
+                                                        if (!Hls.isSupported() && file.transcoding_status === 'ready' && file.hls_manifest_path) {
+                                                            setError('Failed to load HLS video. Your browser might not support it natively.');
+                                                        } else {
+                                                            setError('Failed to load video preview');
+                                                        }
+                                                        setLoading(false);
+                                                    }}
+                                                    preload="metadata"
+                                                />
+                                                <div className="flex justify-end mt-2">
+                                                    <Select value={selectedQuality} onValueChange={setSelectedQuality}>
+                                                        <SelectTrigger className="w-[180px]">
+                                                            <SelectValue placeholder="Select Quality" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="auto">Auto</SelectItem>
+                                                            <SelectItem value="1080p">1080p</SelectItem>
+                                                            <SelectItem value="720p">720p</SelectItem>
+                                                            <SelectItem value="480p">480p</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center h-64 text-center">
+                                                <Video className="h-16 w-16 text-slate-400 mb-4" />
+                                                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                                                    Video Processing
+                                                </h3>
+                                                <p className="text-slate-600 dark:text-slate-300 mb-4">
+                                                    {file.transcoding_status === 'pending' || file.transcoding_status === 'processing'
+                                                        ? 'This video is currently being processed. Please check back later.'
+                                                        : 'Video transcoding failed. Please contact support.'}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {isAudio(file.mime_type) && (
