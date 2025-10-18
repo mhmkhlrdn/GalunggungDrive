@@ -93,6 +93,7 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                             className={`w-full h-full object-cover ${isLoading ? 'hidden' : ''}`}
                             onLoad={handleLoad}
                             onError={handleError}
+                            loading="lazy"
                         />
                     ) : (
                         <video
