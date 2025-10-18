@@ -6,8 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useForm, usePage, router } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
+import { useUpload } from '@/contexts/UploadContext';
 
 
 interface StorageLocationOption {
@@ -35,6 +36,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
     const { auth } = usePage<SharedData>().props;
     const user = auth?.user;
     const isStaff = user && user.role === 'staff';
+    const { uploadFiles } = useUpload();
 
     const [uploadedFiles, setUploadedFiles] = useState<UploadEntry[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +49,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         }
     }, [isOpen]);
 
-    const { data, setData, processing, errors, reset } = useForm({
+    const { data, setData, errors, reset } = useForm({
         files: [] as UploadEntry[],
         folder_id: currentFolderId || null,
         disk_id: storageLocations.length ? storageLocations[0].id : undefined as number | undefined,
@@ -125,9 +127,11 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
 
 
         const formData = new FormData();
+        const filesToUpload: File[] = [];
         uploadedFiles.forEach((entry, index) => {
             formData.append(`files[${index}]`, entry.file);
             formData.append(`relative_paths[${index}]`, entry.relativePath);
+            filesToUpload.push(entry.file);
         });
         formData.append('folder_id', data.folder_id ? String(data.folder_id) : '');
         formData.append('disk_id', data.disk_id ? String(data.disk_id) : '');
@@ -135,17 +139,10 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         formData.append('tags', data.tags);
         formData.append('visibility', data.visibility);
 
-        router.post('/files', formData, {
-            forceFormData: true,
-            onSuccess: () => {
-                onUpload(uploadedFiles.map(e => e.file));
-                reset();
-                onClose();
-            },
-            onError: (errors: Record<string, string>) => {
-                console.error('Upload error:', errors);
-            },
-        });
+        uploadFiles(filesToUpload, formData);
+        onUpload(filesToUpload);
+        reset();
+        onClose();
     };
 
     const removeFile = (index: number) => {
@@ -403,30 +400,21 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                     )}
 
                     {/* Upload Progress */}
-                    {processing && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600 dark:text-slate-300">Mengunggah...</span>
-                            </div>
-                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                                <div className="bg-blue-600 h-2 rounded-full animate-pulse" />
-                            </div>
-                        </div>
-                    )}
+                    {/* Removed as progress is now handled by UploadContext */}
 
                 </div>
 
                 {/* Actions - Fixed at bottom */}
                 <div className="flex items-center justify-end gap-3 border-t pt-4 mt-4">
-                    <Button variant="outline" onClick={onClose} disabled={processing}>
+                    <Button variant="outline" onClick={onClose} >
                         Batal
                     </Button>
                     <Button
                         onClick={handleUpload}
-                        disabled={uploadedFiles.length === 0 || processing}
+                        disabled={uploadedFiles.length === 0}
                         className="bg-blue-600 hover:bg-blue-700"
                     >
-                        {processing ? 'Mengunggah...' : `Unggah ${uploadedFiles.length} file`}
+                        Unggah {uploadedFiles.length} file
                     </Button>
                 </div>
             </DialogContent>

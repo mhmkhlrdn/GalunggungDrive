@@ -5,6 +5,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 import { SnackbarProvider } from './contexts/SnackbarContext';
+import { UploadProvider } from './contexts/UploadContext';
 import { Ziggy } from './ziggy';
 import {route} from 'ziggy-js';
 import { LoadingBar } from './components/ui/loading-bar';
@@ -45,8 +46,10 @@ createInertiaApp({
 
         root.render(
             <SnackbarProvider>
-                <LoadingBar />
-                <App {...props} />
+                <UploadProvider>
+                    <LoadingBar />
+                    <App {...props} />
+                </UploadProvider>
             </SnackbarProvider>
         );
     },
