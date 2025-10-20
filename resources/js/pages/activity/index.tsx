@@ -5,7 +5,6 @@ import { route } from 'ziggy-js';
 import {
     Search,
     Filter,
-    Calendar,
     Clock,
     User,
     Activity,
@@ -70,7 +69,7 @@ export default function ActivityIndex({ activities, availableActions, filters, a
     const [actorFilter, setActorFilter] = useState(filters.actor || '');
     const [dateFromFilter, setDateFromFilter] = useState(filters.date_from || '');
     const [dateToFilter, setDateToFilter] = useState(filters.date_to || '');
-
+    console.log(allActors)
     const getActorName = (name: string) => {
         return name;
     };

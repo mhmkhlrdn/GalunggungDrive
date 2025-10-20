@@ -228,7 +228,6 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
 
                     {previewUrl && !loading && !error && (
                         <div className="space-y-4">
-                            {/* File Preview */}
                             <div className="border rounded-lg overflow-hidden">
                                 {isImage(file.mime_type) && (
                                     <img
