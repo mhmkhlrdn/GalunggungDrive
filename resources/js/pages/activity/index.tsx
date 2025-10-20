@@ -69,7 +69,6 @@ export default function ActivityIndex({ activities, availableActions, filters, a
     const [actorFilter, setActorFilter] = useState(filters.actor || '');
     const [dateFromFilter, setDateFromFilter] = useState(filters.date_from || '');
     const [dateToFilter, setDateToFilter] = useState(filters.date_to || '');
-    console.log(allActors)
     const getActorName = (name: string) => {
         return name;
     };
@@ -225,11 +224,12 @@ export default function ActivityIndex({ activities, availableActions, filters, a
                                 className="w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             >
                                 <option value="">Semua Pelaku</option>
-                                {allActors.map((actor) => (
-                                    <option key={actor.id} value={actor.id}>
-                                        {getActorName(actor.name)}
-                                    </option>
-                                ))}
+                                {allActors.map((actor, index) => (
+  <option key={actor?.id ?? index} value={actor?.id ?? ''}>
+    {getActorName(actor?.name)}
+  </option>
+))}
+
                             </select>
                         </div>
                         <div>
