@@ -334,7 +334,7 @@ class FileController extends Controller
             $uploadedFiles[] = $file;
         }
 
-        // Clear relevant caches after file upload
+
         $this->clearFileCaches(Auth::id(), $request->folder_id);
 
         return redirect()->back()->with('success',
@@ -441,7 +441,7 @@ class FileController extends Controller
 
         $file->delete();
 
-        // Clear relevant caches after file deletion
+
         $this->clearFileCaches(Auth::id(), $file->folder_id);
 
         return redirect()->back()->with('success', 'File deleted successfully.');
@@ -688,7 +688,7 @@ class FileController extends Controller
             'folder_id' => $request->folder_id,
         ]);
 
-        // Clear relevant caches after file move
+
         $this->clearFileCaches(Auth::id(), $oldFolderId);
         $this->clearFileCaches(Auth::id(), $request->folder_id);
 
@@ -845,7 +845,7 @@ class FileController extends Controller
 
                 $this->authorize('delete', $file);
 
-                // delete physical files and versions
+
                 try {
                     if ($file->disk && $file->path) {
                         try { Storage::disk($file->disk)->delete($file->path); } catch (\Throwable $e) { /* ignore */ }
@@ -854,7 +854,7 @@ class FileController extends Controller
                         try { Storage::disk($file->disk)->delete($version->path); } catch (\Throwable $e) { /* ignore */ }
                     });
                 } catch (\Throwable $e) {
-                    // continue with DB delete even if physical deletion failed
+
                 }
 
                 $file->delete();
@@ -866,18 +866,14 @@ class FileController extends Controller
             }
         }
 
-        // Clear relevant caches after batch deletion
         if ($deleted > 0) {
             $this->clearFileCaches(Auth::id());
         }
 
-        // If there were no errors, return 204 No Content so the frontend
-        // Inertia request doesn't receive a JSON body to render.
         if (empty($errors)) {
             return response()->noContent();
         }
 
-        // If some files failed to delete, return 207 Multi-Status with details
         return redirect()->back()->with('success', 'File berhasil dihapus.');
     }
 
@@ -932,7 +928,7 @@ class FileController extends Controller
             }
         }
 
-        // Clear relevant caches after batch move
+
         if ($moved > 0) {
             $this->clearFileCaches(Auth::id());
         }
@@ -985,7 +981,7 @@ class FileController extends Controller
 
                 if (!isset($folderMap[$currentPath])) {
 
-                    $existingFolder = \App\Models\Folder::where('name', $folderName)
+                    $existingFolder = Folder::where('name', $folderName)
                         ->where('parent_id', $currentParentId)
                         ->where('user_id', Auth::id())
                         ->first();
@@ -995,7 +991,7 @@ class FileController extends Controller
                         $currentParentId = $existingFolder->id;
                     } else {
 
-                        $folder = \App\Models\Folder::create([
+                        $folder = Folder::create([
                             'user_id' => Auth::id(),
                             'parent_id' => $currentParentId,
                             'name' => $folderName,
@@ -1022,38 +1018,199 @@ class FileController extends Controller
         return $folderMap;
     }
 
-    private function clearFileCaches(int $userId, $folderId = null): void
-    {
-        // Use central CacheService to clear folder-related caches and bump version token
-        try {
-            \App\Services\CacheService::clearFolderCaches($userId, $folderId);
-        } catch (\Throwable $e) {
-            // Fallback: attempt to clear likely keys and bump the version token
-            $patterns = [
-                "cloud_data_{$userId}_*",
-                "folder_show_*_{$userId}",
-                "folders_index_{$userId}_*",
-            ];
 
-            foreach ($patterns as $pattern) {
-                Cache::forget($pattern);
-            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private function clearFileCaches(int $userId, $folderId = null): void
+{
+
+    try {
+        if (class_exists(\App\Services\CacheService::class)) {
+            \App\Services\CacheService::clearFolderCaches($userId, $folderId);
+            return;
+        }
+    } catch (\Throwable $e) {
+
+        \Log::warning('CacheService::clearFolderCaches failed: ' . $e->getMessage());
+    }
+
+
+    try {
+
+        if (Cache::getStore() && method_exists(Cache::getStore(), 'tags')) {
+            Cache::tags(['folders', "user_{$userId}"])->flush();
+
 
             if ($folderId) {
-                $version = Cache::get("folders_version_{$userId}", 0);
-                Cache::forget("folder_show_{$folderId}_{$userId}_v{$version}");
-                Cache::forget("folders_index_{$userId}_{$folderId}_*");
+                Cache::tags(['folders', "user_{$userId}", "folder_{$folderId}"])->flush();
             }
 
-            $versionKey = "folders_version_{$userId}";
+            return;
+        }
+    } catch (\Throwable $e) {
+        \Log::warning('Cache tags flush failed: ' . $e->getMessage());
+
+    }
+
+
+    try {
+        $store = Cache::getStore();
+
+
+        $isRedis = false;
+        if (method_exists($store, 'getRedis')) $isRedis = true;
+        if (method_exists($store, 'connection')) {
+            $conn = $store->connection();
+
+            $isRedis = true;
+        }
+
+        if ($isRedis) {
+
             try {
-                Cache::increment($versionKey);
-            } catch (\Throwable $e2) {
-                $curr = Cache::get($versionKey, 0);
-                Cache::put($versionKey, $curr + 1);
+                if (isset($conn)) {
+                    $redis = $conn;
+                } else {
+
+                    if (method_exists($store, 'connection')) {
+                        $redis = $store->connection();
+                    } elseif (method_exists($store, 'getRedis')) {
+                        $redis = $store->getRedis();
+                    } else {
+                        $redis = null;
+                    }
+                }
+            } catch (\Throwable $e) {
+                $redis = null;
+            }
+
+            if ($redis) {
+                $patterns = [
+                    "cloud_data_{$userId}_*",
+                    "folder_show_*_{$userId}*",
+                    "folders_index_{$userId}_*",
+                ];
+
+
+                if ($folderId) {
+                    $patterns[] = "folder_show_{$folderId}_{$userId}_*";
+                    $patterns[] = "folders_index_{$userId}_{$folderId}_*";
+                }
+
+
+                foreach ($patterns as $pattern) {
+                    $cursor = null;
+
+                    if (method_exists($redis, 'scan')) {
+                        $cursor = 0;
+                        do {
+                            $result = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 1000);
+                            if ($result === false) break;
+                            if (is_array($result)) {
+
+                                if (count($result) === 2 && is_array($result[1])) {
+                                    $cursor = (int)$result[0];
+                                    $keys = $result[1];
+                                } else {
+
+                                    $keys = $result;
+                                    $cursor = 0;
+                                }
+                            } else {
+                                $keys = (array)$result;
+                                $cursor = 0;
+                            }
+
+                            if (!empty($keys)) {
+
+                                foreach (array_chunk($keys, 1000) as $chunk) {
+                                    try {
+                                        $redis->del($chunk);
+                                    } catch (\Throwable $e) {
+
+                                        foreach ($chunk as $k) {
+                                            try { $redis->del($k); } catch (\Throwable $ee) { }
+                                        }
+                                    }
+                                }
+                            }
+                        } while ($cursor !== 0 && $cursor !== null);
+                    } else {
+
+                        try {
+                            $keys = $redis->keys($pattern);
+                            if (!empty($keys)) {
+                                foreach (array_chunk($keys, 1000) as $chunk) {
+                                    try { $redis->del($chunk); } catch (\Throwable $e) {
+                                        foreach ($chunk as $k) {
+                                            try { $redis->del($k); } catch (\Throwable $ee) {}
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $e) {
+
+                            \Log::warning("Redis KEYS failed for pattern {$pattern}: " . $e->getMessage());
+                        }
+                    }
+                }
+
+                return;
             }
         }
+    } catch (\Throwable $e) {
+        \Log::warning('Redis pattern delete attempt failed: ' . $e->getMessage());
     }
+
+
+    try {
+        $versionKey = "folders_version_{$userId}";
+        Cache::increment($versionKey);
+    } catch (\Throwable $e) {
+
+        $versionKey = "folders_version_{$userId}";
+        $curr = Cache::get($versionKey, 0);
+        Cache::put($versionKey, $curr + 1);
+    }
+
+
+    try {
+        Cache::forget("folder_show_{$folderId}_{$userId}");
+        Cache::forget("folders_index_{$userId}_{$folderId}");
+        Cache::forget("cloud_data_{$userId}");
+    } catch (\Throwable $e) {
+
+    }
+}
+
 }
 
 
