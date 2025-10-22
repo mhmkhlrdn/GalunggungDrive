@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { File, Image, Video, Music, FileText, Archive } from 'lucide-react';
+import { useNavigation } from '@/contexts/NavigationContext';
 
 interface FilePreviewProps {
     file: {
@@ -19,6 +20,7 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
     const [isVisible, setIsVisible] = useState(!lazy || priority);
     const [hasLoaded, setHasLoaded] = useState(false);
     const [srcUrl, setSrcUrl] = useState<string | null>(null);
+    const { isNavigating } = useNavigation();
     const elementRef = useRef<HTMLDivElement>(null);
     const controllerRef = useRef<AbortController | null>(null);
     const srcUrlRef = useRef<string | null>(null);
@@ -109,9 +111,10 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
 
     // Load preview when visible
     useEffect(() => {
-        if (!showPreview || hasLoaded) return;
+        if (!showPreview || hasLoaded || isNavigating) return;
 
         let objectUrl: string | null = null;
+        let isAborted = false;
 
         const loadPreview = async () => {
             setIsLoading(true);
@@ -124,8 +127,13 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
 
             controllerRef.current = new AbortController();
             const { signal } = controllerRef.current;
+            let timeoutId: NodeJS.Timeout | null = null;
 
             const handleAbort = () => {
+                isAborted = true;
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
                 try {
                     controllerRef.current?.abort();
                 } catch {
@@ -133,41 +141,80 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
                 }
             };
 
-            // Listen for navigation events
+            // Listen for navigation events - more comprehensive
             const onAppNavigationStart = () => handleAbort();
+            const onInertiaStart = () => handleAbort();
+            const onPageHide = () => handleAbort();
+            const onBeforeUnload = () => handleAbort();
+
+            // Listen for Inertia navigation events
             document.addEventListener('app:navigation-start', onAppNavigationStart);
-            window.addEventListener('pagehide', handleAbort);
-            window.addEventListener('beforeunload', handleAbort);
+            document.addEventListener('inertia:start', onInertiaStart);
+            window.addEventListener('pagehide', onPageHide);
+            window.addEventListener('beforeunload', onBeforeUnload);
 
             try {
+                // Check if already aborted before making request
+                if (isAborted) return;
+
+                // Add timeout to prevent long-running requests
+                timeoutId = setTimeout(() => {
+                    if (controllerRef.current) {
+                        controllerRef.current.abort();
+                    }
+                }, 5000); // 5 second timeout
+
                 const res = await fetch(`/files/${file.id}/preview`, {
                     credentials: 'include',
                     signal
                 });
 
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+
+                // Check if aborted during fetch
+                if (isAborted) return;
+
                 if (!res.ok) throw new Error(`Preview request failed: ${res.status}`);
 
                 const blob = await res.blob();
+
+                // Check if aborted after blob creation
+                if (isAborted) {
+                    URL.revokeObjectURL(URL.createObjectURL(blob));
+                    return;
+                }
+
                 objectUrl = URL.createObjectURL(blob);
                 setSrcUrl(objectUrl);
                 srcUrlRef.current = objectUrl;
                 setHasLoaded(true);
             } catch (e) {
                 const errName = e instanceof Error ? e.name : String((e as unknown) || '');
-                if (errName === 'AbortError') {
+                if (errName === 'AbortError' || isAborted) {
                     setIsLoading(false);
                     return;
                 }
                 console.error('Preview fetch failed for file', file.id, e);
                 setHasError(true);
             } finally {
-                setIsLoading(false);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+                if (!isAborted) {
+                    setIsLoading(false);
+                }
             }
 
             return () => {
-                window.removeEventListener('pagehide', handleAbort);
-                window.removeEventListener('beforeunload', handleAbort);
+                window.removeEventListener('pagehide', onPageHide);
+                window.removeEventListener('beforeunload', onBeforeUnload);
                 document.removeEventListener('app:navigation-start', onAppNavigationStart);
+                document.removeEventListener('inertia:start', onInertiaStart);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
                 try {
                     controllerRef.current?.abort();
                 } catch {
@@ -181,19 +228,75 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
         };
 
         loadPreview();
-    }, [file.id, showPreview, hasLoaded]);
+    }, [file.id, showPreview, hasLoaded, isNavigating]);
 
-    // Cleanup on unmount
+    // Cleanup on unmount - immediate abort
     useEffect(() => {
         return () => {
+            // Immediately abort any ongoing requests
             if (controllerRef.current) {
-                controllerRef.current.abort();
+                try {
+                    controllerRef.current.abort();
+                } catch {
+                    // ignore
+                }
             }
+            // Clean up blob URLs
             if (srcUrlRef.current) {
-                URL.revokeObjectURL(srcUrlRef.current);
+                try {
+                    URL.revokeObjectURL(srcUrlRef.current);
+                } catch {
+                    // ignore
+                }
             }
         };
     }, []); // Empty dependency array - only run on unmount
+
+    // Additional cleanup effect that runs when component is about to unmount
+    useEffect(() => {
+        const handleBeforeUnmount = () => {
+            if (controllerRef.current) {
+                try {
+                    controllerRef.current.abort();
+                } catch {
+                    // ignore
+                }
+            }
+        };
+
+        // Listen for Inertia navigation start to abort immediately
+        document.addEventListener('inertia:start', handleBeforeUnmount);
+        document.addEventListener('app:navigation-start', handleBeforeUnmount);
+
+        return () => {
+            document.removeEventListener('inertia:start', handleBeforeUnmount);
+            document.removeEventListener('app:navigation-start', handleBeforeUnmount);
+        };
+    }, []);
+
+    // Global navigation state listener
+    useEffect(() => {
+        const handleNavigationStart = () => {
+            if (controllerRef.current) {
+                try {
+                    controllerRef.current.abort();
+                } catch {
+                    // ignore
+                }
+            }
+        };
+
+        // Listen for any navigation events globally
+        window.addEventListener('beforeunload', handleNavigationStart);
+        document.addEventListener('inertia:start', handleNavigationStart);
+        document.addEventListener('app:navigation-start', handleNavigationStart);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleNavigationStart);
+            document.removeEventListener('inertia:start', handleNavigationStart);
+            document.removeEventListener('app:navigation-start', handleNavigationStart);
+        };
+    }, []);
 
     if (isImage || isVideo) {
         return (

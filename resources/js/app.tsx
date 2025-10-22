@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import { UploadProvider } from './contexts/UploadContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import { Ziggy } from './ziggy';
 import {route} from 'ziggy-js';
 import { LoadingBar } from './components/ui/loading-bar';
@@ -45,12 +46,14 @@ createInertiaApp({
         window.Auth = (props.initialPage.props as unknown as import('./types').SharedData).auth;
 
         root.render(
-            <SnackbarProvider>
-                <UploadProvider>
-                    <LoadingBar />
-                    <App {...props} />
-                </UploadProvider>
-            </SnackbarProvider>
+            <NavigationProvider>
+                <SnackbarProvider>
+                    <UploadProvider>
+                        <LoadingBar />
+                        <App {...props} />
+                    </UploadProvider>
+                </SnackbarProvider>
+            </NavigationProvider>
         );
     },
     progress: false,
