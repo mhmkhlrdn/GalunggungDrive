@@ -1040,6 +1040,15 @@ class FileController extends Controller
             Cache::forget("folder_show_{$folderId}_{$userId}");
             Cache::forget("folders_index_{$userId}_{$folderId}_*");
         }
+
+        // Bump per-user folders version token so versioned cache keys are invalidated
+        $versionKey = "folders_version_{$userId}";
+        try {
+            Cache::increment($versionKey);
+        } catch (\Throwable $e) {
+            $curr = Cache::get($versionKey, 0);
+            Cache::put($versionKey, $curr + 1);
+        }
     }
 }
 

@@ -1,14 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { route } from 'ziggy-js';
-// If you use a toast system, import it here. Example:
-// import { toast } from '@/components/ui/use-toast';
-import { formatFileSize } from '@/lib/utils';
-import { X, Download, Share2, Eye, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
+import { X, Download, Share2, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ShareModal from '@/components/share-modal';
 import { User } from '@/types';
-import { router } from '@inertiajs/react';
 
 interface FilePreviewModalProps {
     isOpen: boolean;
@@ -91,7 +87,7 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                 timeout = setTimeout(() => {
                     setError('Preview loading timeout');
                     setLoading(false);
-                }, 10000);
+                }, 100000);
 
                 fetch(url, { method: 'HEAD' })
                     .then(response => {
@@ -180,8 +176,8 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                             touchStartXRef.current = e.touches[0].clientX;
                         }
                     }}
-                    onTouchMove={(e) => {
-                        // prevent vertical scroll from being blocked; only act on horizontal swipes
+                    onTouchMove={() => {
+
                     }}
                     onTouchEnd={(e) => {
                         const startX = touchStartXRef.current;

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Services\CacheService as AppCacheService;
 
 class FolderController extends Controller
 {
@@ -29,8 +30,11 @@ class FolderController extends Controller
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
 
-        // Cache key for folder listing
-        $cacheKey = "folders_index_{$user->id}_{$parentId}_{$search}_{$sortBy}_{$sortOrder}";
+
+        $version = Cache::get("folders_version_{$user->id}", 0);
+
+
+        $cacheKey = "folders_index_{$user->id}_{$parentId}_{$search}_{$sortBy}_{$sortOrder}_v{$version}";
 
         $data = Cache::remember($cacheKey, 300, function () use ($user, $parentId, $search, $sortBy, $sortOrder) {
             return $this->getFolderIndexData($user, $parentId, $search, $sortBy, $sortOrder);
@@ -57,11 +61,11 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
-        // Optimize file count and size calculations using single queries
+
         $folderIds = $folders->pluck('id')->toArray();
 
         if (!empty($folderIds)) {
-            // Get file counts and sizes in batch using Eloquent
+
             $fileStats = File::whereIn('folder_id', $folderIds)
                 ->whereHas('storageLocation', function ($q) {
                     $q->where('is_active', true);
@@ -167,7 +171,7 @@ class FolderController extends Controller
             ],
         ]);
 
-        // Clear relevant caches
+
         $this->clearFolderCaches(Auth::id(), $request->parent_id);
 
         return redirect()->back()->with('success', 'Folder berhasil dibuat.');
@@ -179,8 +183,11 @@ class FolderController extends Controller
         /** @var User $user */
         $this->authorize('view', $folder);
 
-        // Cache key for folder show
-        $cacheKey = "folder_show_{$folder->id}_{$user->id}";
+
+        $version = Cache::get("folders_version_{$user->id}", 0);
+
+
+        $cacheKey = "folder_show_{$folder->id}_{$user->id}_v{$version}";
 
         $data = Cache::remember($cacheKey, 180, function () use ($folder, $user) {
             return $this->getFolderShowData($folder, $user);
@@ -193,7 +200,7 @@ class FolderController extends Controller
 
     private function getFolderShowData(Folder $folder, User $user): array
     {
-        // Optimized files query with proper eager loading
+
         $files = File::with(['user:id,name', 'storageLocation:id,name,is_active'])
             ->where('folder_id', $folder->id)
             ->visibleTo($user)
@@ -203,7 +210,7 @@ class FolderController extends Controller
             ->get()
             ->map->toFrontend();
 
-        // Optimized subfolders query
+
         $subfolders = Folder::where('parent_id', $folder->id)
             ->visibleTo($user)
             ->withCount(['files', 'children as folders_count'])
@@ -222,7 +229,7 @@ class FolderController extends Controller
 
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
-        // Optimized all folders query
+
         $allFolders = Folder::where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
                   ->orWhere('visibility', 'public');
@@ -483,7 +490,7 @@ class FolderController extends Controller
 
         $folder->delete();
 
-        // Clear relevant caches after folder deletion
+
         $this->clearFolderCaches(Auth::id(), $folder->parent_id);
 
         return redirect()->back()->with('success', 'Folder berhasil dihapus.');
@@ -540,19 +547,35 @@ class FolderController extends Controller
 
     private function clearFolderCaches(int $userId, $parentId = null): void
     {
-        $patterns = [
-            "folders_index_{$userId}_*",
-            "folder_show_*_{$userId}",
-            "cloud_data_{$userId}_*",
-        ];
 
-        foreach ($patterns as $pattern) {
-            Cache::forget($pattern);
+
+
+
+        $versionKey = "folders_version_{$userId}";
+        try {
+
+            Cache::increment($versionKey);
+        } catch (\Throwable $e) {
+            $curr = Cache::get($versionKey, 0);
+            Cache::put($versionKey, $curr + 1);
         }
 
-        // Clear specific caches
-        if ($parentId) {
-            Cache::forget("folders_index_{$userId}_{$parentId}_*");
+
+        $cloudKey = "cloud_data_{$userId}_version";
+        try {
+            Cache::increment($cloudKey);
+        } catch (\Throwable $e) {
+            $curr = Cache::get($cloudKey, 0);
+            Cache::put($cloudKey, $curr + 1);
+        }
+
+
+
+        try {
+            AppCacheService::clearFolderCaches($userId, $parentId);
+        } catch (\Throwable $e) {
+
+            Log::warning('AppCacheService::clearFolderCaches failed: ' . $e->getMessage(), ['user_id' => $userId]);
         }
     }
 private function formatFileSize($bytes)
@@ -584,7 +607,10 @@ public function emptyFolder(Folder $folder): RedirectResponse
             ],
         ]);
 
-        return redirect()->back()->with('success', 'Folder berhasil dikosongkan.');
+
+    $this->clearFolderCaches(Auth::id(), $folder->parent_id);
+
+    return redirect()->back()->with('success', 'Folder berhasil dikosongkan.');
     } catch (\Exception $e) {
         Log::error('Gagal mengkosongkan folder: ' . $e->getMessage(), [
             'folder_id' => $folder->id,
@@ -597,7 +623,7 @@ public function emptyFolder(Folder $folder): RedirectResponse
 
 private function deleteFolderContents(Folder $folder): void
 {
-    // Delete all files in the current folder
+
     foreach ($folder->files as $file) {
         $storageLocation = $file->storageLocation;
         if ($storageLocation && $storageLocation->is_active) {
@@ -609,7 +635,7 @@ private function deleteFolderContents(Folder $folder): void
         $file->delete();
     }
 
-    // Recursively delete all subfolders and their contents
+
     foreach ($folder->children as $subfolder) {
         $this->deleteFolderContents($subfolder);
         $subfolder->delete();

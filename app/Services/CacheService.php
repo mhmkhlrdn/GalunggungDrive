@@ -56,10 +56,10 @@ class CacheService
     public static function getFileStats(array $folderIds): array
     {
         $cacheKey = 'file_stats_' . md5(implode(',', $folderIds));
-        
+
         return Cache::remember($cacheKey, self::SHORT_CACHE_TTL, function () use ($folderIds) {
             return DB::table('files')
-                ->select('folder_id', 
+                ->select('folder_id',
                     DB::raw('COUNT(*) as files_count'),
                     DB::raw('SUM(size) as total_size')
                 )
@@ -85,7 +85,7 @@ class CacheService
         }
 
         $cacheKey = 'starred_files_' . $userId . '_' . md5(implode(',', $fileIds));
-        
+
         return Cache::remember($cacheKey, self::LONG_CACHE_TTL, function () use ($userId, $fileIds) {
             return DB::table('user_starred')
                 ->where('user_id', $userId)
@@ -101,7 +101,7 @@ class CacheService
     public static function getUsersForSharing(int $excludeUserId): array
     {
         $cacheKey = "users_for_sharing_{$excludeUserId}";
-        
+
         return Cache::remember($cacheKey, self::LONG_CACHE_TTL, function () use ($excludeUserId) {
             return User::where('id', '!=', $excludeUserId)
                 ->select('id', 'name', 'email')
@@ -146,6 +146,17 @@ class CacheService
         foreach ($patterns as $pattern) {
             Cache::forget($pattern);
         }
+
+        // Also bump per-user version token so any cache keys that include the version
+        // will be invalidated. This keeps compatibility with FolderController's
+        // version-based invalidation strategy.
+        $versionKey = "folders_version_{$userId}";
+        try {
+            Cache::increment($versionKey);
+        } catch (\Throwable $e) {
+            $curr = Cache::get($versionKey, 0);
+            Cache::put($versionKey, $curr + 1);
+        }
     }
 
     /**
@@ -171,11 +182,20 @@ class CacheService
     {
         // Pre-load commonly accessed data
         self::getUsersForSharing($user->id);
-        
+
         // Pre-load cloud data
-        $cloudController = new \App\Http\Controllers\OptimizedCloudController();
-        $cloudData = $cloudController->getCloudData($user->id, $user);
-        self::setCloudData($user, $cloudData);
+        $fqcn = '\\App\\Http\\Controllers\\OptimizedCloudController';
+        if (class_exists($fqcn)) {
+            try {
+                $cloudController = app()->make($fqcn);
+                if (method_exists($cloudController, 'getCloudData')) {
+                    $cloudData = $cloudController->getCloudData($user->id, $user);
+                    self::setCloudData($user, $cloudData);
+                }
+            } catch (\Throwable $e) {
+                // Non-fatal: skip warm-up if controller or method not available
+            }
+        }
     }
 
     /**
