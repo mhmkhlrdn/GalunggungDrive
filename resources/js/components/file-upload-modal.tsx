@@ -122,9 +122,8 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         },
     });
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (uploadedFiles.length === 0) return;
-
 
         const formData = new FormData();
         const filesToUpload: File[] = [];
@@ -139,10 +138,19 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         formData.append('tags', data.tags);
         formData.append('visibility', data.visibility);
 
-        uploadFiles(filesToUpload, formData);
-        onUpload(filesToUpload);
-        reset();
-        onClose();
+        try {
+            await uploadFiles(filesToUpload, formData);
+            // Only trigger onUpload and close after uploads complete to avoid
+            // navigation cancelling the in-flight requests.
+            onUpload(filesToUpload);
+            reset();
+            onClose();
+        } catch (e) {
+            // Keep modal open on failure; ideally surface errors to user
+            // For now, log and alert
+            console.error('Upload failed', e);
+            alert('Upload failed. Please try again.');
+        }
     };
 
     const removeFile = (index: number) => {

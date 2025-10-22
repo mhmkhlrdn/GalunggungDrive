@@ -30,6 +30,7 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
     const [uploads, setUploads] = useState<UploadFile[]>([]);
 
     const uploadFiles = useCallback(async (files: File[], commonFormData: FormData) => {
+        // Prepare upload entries for each file for UI tracking
         const newUploads: UploadFile[] = files.map(file => ({
             id: uuidv4(),
             name: file.name,
@@ -42,65 +43,37 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
 
         setUploads(prev => [...prev, ...newUploads]);
 
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const upload = newUploads[i];
+        // Send the full FormData in a single request so the server receives the
+        // `files[0]`, `files[1]`, ... and `relative_paths[...]` keys exactly as built
+        // by the upload modal. This avoids mismatches when the modal constructs
+        // indexed form keys and the context was splitting requests per file.
+        const source = axios.CancelToken.source();
 
-            const fileFormData = new FormData();
-            fileFormData.append('files[0]', file);
-            fileFormData.append('relative_paths[0]', commonFormData.get(`relative_paths[${i}]`) || file.name);
+        // Mark all uploads as uploading
+        setUploads(prev => prev.map(u => newUploads.find(nu => nu.id === u.id) ? { ...u, status: 'uploading', startTime: Date.now() } : u));
 
-            // Append other common data from the original formData
-            fileFormData.append('folder_id', commonFormData.get('folder_id') || '');
-            fileFormData.append('disk_id', commonFormData.get('disk_id') || '');
-            fileFormData.append('description', commonFormData.get('description') || '');
-            fileFormData.append('tags', commonFormData.get('tags') || '');
-            fileFormData.append('visibility', commonFormData.get('visibility') || '');
+        try {
+            await axios.post('/files', commonFormData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    const { loaded, total } = progressEvent;
+                    if (!total) return;
+                    const progress = Math.round((loaded * 100) / total);
 
-            const source = axios.CancelToken.source();
-            upload.cancelSource = () => source.cancel('Upload cancelled by user.');
+                    // Update all new uploads with the overall progress percentage
+                    setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, progress, uploadedBytes: Math.round((progress / 100) * u.totalBytes) } : u));
+                },
+                cancelToken: source.token,
+            });
 
-            setUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'uploading', startTime: Date.now() } : u));
-
-            try {
-                await axios.post('/files', fileFormData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                    onUploadProgress: (progressEvent) => {
-                        const { loaded, total } = progressEvent;
-                        if (total) {
-                            const progress = Math.round((loaded * 100) / total);
-                            const currentTime = Date.now();
-                            const elapsedTime = (currentTime - (upload.startTime || currentTime)) / 1000; // in seconds
-                            const bytesPerSecond = loaded / elapsedTime;
-                            const remainingBytes = total - loaded;
-                            const estimatedTime = bytesPerSecond > 0 ? remainingBytes / bytesPerSecond : undefined;
-
-                            setUploads(prev => prev.map(u =>
-                                u.id === upload.id
-                                    ? { ...u, progress, uploadedBytes: loaded, totalBytes: total, estimatedTime }
-                                    : u
-                            ));
-                        }
-                    },
-                    cancelToken: source.token,
-                });
-
-                setUploads(prev => prev.map(u =>
-                    u.id === upload.id ? { ...u, progress: 100, uploadedBytes: u.totalBytes, status: 'completed', endTime: Date.now() } : u
-                ));
-            } catch (error) {
-                if (axios.isCancel(error)) {
-                    setUploads(prev => prev.map(u =>
-                        u.id === upload.id ? { ...u, status: 'cancelled', endTime: Date.now(), error: error.message } : u
-                    ));
-                } else {
-                    console.error('Upload failed:', error);
-                    setUploads(prev => prev.map(u =>
-                        u.id === upload.id ? { ...u, status: 'failed', endTime: Date.now(), error: 'Upload failed' } : u
-                    ));
-                }
+            // Mark all as completed
+            setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, progress: 100, uploadedBytes: u.totalBytes, status: 'completed', endTime: Date.now() } : u));
+        } catch (error) {
+            if (axios.isCancel(error)) {
+                setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, status: 'cancelled', endTime: Date.now(), error: (error as any).message } : u));
+            } else {
+                console.error('Upload failed:', error);
+                setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, status: 'failed', endTime: Date.now(), error: 'Upload failed' } : u));
             }
         }
     }, []);
