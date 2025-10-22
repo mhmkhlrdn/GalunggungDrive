@@ -203,7 +203,7 @@ class CacheService
     /**
      * Get cache key for cloud data
      */
-    private static function getCloudCacheKey(User $user): string
+    public static function getCloudCacheKey(User $user): string
     {
         $role = $user->isSuperAdmin() ? 'super' : ($user->isAdmin() ? 'admin' : 'user');
         $version = Cache::get("cloud_data_{$user->id}_version", 0);

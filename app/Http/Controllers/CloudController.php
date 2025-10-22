@@ -19,10 +19,8 @@ class CloudController extends Controller
         /** @var User $user */
         $userId = $user->id;
 
-        // Use CacheService to obtain a versioned cache key so cache bumps propagate to Cloud as well
         $cacheKey = CacheService::getCloudCacheKey($user);
 
-        // Try to get cached data first
         $cachedData = Cache::remember($cacheKey, 300, function () use ($userId, $user) {
             return $this->getCloudData($userId, $user);
         });
