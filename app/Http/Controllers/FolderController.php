@@ -609,6 +609,7 @@ public function emptyFolder(Folder $folder): RedirectResponse
 
 
     $this->clearFolderCaches(Auth::id(), $folder->parent_id);
+    $this->clearFolderCaches(Auth::id(), $folder->id);
 
     return redirect()->back()->with('success', 'Folder berhasil dikosongkan.');
     } catch (\Exception $e) {

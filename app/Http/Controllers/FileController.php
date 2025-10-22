@@ -930,7 +930,12 @@ class FileController extends Controller
 
 
         if ($moved > 0) {
-            $this->clearFileCaches(Auth::id());
+            foreach ($ids as $id) {
+                $file = File::find($id);
+                if ($file) {
+                    $this->clearFileCaches(Auth::id(), $file->folder_id);
+                }
+            }
         }
 
         if (empty($errors)) {
