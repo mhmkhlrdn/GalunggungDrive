@@ -88,15 +88,13 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                 }
             };
 
-            // Abort preview fetch when navigation or page hide events happen so
-            // navigation isn't postponed by in-flight requests.
+            // Abort preview fetch when page is being unloaded/hidden so
+            // navigation isn't postponed by in-flight requests. Avoid aborting
+            // on SPA history/popstate or Inertia start events because those can
+            // be triggered without an actual navigation and cause spurious
+            // cancellations of thumbnail requests.
             window.addEventListener('pagehide', handleAbort);
             window.addEventListener('beforeunload', handleAbort);
-            window.addEventListener('popstate', handleAbort);
-
-            // Inertia emits events on document; try to abort on inertia:start if present
-            const onInertiaStart = () => handleAbort();
-            document.addEventListener('inertia:start', onInertiaStart);
 
             (async () => {
                 try {
@@ -124,8 +122,6 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                 // Clean up listeners and revoke object URL
                 window.removeEventListener('pagehide', handleAbort);
                 window.removeEventListener('beforeunload', handleAbort);
-                window.removeEventListener('popstate', handleAbort);
-                document.removeEventListener('inertia:start', onInertiaStart);
                 try {
                     controller.abort();
                 } catch {
