@@ -31,14 +31,9 @@ class FolderController extends Controller
         $sortOrder = $request->get('sort_order', 'asc');
 
 
-        $version = Cache::get("folders_version_{$user->id}", 0);
-
-
-        $cacheKey = "folders_index_{$user->id}_{$parentId}_{$search}_{$sortBy}_{$sortOrder}_v{$version}";
-
-        $data = Cache::remember($cacheKey, 300, function () use ($user, $parentId, $search, $sortBy, $sortOrder) {
-            return $this->getFolderIndexData($user, $parentId, $search, $sortBy, $sortOrder);
-        });
+        // Return fresh data for folder listings to ensure UI reflects changes immediately.
+        // Caching was removed here because it previously caused stale UI after mutations.
+        $data = $this->getFolderIndexData($user, $parentId, $search, $sortBy, $sortOrder);
 
         return Inertia::render('Folders/Index', $data);
     }
@@ -171,8 +166,21 @@ class FolderController extends Controller
             ],
         ]);
 
+        // Log and clear caches for the affected user/folder so front-end sees updates immediately
+        try {
+            $before = Cache::get("folders_version_" . Auth::id(), 0);
+        } catch (\Throwable $e) {
+            $before = null;
+        }
 
         $this->clearFolderCaches(Auth::id(), $request->parent_id);
+
+        try {
+            $after = Cache::get("folders_version_" . Auth::id(), 0);
+        } catch (\Throwable $e) {
+            $after = null;
+        }
+        Log::info('Folder created and cache cleared', ['user_id' => Auth::id(), 'folder_id' => $folder->id, 'before_version' => $before, 'after_version' => $after]);
 
         return redirect()->back()->with('success', 'Folder berhasil dibuat.');
     }
@@ -184,14 +192,8 @@ class FolderController extends Controller
         $this->authorize('view', $folder);
 
 
-        $version = Cache::get("folders_version_{$user->id}", 0);
-
-
-        $cacheKey = "folder_show_{$folder->id}_{$user->id}_v{$version}";
-
-        $data = Cache::remember($cacheKey, 180, function () use ($folder, $user) {
-            return $this->getFolderShowData($folder, $user);
-        });
+        // Return fresh data for folder view so changes are visible immediately.
+        $data = $this->getFolderShowData($folder, $user);
 
         return inertia('Folders/Show', array_merge($data, [
             'from' => $request->query('from'),
@@ -612,8 +614,21 @@ public function emptyFolder(Folder $folder): RedirectResponse
         ]);
 
 
+    try {
+        $before = Cache::get("folders_version_" . Auth::id(), 0);
+    } catch (\Throwable $e) {
+        $before = null;
+    }
+
     $this->clearFolderCaches(Auth::id(), $folder->parent_id);
     $this->clearFolderCaches(Auth::id(), $folder->id);
+
+    try {
+        $after = Cache::get("folders_version_" . Auth::id(), 0);
+    } catch (\Throwable $e) {
+        $after = null;
+    }
+    Log::info('Folder emptied and cache cleared', ['user_id' => Auth::id(), 'folder_id' => $folder->id, 'before_version' => $before, 'after_version' => $after]);
 
     return redirect()->back()->with('success', 'Folder berhasil dikosongkan.');
     } catch (\Exception $e) {

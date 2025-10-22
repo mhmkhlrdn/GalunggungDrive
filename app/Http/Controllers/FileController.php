@@ -5,15 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\ActivityLog;
-use App\Models\FileShare;
-use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
+    try {
+        \App\Services\CacheService::clearFolderCaches($userId, $folderId);
+    } catch (\Throwable $e) {
+        // fallback noop
+    }
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Models\StorageLocation;
 use Inertia\Inertia;
