@@ -17,8 +17,7 @@ return new class extends Migration {
         });
         Schema::table('storage_locations', function (Blueprint $table) {
             $table->boolean('can_serve')
-                ->default(false)
-                ->after('visibility'); // place it logically after visibility
+                ->default(false);
         });
     }
 

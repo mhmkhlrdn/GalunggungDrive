@@ -25,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
             // Add maintenance mode check to web middleware group, after authentication
             \App\Http\Middleware\CheckMaintenanceMode::class,
+            // Add performance monitoring
+            \App\Http\Middleware\PerformanceMonitoring::class,
         ]);
 
         $middleware->alias([

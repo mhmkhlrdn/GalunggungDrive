@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { File, Image, Video, Music, FileText, Archive } from 'lucide-react';
 
 interface FilePreviewProps {
@@ -9,11 +9,17 @@ interface FilePreviewProps {
     };
     size?: 'sm' | 'md' | 'lg';
     className?: string;
+    lazy?: boolean;
+    priority?: boolean;
 }
 
-export default function FilePreview({ file, size = 'md', className = '' }: FilePreviewProps) {
-    const [isLoading, setIsLoading] = useState(true);
+export default function FilePreview({ file, size = 'md', className = '', lazy = true, priority = false }: FilePreviewProps) {
+    const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [isVisible, setIsVisible] = useState(!lazy || priority);
+    const [hasLoaded, setHasLoaded] = useState(false);
+    const elementRef = useRef<HTMLDivElement>(null);
+    const controllerRef = useRef<AbortController | null>(null);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -61,90 +67,133 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
 
     const isImage = file.mime_type.startsWith('image/');
     const isVideo = file.mime_type.startsWith('video/');
-    const showPreview = (isImage || isVideo) && !hasError;
-    const IconComponent = getFileIcon(file.mime_type);
+    const showPreview = (isImage || isVideo) && !hasError && isVisible;
 
-    const [srcUrl, setSrcUrl] = useState<string | null>(null);
-
-    const handleLoad = () => setIsLoading(false);
-    const handleError = () => { setIsLoading(false); setHasError(true); };
-
+    // Intersection Observer for lazy loading
     useEffect(() => {
+        if (!lazy || priority || isVisible) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setIsVisible(true);
+                        observer.disconnect();
+                    }
+                });
+            },
+            {
+                rootMargin: '50px', // Start loading 50px before element comes into view
+                threshold: 0.1
+            }
+        );
+
+        if (elementRef.current) {
+            observer.observe(elementRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [lazy, priority, isVisible]);
+
+    const handleLoad = useCallback(() => {
+        setIsLoading(false);
+    }, []);
+
+    const handleError = useCallback(() => {
+        setIsLoading(false);
+        setHasError(true);
+    }, []);
+
+    // Load preview when visible
+    useEffect(() => {
+        if (!showPreview || hasLoaded) return;
+
         let objectUrl: string | null = null;
 
-        // Only attempt fetch for previewable types
-        if (showPreview) {
+        const loadPreview = async () => {
             setIsLoading(true);
             setHasError(false);
 
-            const controller = new AbortController();
-            const { signal } = controller;
+            // Cancel any existing request
+            if (controllerRef.current) {
+                controllerRef.current.abort();
+            }
+
+            controllerRef.current = new AbortController();
+            const { signal } = controllerRef.current;
 
             const handleAbort = () => {
                 try {
-                    controller.abort();
+                    controllerRef.current?.abort();
                 } catch {
                     // ignore
                 }
             };
 
-            // Allow other parts of the app to signal a real navigation start so
-            // previews can be aborted immediately (without listening to noisy
-            // SPA events globally). This avoids spurious aborts but still
-            // prioritizes navigation when the app dispatches the event.
+            // Listen for navigation events
             const onAppNavigationStart = () => handleAbort();
             document.addEventListener('app:navigation-start', onAppNavigationStart);
-
-            // Abort preview fetch when page is being unloaded/hidden so
-            // navigation isn't postponed by in-flight requests. Avoid aborting
-            // on SPA history/popstate or Inertia start events because those can
-            // be triggered without an actual navigation and cause spurious
-            // cancellations of thumbnail requests.
             window.addEventListener('pagehide', handleAbort);
             window.addEventListener('beforeunload', handleAbort);
 
-            (async () => {
-                try {
-                    const res = await fetch(`/files/${file.id}/preview`, { credentials: 'include', signal });
-                    if (!res.ok) throw new Error(`Preview request failed: ${res.status}`);
-                    const blob = await res.blob();
-                    objectUrl = URL.createObjectURL(blob);
-                    setSrcUrl(objectUrl);
-                    // let the normal onLoad/onLoadedData handle marking loaded
-                } catch (e) {
-                    // Ignore abort errors - they indicate navigation or unmount
-                    // 'e' is unknown here, check its name property defensively
-                    const errName = e instanceof Error ? e.name : String((e as unknown) || '');
-                    if (errName === 'AbortError') {
-                        // stop showing spinner so navigation can proceed immediately
-                        setIsLoading(false);
-                        return;
-                    }
-                    console.error('Preview fetch failed for file', file.id, e);
-                    handleError();
+            try {
+                const res = await fetch(`/files/${file.id}/preview`, {
+                    credentials: 'include',
+                    signal
+                });
+
+                if (!res.ok) throw new Error(`Preview request failed: ${res.status}`);
+
+                const blob = await res.blob();
+                objectUrl = URL.createObjectURL(blob);
+                setSrcUrl(objectUrl);
+                setHasLoaded(true);
+            } catch (e) {
+                const errName = e instanceof Error ? e.name : String((e as unknown) || '');
+                if (errName === 'AbortError') {
+                    setIsLoading(false);
+                    return;
                 }
-            })();
+                console.error('Preview fetch failed for file', file.id, e);
+                setHasError(true);
+            } finally {
+                setIsLoading(false);
+            }
 
             return () => {
-                // Clean up listeners and revoke object URL
                 window.removeEventListener('pagehide', handleAbort);
                 window.removeEventListener('beforeunload', handleAbort);
                 document.removeEventListener('app:navigation-start', onAppNavigationStart);
                 try {
-                    controller.abort();
+                    controllerRef.current?.abort();
                 } catch {
                     // ignore
                 }
                 if (objectUrl) URL.revokeObjectURL(objectUrl);
             };
-        }
+        };
 
-        return () => {};
-    }, [file.id, showPreview]);
+        loadPreview();
+    }, [file.id, showPreview, hasLoaded]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (controllerRef.current) {
+                controllerRef.current.abort();
+            }
+            if (srcUrl) {
+                URL.revokeObjectURL(srcUrl);
+            }
+        };
+    }, [srcUrl]);
 
     if (isImage || isVideo) {
         return (
-            <div className={`relative ${getSizeClasses()} rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center ${className}`}>
+            <div
+                ref={elementRef}
+                className={`relative ${getSizeClasses()} rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center ${className}`}
+            >
                 {isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-t-2 border-blue-500" />
@@ -159,8 +208,8 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                             style={{ opacity: isLoading ? 0 : 1 }}
                             onLoad={handleLoad}
                             onError={handleError}
-                            // avoid native lazy loading when we fetch blob manually
                             loading="eager"
+                            decoding="async"
                         />
                     ) : (
                         <video
@@ -182,6 +231,8 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
             </div>
         );
     }
+
+    const IconComponent = getFileIcon(file.mime_type);
 
     return (
         <div className={`${getSizeClasses()} rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center ${className}`}>

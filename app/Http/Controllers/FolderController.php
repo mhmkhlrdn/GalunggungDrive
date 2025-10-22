@@ -14,6 +14,8 @@ use App\Models\StorageLocation;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Zip;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,17 +24,26 @@ class FolderController extends Controller
     public function index(Request $request): Response
     {
         $user = Auth::user();
-        $activeServingLocations = StorageLocation::serving()->orderBy('name')->get(['id', 'name']);
         $parentId = $request->get('parent_id');
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
 
-        $query = Folder::with(['user', 'parent'])
-            ->where(function ($q) {
-                $q->where('user_id', Auth::id());
+        // Cache key for folder listing
+        $cacheKey = "folders_index_{$user->id}_{$parentId}_{$search}_{$sortBy}_{$sortOrder}";
 
-            });
+        $data = Cache::remember($cacheKey, 300, function () use ($user, $parentId, $search, $sortBy, $sortOrder) {
+            return $this->getFolderIndexData($user, $parentId, $search, $sortBy, $sortOrder);
+        });
+
+        return Inertia::render('Folders/Index', $data);
+    }
+
+    private function getFolderIndexData(User $user, $parentId, $search, $sortBy, $sortOrder): array
+    {
+        $query = Folder::with(['user:id,name', 'parent:id,name'])
+            ->where('user_id', $user->id)
+            ->select(['id', 'name', 'parent_id', 'user_id', 'updated_at', 'created_at']);
 
         if ($parentId) {
             $query->where('parent_id', $parentId);
@@ -46,39 +57,42 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
+        // Optimize file count and size calculations using single queries
+        $folderIds = $folders->pluck('id')->toArray();
 
-        $folders->getCollection()->transform(function ($folder) {
-            $filesCount = File::where('folder_id', $folder->id)
+        if (!empty($folderIds)) {
+            // Get file counts and sizes in batch
+            $fileStats = DB::table('files')
+                ->select('folder_id',
+                    DB::raw('COUNT(*) as files_count'),
+                    DB::raw('SUM(size) as total_size')
+                )
+                ->whereIn('folder_id', $folderIds)
                 ->whereHas('storageLocation', function ($q) {
                     $q->where('is_active', true);
                 })
-                ->where(function ($q) {
-                    $q->where('user_id', Auth::id())
+                ->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
                       ->orWhere('visibility', 'public');
                 })
-                ->count();
+                ->groupBy('folder_id')
+                ->get()
+                ->keyBy('folder_id');
 
-            $totalSize = File::where('folder_id', $folder->id)
-                ->whereHas('storageLocation', function ($q) {
-                    $q->where('is_active', true);
-                })
-                ->where(function ($q) {
-                    $q->where('user_id', Auth::id())
-                      ->orWhere('visibility', 'public');
-                })
-                ->sum('size');
+            $folders->getCollection()->transform(function ($folder) use ($fileStats) {
+                $stats = $fileStats->get($folder->id);
+                $folder->files_count = $stats ? $stats->files_count : 0;
+                $folder->total_size = $stats ? $stats->total_size : 0;
+                return $folder;
+            });
+        }
 
-            $folder->files_count = $filesCount;
-            $folder->total_size = $totalSize;
-
-            return $folder;
+        $users = Cache::remember("users_for_sharing_{$user->id}", 600, function () use ($user) {
+            return User::where('id', '!=', $user->id)
+                ->select('id', 'name', 'email')
+                ->orderBy('name')
+                ->get();
         });
-
-
-        $users = User::where('id', '!=', Auth::id())
-            ->select('id', 'name', 'email')
-            ->orderBy('name')
-            ->get();
 
         $currentFolder = $parentId ? Folder::find($parentId) : null;
         $breadcrumbs = $this->getBreadcrumbs($currentFolder);
@@ -92,9 +106,15 @@ class FolderController extends Controller
             })
             ->values();
 
-        return Inertia::render('Folders/Index', [
+        $activeServingLocations = StorageLocation::serving()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return [
             'folders' => $folders,
-            'storageLoc' => $activeServingLocations->map(function ($loc) { return ['id' => $loc->id, 'name' => $loc->name]; }),
+            'storageLoc' => $activeServingLocations->map(function ($loc) {
+                return ['id' => $loc->id, 'name' => $loc->name];
+            }),
             'currentFolder' => $currentFolder,
             'breadcrumbs' => $breadcrumbs,
             'users' => $users,
@@ -104,7 +124,7 @@ class FolderController extends Controller
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
             ],
-        ]);
+        ];
     }
 
     public function store(Request $request): RedirectResponse
@@ -148,6 +168,9 @@ class FolderController extends Controller
             ],
         ]);
 
+        // Clear relevant caches
+        $this->clearFolderCaches(Auth::id(), $request->parent_id);
+
         return redirect()->back()->with('success', 'Folder berhasil dibuat.');
     }
 
@@ -157,39 +180,56 @@ class FolderController extends Controller
         /** @var User $user */
         $this->authorize('view', $folder);
 
-        $files = File::with(['user', 'storageLocation'])
-    ->where('folder_id', $folder->id)
-    ->visibleTo($user)
-    ->whereHas('storageLocation', fn($q) => $q->where('is_active', true))
-    ->latest('updated_at')
-    ->get()
+        // Cache key for folder show
+        $cacheKey = "folder_show_{$folder->id}_{$user->id}";
+
+        $data = Cache::remember($cacheKey, 180, function () use ($folder, $user) {
+            return $this->getFolderShowData($folder, $user);
+        });
+
+        return inertia('Folders/Show', array_merge($data, [
+            'from' => $request->query('from'),
+        ]));
+    }
+
+    private function getFolderShowData(Folder $folder, User $user): array
+    {
+        // Optimized files query with proper eager loading
+        $files = File::with(['user:id,name', 'storageLocation:id,name,is_active'])
+            ->where('folder_id', $folder->id)
+            ->visibleTo($user)
+            ->whereHas('storageLocation', fn($q) => $q->where('is_active', true))
+            ->latest('updated_at')
+            ->select(['id', 'name', 'size', 'mime_type', 'created_at', 'updated_at', 'folder_id', 'user_id', 'description', 'tags', 'visibility'])
+            ->get()
             ->map->toFrontend();
 
-
+        // Optimized subfolders query
         $subfolders = Folder::where('parent_id', $folder->id)
-    ->visibleTo($user)
-    ->withCount(['files', 'children as folders_count'])
-    ->orderBy('name')
-    ->get()
-    ->map(fn($subfolder) => [
-        'id' => $subfolder->id,
-        'name' => $subfolder->name,
-        'parent_id' => $subfolder->parent_id,
-        'created_at' => $subfolder->created_at->toISOString(),
-        'updated_at' => $subfolder->updated_at->toISOString(),
-        'files_count' => $subfolder->files_count,
-        'folders_count' => $subfolder->folders_count,
-    ]);
-
-
+            ->visibleTo($user)
+            ->withCount(['files', 'children as folders_count'])
+            ->orderBy('name')
+            ->select(['id', 'name', 'parent_id', 'created_at', 'updated_at', 'visibility'])
+            ->get()
+            ->map(fn($subfolder) => [
+                'id' => $subfolder->id,
+                'name' => $subfolder->name,
+                'parent_id' => $subfolder->parent_id,
+                'created_at' => $subfolder->created_at->toISOString(),
+                'updated_at' => $subfolder->updated_at->toISOString(),
+                'files_count' => $subfolder->files_count,
+                'folders_count' => $subfolder->folders_count,
+            ]);
 
         $breadcrumbs = $this->getBreadcrumbs($folder);
 
-        $allFolders = Folder::where(function ($q) {
-                $q->where('user_id', Auth::id())
+        // Optimized all folders query
+        $allFolders = Folder::where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
                   ->orWhere('visibility', 'public');
             })
             ->orderBy('name')
+            ->select(['id', 'name', 'parent_id'])
             ->get()
             ->map(function ($folder) {
                 return [
@@ -212,7 +252,7 @@ class FolderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return inertia('Folders/Show', [
+        return [
             'folder' => [
                 'id' => $folder->id,
                 'name' => $folder->name,
@@ -228,9 +268,10 @@ class FolderController extends Controller
             'currentFolderId' => $folder->id,
             'allFolders' => $allFolders,
             'disks' => $availableDisks,
-            'storageLoc' => $activeServingLocations->map(function ($loc) { return ['id' => $loc->id, 'name' => $loc->name]; }),
-            'from' => $request->query('from'),
-        ]);
+            'storageLoc' => $activeServingLocations->map(function ($loc) {
+                return ['id' => $loc->id, 'name' => $loc->name];
+            }),
+        ];
     }
 
     /**
@@ -493,6 +534,25 @@ class FolderController extends Controller
         }
 
         return $breadcrumbs;
+    }
+
+    private function clearFolderCaches(int $userId, $parentId = null): void
+    {
+        // Clear various cache patterns
+        $patterns = [
+            "folders_index_{$userId}_*",
+            "folder_show_*_{$userId}",
+            "cloud_data_{$userId}_*",
+        ];
+
+        foreach ($patterns as $pattern) {
+            Cache::forget($pattern);
+        }
+
+        // Clear specific caches
+        if ($parentId) {
+            Cache::forget("folders_index_{$userId}_{$parentId}_*");
+        }
     }
 private function formatFileSize($bytes)
 {

@@ -258,7 +258,12 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
                                     onDragEnd={() => { setDraggingFileId(null); setHoverFolderId(null); }}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <FilePreview file={file} size="md" />
+                                        <FilePreview
+                                            file={file}
+                                            size="md"
+                                            lazy={true}
+                                            priority={idx < 8} // Load first 8 images immediately
+                                        />
                                         <div className="min-w-0 flex-1">
                                             <button
                                                 onClick={() => { setPreviewIndex(idx); setShowFilePreview(true); }}
