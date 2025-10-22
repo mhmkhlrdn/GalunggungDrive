@@ -1024,30 +1024,34 @@ class FileController extends Controller
 
     private function clearFileCaches(int $userId, $folderId = null): void
     {
-        // Clear various cache patterns
-        $patterns = [
-            "cloud_data_{$userId}_*",
-            "folder_show_*_{$userId}",
-            "folders_index_{$userId}_*",
-        ];
-
-        foreach ($patterns as $pattern) {
-            Cache::forget($pattern);
-        }
-
-        // Clear specific caches
-        if ($folderId) {
-            Cache::forget("folder_show_{$folderId}_{$userId}");
-            Cache::forget("folders_index_{$userId}_{$folderId}_*");
-        }
-
-        // Bump per-user folders version token so versioned cache keys are invalidated
-        $versionKey = "folders_version_{$userId}";
+        // Use central CacheService to clear folder-related caches and bump version token
         try {
-            Cache::increment($versionKey);
+            \App\Services\CacheService::clearFolderCaches($userId, $folderId);
         } catch (\Throwable $e) {
-            $curr = Cache::get($versionKey, 0);
-            Cache::put($versionKey, $curr + 1);
+            // Fallback: attempt to clear likely keys and bump the version token
+            $patterns = [
+                "cloud_data_{$userId}_*",
+                "folder_show_*_{$userId}",
+                "folders_index_{$userId}_*",
+            ];
+
+            foreach ($patterns as $pattern) {
+                Cache::forget($pattern);
+            }
+
+            if ($folderId) {
+                $version = Cache::get("folders_version_{$userId}", 0);
+                Cache::forget("folder_show_{$folderId}_{$userId}_v{$version}");
+                Cache::forget("folders_index_{$userId}_{$folderId}_*");
+            }
+
+            $versionKey = "folders_version_{$userId}";
+            try {
+                Cache::increment($versionKey);
+            } catch (\Throwable $e2) {
+                $curr = Cache::get($versionKey, 0);
+                Cache::put($versionKey, $curr + 1);
+            }
         }
     }
 }

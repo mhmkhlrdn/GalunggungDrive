@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Services\CacheService;
 
 class CloudController extends Controller
 {
@@ -18,8 +19,8 @@ class CloudController extends Controller
         /** @var User $user */
         $userId = $user->id;
 
-        // Cache key based on user and permissions
-        $cacheKey = "cloud_data_{$userId}_" . ($user->isSuperAdmin() ? 'super' : ($user->isAdmin() ? 'admin' : 'user'));
+        // Use CacheService to obtain a versioned cache key so cache bumps propagate to Cloud as well
+        $cacheKey = CacheService::getCloudCacheKey($user);
 
         // Try to get cached data first
         $cachedData = Cache::remember($cacheKey, 300, function () use ($userId, $user) {

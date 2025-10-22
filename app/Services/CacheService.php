@@ -37,7 +37,8 @@ class CacheService
      */
     public static function getFolderData(int $folderId, int $userId): ?array
     {
-        $cacheKey = "folder_show_{$folderId}_{$userId}";
+        $version = Cache::get("folders_version_{$userId}", 0);
+        $cacheKey = "folder_show_{$folderId}_{$userId}_v{$version}";
         return Cache::get($cacheKey);
     }
 
@@ -46,7 +47,8 @@ class CacheService
      */
     public static function setFolderData(int $folderId, int $userId, array $data): void
     {
-        $cacheKey = "folder_show_{$folderId}_{$userId}";
+        $version = Cache::get("folders_version_{$userId}", 0);
+        $cacheKey = "folder_show_{$folderId}_{$userId}_v{$version}";
         Cache::put($cacheKey, $data, self::CACHE_TTL);
     }
 
@@ -204,7 +206,8 @@ class CacheService
     private static function getCloudCacheKey(User $user): string
     {
         $role = $user->isSuperAdmin() ? 'super' : ($user->isAdmin() ? 'admin' : 'user');
-        return "cloud_data_{$user->id}_{$role}";
+        $version = Cache::get("cloud_data_{$user->id}_version", 0);
+        return "cloud_data_{$user->id}_{$role}_v{$version}";
     }
 
     /**
