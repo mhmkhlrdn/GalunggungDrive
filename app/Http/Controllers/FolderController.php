@@ -540,7 +540,7 @@ class FolderController extends Controller
 
     private function clearFolderCaches(int $userId, $parentId = null): void
     {
-        $patterns = 
+        $patterns = [
             "folders_index_{$userId}_*",
             "folder_show_*_{$userId}",
             "cloud_data_{$userId}_*",
