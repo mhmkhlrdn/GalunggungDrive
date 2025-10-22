@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Models\StorageLocation;
 use Inertia\Inertia;
@@ -333,6 +334,9 @@ class FileController extends Controller
             $uploadedFiles[] = $file;
         }
 
+        // Clear relevant caches after file upload
+        $this->clearFileCaches(Auth::id(), $request->folder_id);
+
         return redirect()->back()->with('success',
             count($uploadedFiles) . ' file berhasil diunggah.'
         );
@@ -436,6 +440,9 @@ class FileController extends Controller
         ]);
 
         $file->delete();
+
+        // Clear relevant caches after file deletion
+        $this->clearFileCaches(Auth::id(), $file->folder_id);
 
         return redirect()->back()->with('success', 'File deleted successfully.');
     }
@@ -681,6 +688,10 @@ class FileController extends Controller
             'folder_id' => $request->folder_id,
         ]);
 
+        // Clear relevant caches after file move
+        $this->clearFileCaches(Auth::id(), $oldFolderId);
+        $this->clearFileCaches(Auth::id(), $request->folder_id);
+
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action' => 'move',
@@ -855,6 +866,11 @@ class FileController extends Controller
             }
         }
 
+        // Clear relevant caches after batch deletion
+        if ($deleted > 0) {
+            $this->clearFileCaches(Auth::id());
+        }
+
         // If there were no errors, return 204 No Content so the frontend
         // Inertia request doesn't receive a JSON body to render.
         if (empty($errors)) {
@@ -914,6 +930,11 @@ class FileController extends Controller
             } catch (\Throwable $e) {
                 $errors[] = "Failed to move file {$id}: {$e->getMessage()}";
             }
+        }
+
+        // Clear relevant caches after batch move
+        if ($moved > 0) {
+            $this->clearFileCaches(Auth::id());
         }
 
         if (empty($errors)) {
@@ -999,6 +1020,26 @@ class FileController extends Controller
         }
 
         return $folderMap;
+    }
+
+    private function clearFileCaches(int $userId, $folderId = null): void
+    {
+        // Clear various cache patterns
+        $patterns = [
+            "cloud_data_{$userId}_*",
+            "folder_show_*_{$userId}",
+            "folders_index_{$userId}_*",
+        ];
+
+        foreach ($patterns as $pattern) {
+            Cache::forget($pattern);
+        }
+
+        // Clear specific caches
+        if ($folderId) {
+            Cache::forget("folder_show_{$folderId}_{$userId}");
+            Cache::forget("folders_index_{$userId}_{$folderId}_*");
+        }
     }
 }
 

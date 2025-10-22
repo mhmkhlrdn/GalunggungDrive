@@ -61,13 +61,8 @@ class FolderController extends Controller
         $folderIds = $folders->pluck('id')->toArray();
 
         if (!empty($folderIds)) {
-            // Get file counts and sizes in batch
-            $fileStats = DB::table('files')
-                ->select('folder_id',
-                    DB::raw('COUNT(*) as files_count'),
-                    DB::raw('SUM(size) as total_size')
-                )
-                ->whereIn('folder_id', $folderIds)
+            // Get file counts and sizes in batch using Eloquent
+            $fileStats = File::whereIn('folder_id', $folderIds)
                 ->whereHas('storageLocation', function ($q) {
                     $q->where('is_active', true);
                 })
@@ -75,6 +70,10 @@ class FolderController extends Controller
                     $q->where('user_id', $user->id)
                       ->orWhere('visibility', 'public');
                 })
+                ->select('folder_id',
+                    DB::raw('COUNT(*) as files_count'),
+                    DB::raw('SUM(size) as total_size')
+                )
                 ->groupBy('folder_id')
                 ->get()
                 ->keyBy('folder_id');
@@ -483,6 +482,9 @@ class FolderController extends Controller
         ]);
 
         $folder->delete();
+
+        // Clear relevant caches after folder deletion
+        $this->clearFolderCaches(Auth::id(), $folder->parent_id);
 
         return redirect()->back()->with('success', 'Folder berhasil dihapus.');
     }
