@@ -179,8 +179,8 @@ class FileController extends Controller
         } else {
             Log::warning('No files found in upload request');
         }
-    
-         if ($user && $user->isStaff()) { 
+
+         if ($user && $user->isStaff()) {
  $validationRules['visibility'] = 'required|in:public';
 }
 
@@ -809,6 +809,53 @@ class FileController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Batch delete files by ids. Each file is authorized before deletion.
+     */
+    public function batchDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['deleted' => 0, 'errors' => ['No ids provided']], 422);
+        }
+
+        $deleted = 0;
+        $errors = [];
+
+        foreach ($ids as $id) {
+            try {
+                $file = File::find($id);
+                if (!$file) {
+                    $errors[] = "File {$id} not found";
+                    continue;
+                }
+
+                $this->authorize('delete', $file);
+
+                // delete physical files and versions
+                try {
+                    if ($file->disk && $file->path) {
+                        try { Storage::disk($file->disk)->delete($file->path); } catch (\Throwable $e) { /* ignore */ }
+                    }
+                    $file->versions()->get()->each(function ($version) use ($file) {
+                        try { Storage::disk($file->disk)->delete($version->path); } catch (\Throwable $e) { /* ignore */ }
+                    });
+                } catch (\Throwable $e) {
+                    // continue with DB delete even if physical deletion failed
+                }
+
+                $file->delete();
+                $deleted++;
+            } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                $errors[] = "No permission to delete file {$id}";
+            } catch (\Throwable $e) {
+                $errors[] = "Failed to delete file {$id}: {$e->getMessage()}";
+            }
+        }
+
+        return response()->json(['deleted' => $deleted, 'errors' => $errors]);
     }
 
     /**

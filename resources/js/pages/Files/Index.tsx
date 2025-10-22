@@ -257,8 +257,12 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
     const handleBulkDelete = () => {
         if (selectedFiles.length === 0) return;
         if (!confirm(`Hapus ${selectedFiles.length} file terpilih?`)) return;
-        selectedFiles.forEach(id => router.delete(`/files/${id}`));
-        router.reload();
+
+        post('/api/files/batch-delete', { ids: selectedFiles }, {
+            successMessage: `${selectedFiles.length} file berhasil dihapus.`,
+            errorMessage: ERROR_MESSAGES.FILE_DELETE_FAILED,
+            onSuccess: () => router.reload()
+        });
     };
 
     const handleMoveFile = (fileId: number, fileName: string) => {

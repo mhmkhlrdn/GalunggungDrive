@@ -72,6 +72,9 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
         Route::get('files/{file}/versions/{version}/download', [App\Http\Controllers\FileVersionController::class, 'download'])->name('files.versions.download');
         Route::delete('files/{file}/versions/{version}', [App\Http\Controllers\FileVersionController::class, 'destroy'])->name('files.versions.destroy');
 
+    // API batch operations
+    Route::post('api/files/batch-delete', [FileController::class, 'batchDelete'])->name('api.files.batch-delete');
+
         Route::resource('folders', FolderController::class);
         Route::post('folders/{folder}/restore', [FolderController::class, 'restore'])->name('folders.restore');
         Route::get('folders/{folder}/download', [FolderController::class, 'download'])->name('folders.download');

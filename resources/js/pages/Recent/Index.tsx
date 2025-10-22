@@ -22,11 +22,7 @@ import {
     Eye,
     Edit,
     Move,
-    Lock,
-    Globe,
-    Users,
     FolderOpen,
-    Home,
     Clock,
     Calendar,
     User,
@@ -148,21 +144,12 @@ export default function RecentIndex({ files, filters, folders, users = [], disks
         );
     };
 
-    const selectAllFiles = () => {
-        setSelectedFiles(files.data.map(file => file.id));
-    };
+    // selectAllFiles removed (not used)
 
     const clearSelection = () => {
         setSelectedFiles([]);
     };
 
-    const toggleSelectAll = () => {
-        if (selectedFiles.length === files.data.length) {
-            clearSelection();
-        } else {
-            selectAllFiles();
-        }
-    };
 
     const handleFileUpload = () => {
         router.reload();
@@ -234,18 +221,19 @@ export default function RecentIndex({ files, filters, folders, users = [], disks
         });
     };
 
-    const handleBulkShare = () => {
-        const filesToShare = files.data.filter(f => selectedFiles.includes(f.id));
-        if (filesToShare.length === 0) return;
-        setShareSelection(filesToShare);
-        setShowShareModal(true);
-    };
+    // bulk share is not used in this page; open share modal for selection via actions
 
     const handleBulkDelete = () => {
         if (selectedFiles.length === 0) return;
         if (!confirm(`Hapus ${selectedFiles.length} file terpilih?`)) return;
-        selectedFiles.forEach(id => router.delete(`/files/${id}`));
-        router.reload();
+
+        // Use single API call to delete multiple files to avoid Inertia cancelling
+        // concurrent router.delete calls. The API will authorize/delete each file.
+        post('/api/files/batch-delete', { ids: selectedFiles }, {
+            successMessage: `${selectedFiles.length} file berhasil dihapus.`,
+            errorMessage: ERROR_MESSAGES.FILE_DELETE_FAILED,
+            onSuccess: () => router.reload()
+        });
     };
 
     const handleMoveFile = (fileId: number, fileName: string) => {
