@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, Image, Video, Music, File, FileText, FileSpreadsheet, Presentation, Archive, Eye, Calendar, FolderOpen } from 'lucide-react';
+import { Folder, Upload, Plus, ArrowLeft, Download, Share2, Edit, Trash2, Move, Star, MoreVertical, File, FileText, Eye, Calendar, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FilePreviewModal from '@/components/file-preview-modal';
 import { Badge } from '@/components/ui/badge';
@@ -110,17 +110,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
         setShowEditModal(true);
     };
 
-    const getFileIcon = (mimeType: string) => {
-        if (mimeType.startsWith('image/')) return <Image className="h-4 w-4" />;
-        if (mimeType.startsWith('video/')) return <Video className="h-4 w-4" />;
-        if (mimeType.startsWith('audio/')) return <Music className="h-4 w-4" />;
-        if (mimeType === 'application/pdf') return <File className="h-4 w-4" />;
-        if (mimeType.includes('word')) return <FileText className="h-4 w-4" />;
-        if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return <FileSpreadsheet className="h-4 w-4" />;
-        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return <Presentation className="h-4 w-4" />;
-        if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-4 w-4" />;
-        return <File className="h-4 w-4" />;
-    };
+
 
     const getFileType = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return 'Image';
@@ -509,7 +499,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                 onClose={() => setShowUploadModal(false)}
                 currentFolderId={folder.id}
                 currentFolderName={folder.name}
-                onUpload={() => window.location.reload()}
+                onUpload={() => router.reload()}
                 storageLocations={storageLoc}
             />
 
