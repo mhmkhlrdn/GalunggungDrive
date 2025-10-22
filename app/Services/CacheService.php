@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\File;
@@ -10,9 +11,9 @@ use App\Models\Folder;
 
 class CacheService
 {
-    const CACHE_TTL = 300; // 5 minutes
-    const LONG_CACHE_TTL = 600; // 10 minutes
-    const SHORT_CACHE_TTL = 60; // 1 minute
+    const CACHE_TTL = 300;
+    const LONG_CACHE_TTL = 600;
+    const SHORT_CACHE_TTL = 60;
 
     /**
      * Get cached cloud data for user
@@ -149,15 +150,22 @@ class CacheService
             Cache::forget($pattern);
         }
 
-        // Also bump per-user version token so any cache keys that include the version
-        // will be invalidated. This keeps compatibility with FolderController's
-        // version-based invalidation strategy.
+
+
+
         $versionKey = "folders_version_{$userId}";
         try {
             Cache::increment($versionKey);
         } catch (\Throwable $e) {
             $curr = Cache::get($versionKey, 0);
             Cache::put($versionKey, $curr + 1);
+        }
+
+        try {
+            $new = Cache::get($versionKey, 0);
+            Log::info('Cleared folder caches, bumped folders_version', ['user_id' => $userId, 'new_version' => $new, 'parent_id' => $parentId]);
+        } catch (\Throwable $_) {
+
         }
     }
 
@@ -175,6 +183,30 @@ class CacheService
         foreach ($patterns as $pattern) {
             Cache::forget($pattern);
         }
+
+
+        $versionKey = "folders_version_{$userId}";
+        try {
+            Cache::increment($versionKey);
+        } catch (\Throwable $e) {
+            $curr = Cache::get($versionKey, 0);
+            Cache::put($versionKey, $curr + 1);
+        }
+
+        $cloudKey = "cloud_data_{$userId}_version";
+        try {
+            Cache::increment($cloudKey);
+        } catch (\Throwable $e) {
+            $curr = Cache::get($cloudKey, 0);
+            Cache::put($cloudKey, $curr + 1);
+        }
+
+        try {
+            $new = Cache::get($versionKey, 0);
+            Log::info('Cleared file caches, bumped folders_version and cloud_data_version', ['user_id' => $userId, 'folders_version' => $new]);
+        } catch (\Throwable $_) {
+
+        }
     }
 
     /**
@@ -182,10 +214,10 @@ class CacheService
      */
     public static function warmUpCaches(User $user): void
     {
-        // Pre-load commonly accessed data
+
         self::getUsersForSharing($user->id);
 
-        // Pre-load cloud data
+
         $fqcn = '\\App\\Http\\Controllers\\OptimizedCloudController';
         if (class_exists($fqcn)) {
             try {
@@ -195,7 +227,7 @@ class CacheService
                     self::setCloudData($user, $cloudData);
                 }
             } catch (\Throwable $e) {
-                // Non-fatal: skip warm-up if controller or method not available
+
             }
         }
     }
