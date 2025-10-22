@@ -186,7 +186,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                     <Edit className="mr-2 h-4 w-4" />
                                     Ganti Nama
                                 </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => window.open(`/folders/${folder.id}/download`, '_blank')}>
+                            <DropdownMenuItem onClick={() => { document.dispatchEvent(new Event('app:navigation-start')); window.open(`/folders/${folder.id}/download`, '_blank'); }}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download
                             </DropdownMenuItem>
@@ -265,7 +265,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem
-                                                onClick={() => window.open(`/folders/${subfolder.id}/download`, '_blank')}
+                                                onClick={() => { document.dispatchEvent(new Event('app:navigation-start')); window.open(`/folders/${subfolder.id}/download`, '_blank'); }}
                                             >
                                                 <Download className="h-4 w-4 mr-2" />
                                                 Download
@@ -397,7 +397,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
                                                     <Button
-                                                        onClick={() => window.open(`/files/${file.id}/download`, '_blank')}
+                                                        onClick={() => { document.dispatchEvent(new Event('app:navigation-start')); window.open(`/files/${file.id}/download`, '_blank'); }}
                                                         variant="ghost"
                                                         size="sm"
                                                         className="h-8 w-8 p-0"
@@ -433,6 +433,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                                 className="text-red-600"
                                                                 onClick={() => {
                                                                     if (confirm('Are you sure you want to delete this file?')) {
+                                                                        document.dispatchEvent(new Event('app:navigation-start'));
                                                                         router.delete(`/files/${file.id}`);
                                                                     }
                                                                 } }

@@ -88,6 +88,13 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                 }
             };
 
+            // Allow other parts of the app to signal a real navigation start so
+            // previews can be aborted immediately (without listening to noisy
+            // SPA events globally). This avoids spurious aborts but still
+            // prioritizes navigation when the app dispatches the event.
+            const onAppNavigationStart = () => handleAbort();
+            document.addEventListener('app:navigation-start', onAppNavigationStart);
+
             // Abort preview fetch when page is being unloaded/hidden so
             // navigation isn't postponed by in-flight requests. Avoid aborting
             // on SPA history/popstate or Inertia start events because those can
@@ -122,6 +129,7 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                 // Clean up listeners and revoke object URL
                 window.removeEventListener('pagehide', handleAbort);
                 window.removeEventListener('beforeunload', handleAbort);
+                document.removeEventListener('app:navigation-start', onAppNavigationStart);
                 try {
                     controller.abort();
                 } catch {
