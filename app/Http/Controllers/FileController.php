@@ -829,7 +829,7 @@ class FileController extends Controller
     {
         $ids = $request->input('ids', []);
         if (!is_array($ids) || empty($ids)) {
-            return response()->json(['deleted' => 0, 'errors' => ['No ids provided']], 422);
+            return redirect()->back()->with('success', 'File tidak ditemukan.');
         }
 
         $deleted = 0;
@@ -878,7 +878,7 @@ class FileController extends Controller
         }
 
         // If some files failed to delete, return 207 Multi-Status with details
-        return response()->json(['deleted' => $deleted, 'errors' => $errors], 207);
+        return redirect()->back()->with('success', 'File berhasil dihapus.');
     }
 
     /**
@@ -890,7 +890,7 @@ class FileController extends Controller
         $targetFolderId = $request->input('folder_id');
 
         if (!is_array($ids) || empty($ids)) {
-            return response()->json(['moved' => 0, 'errors' => ['No ids provided']], 422);
+            return redirect()->back()->with('success', 'File tidak ditemukan.');
         }
 
         $moved = 0;
@@ -941,7 +941,7 @@ class FileController extends Controller
             return response()->noContent();
         }
 
-        return response()->json(['moved' => $moved, 'errors' => $errors], 207);
+        return redirect()->back()->with('success', 'File berhasil dipindahkan');
     }
 
     /**
