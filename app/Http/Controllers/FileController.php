@@ -179,25 +179,10 @@ class FileController extends Controller
         } else {
             Log::warning('No files found in upload request');
         }
-
-        $staffAllowedMimeTypes = [
-            'image/*',
-            'video/*',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-        ];
-
-        if ($user && $user->isAdmin()) {
-
-        } elseif ($user && $user->isStaff()) {
-            $validationRules['files.*'] .= '|mimetypes:' . implode(',', $staffAllowedMimeTypes);
-
-            $validationRules['visibility'] = 'required|in:public';
-        } elseif (!empty($uploadConfig['allowed_mime_types'])) {
-            $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
-        }
+    
+         if ($user && $user->isStaff()) { 
+ $validationRules['visibility'] = 'required|in:public';
+}
 
         try {
             $validated = $request->validate($validationRules);
