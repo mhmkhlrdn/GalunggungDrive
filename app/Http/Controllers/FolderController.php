@@ -540,8 +540,7 @@ class FolderController extends Controller
 
     private function clearFolderCaches(int $userId, $parentId = null): void
     {
-        // Clear various cache patterns
-        $patterns = [
+        $patterns = 
             "folders_index_{$userId}_*",
             "folder_show_*_{$userId}",
             "cloud_data_{$userId}_*",
@@ -574,7 +573,7 @@ public function emptyFolder(Folder $folder): RedirectResponse
 
         ActivityLog::create([
             'user_id' => Auth::id(),
-            'action' => 'empty_folder',
+            'action' => 'empty',
             'target_type' => 'folder',
             'target_id' => $folder->id,
             'ip_address' => request()->ip(),
