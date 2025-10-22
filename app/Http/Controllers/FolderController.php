@@ -565,8 +565,9 @@ class FolderController extends Controller
         try {
             Cache::increment($cloudKey);
         } catch (\Throwable $e) {
-            $curr = Cache::get($cloudKey, 0);
-            Cache::put($cloudKey, $curr + 1);
+            Cache::put($cloudKey, function ($value) {
+                return $value === null ? 1 : $value + 1;
+            });
         }
 
 

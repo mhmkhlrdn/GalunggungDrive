@@ -870,9 +870,6 @@ class FileController extends Controller
             $this->clearFileCaches(Auth::id());
         }
 
-        if (empty($errors)) {
-            return response()->noContent();
-        }
 
         return redirect()->back()->with('success', 'File berhasil dihapus.');
     }
@@ -1200,10 +1197,9 @@ class FileController extends Controller
         $versionKey = "folders_version_{$userId}";
         Cache::increment($versionKey);
     } catch (\Throwable $e) {
-
-        $versionKey = "folders_version_{$userId}";
-        $curr = Cache::get($versionKey, 0);
-        Cache::put($versionKey, $curr + 1);
+        Cache::put($versionKey, function ($value) {
+            return $value === null ? 1 : $value + 1;
+        });
     }
 
 
