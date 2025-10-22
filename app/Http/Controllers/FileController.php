@@ -866,6 +866,64 @@ class FileController extends Controller
     }
 
     /**
+     * Batch move files to another folder. Each file is authorized before moving.
+     */
+    public function batchMove(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        $targetFolderId = $request->input('folder_id');
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['moved' => 0, 'errors' => ['No ids provided']], 422);
+        }
+
+        $moved = 0;
+        $errors = [];
+
+        foreach ($ids as $id) {
+            try {
+                $file = File::find($id);
+                if (!$file) {
+                    $errors[] = "File {$id} not found";
+                    continue;
+                }
+
+                $this->authorize('update', $file);
+
+                $oldFolder = $file->folder_id;
+                $file->update(['folder_id' => $targetFolderId]);
+
+                ActivityLog::create([
+                    'user_id' => Auth::id(),
+                    'action' => 'move',
+                    'target_type' => 'file',
+                    'target_id' => $file->id,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'success' => true,
+                    'details' => [
+                        'file_name' => $file->name,
+                        'from_folder' => $oldFolder,
+                        'to_folder' => $targetFolderId,
+                    ],
+                ]);
+
+                $moved++;
+            } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                $errors[] = "No permission to move file {$id}";
+            } catch (\Throwable $e) {
+                $errors[] = "Failed to move file {$id}: {$e->getMessage()}";
+            }
+        }
+
+        if (empty($errors)) {
+            return response()->noContent();
+        }
+
+        return response()->json(['moved' => $moved, 'errors' => $errors], 207);
+    }
+
+    /**
      * Recursively flatten files array to handle nested folder uploads
      */
     private function flattenFilesArray($filesArray, &$flattenedFiles)

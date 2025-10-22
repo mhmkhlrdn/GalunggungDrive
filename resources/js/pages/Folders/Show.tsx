@@ -16,6 +16,7 @@ import { formatFileSize, formatDate } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import CreateFolderModal from '@/components/create-folder-modal';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { useInertiaOperations } from '@/hooks/use-inertia-operations';
 import FilePreview from '@/components/file-preview';
 
 interface File {
@@ -63,9 +64,12 @@ interface Props {
 
 export default function FolderShow({ folder, files, folders, breadcrumbs, allFolders, from, storageLoc }: Props) {
     const { showError, showSuccess } = useSnackbar();
+    const { post } = useInertiaOperations();
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [fileToMove, setFileToMove] = useState<{ id: number; name: string } | null>(null);
+    const [showBulkMoveModal, setShowBulkMoveModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [fileToEdit, setFileToEdit] = useState<File | null>(null);
     const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
@@ -99,6 +103,40 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
      const handleMoveFile = (fileId: number, fileName: string) => {
          setFileToMove({ id: fileId, name: fileName });
          setShowMoveModal(true);
+    };
+
+    const toggleFileSelection = (fileId: number) => {
+        setSelectedFiles(prev => prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]);
+    };
+
+    const clearSelection = () => setSelectedFiles([]);
+
+    const handleBulkDelete = () => {
+        if (selectedFiles.length === 0) return;
+        if (!confirm(`Hapus ${selectedFiles.length} file terpilih?`)) return;
+
+        post('/api/files/batch-delete', { ids: selectedFiles }, {
+            successMessage: `${selectedFiles.length} file berhasil dihapus.`,
+            errorMessage: 'Gagal menghapus file',
+            onSuccess: () => {
+                showSuccess(`${selectedFiles.length} file berhasil dihapus.`);
+                clearSelection();
+                router.reload();
+            }
+        });
+    };
+
+    const handleBulkMove = (folderId: number | null) => {
+        if (selectedFiles.length === 0) return;
+        post('/api/files/batch-move', { ids: selectedFiles, folder_id: folderId }, {
+            successMessage: `${selectedFiles.length} file dipindahkan.`,
+            errorMessage: 'Gagal memindahkan file',
+            onSuccess: () => {
+                showSuccess(`${selectedFiles.length} file dipindahkan.`);
+                clearSelection();
+                router.reload();
+            }
+        });
     };
 
     const handleFileMove = () => {
@@ -320,7 +358,21 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                 </div>
             )}
 
-            {/* Files */}
+                {/* Bulk actions */}
+                {selectedFiles.length > 0 && (
+                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 dark:bg-blue-900/20 dark:border-blue-800 mb-4">
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm text-slate-700">{selectedFiles.length} file dipilih</div>
+                            <div className="flex items-center gap-2">
+                                <Button className="bg-red-600" onClick={handleBulkDelete}><Trash2 className="h-4 w-4 mr-2"/>Hapus</Button>
+                                <Button className="bg-blue-600" onClick={() => setShowBulkMoveModal(true)}><Move className="h-4 w-4 mr-2"/>Pindah</Button>
+                                <Button variant="ghost" onClick={clearSelection}>Batal</Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Files */}
             {files.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Files</h2>
@@ -351,7 +403,8 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                         <tr key={file.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
-                                                    <FilePreview file={file} size="sm"/>
+                                                                <input type="checkbox" checked={selectedFiles.includes(file.id)} onChange={() => toggleFileSelection(file.id)} className="mr-2" />
+                                                                <FilePreview file={file} size="sm"/>
                                                     {/* <span className="text-2xl mr-3">{getFileIcon(file.mime_type)}</span> */}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2">
@@ -387,6 +440,10 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-1">
+                                                    {selectedFiles.length > 0 ? null : (
+                                                        <>
+                                                        </>
+                                                    )}
                                                     <Button
                                                         onClick={() => { const idx = files.findIndex(f => f.id === file.id); if (idx >= 0) { setPreviewIndex(idx); setShowFilePreview(true); } } }
                                                         variant="ghost"
@@ -504,7 +561,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                 storageLocations={storageLoc}
             />
 
-            {/* Move File Modal */}
+            {/* Move File Modal (single) */}
             {fileToMove && (
                 <MoveFileModal
                     isOpen={showMoveModal}
@@ -515,6 +572,19 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                     onMove={handleFileMove}
                     fileId={fileToMove.id}
                     fileName={fileToMove.name}
+                    currentFolderId={folder.id}
+                    folders={allFolders}
+                />
+            )}
+
+            {/* Move File Modal (bulk) - reuse component UI, call handleBulkMove on submit */}
+            {showBulkMoveModal && (
+                <MoveFileModal
+                    isOpen={showBulkMoveModal}
+                    onClose={() => setShowBulkMoveModal(false)}
+                    onMove={(folderId) => { handleBulkMove(folderId); setShowBulkMoveModal(false); }}
+                    fileId={0}
+                    fileName={`${selectedFiles.length} files`}
                     currentFolderId={folder.id}
                     folders={allFolders}
                 />

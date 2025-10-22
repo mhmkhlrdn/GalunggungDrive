@@ -74,6 +74,7 @@ Route::middleware(['auth', 'verified', 'check.session'])->group(function () {
 
     // API batch operations
     Route::post('api/files/batch-delete', [FileController::class, 'batchDelete'])->name('api.files.batch-delete');
+    Route::post('api/files/batch-move', [FileController::class, 'batchMove'])->name('api.files.batch-move');
 
         Route::resource('folders', FolderController::class);
         Route::post('folders/{folder}/restore', [FolderController::class, 'restore'])->name('folders.restore');
