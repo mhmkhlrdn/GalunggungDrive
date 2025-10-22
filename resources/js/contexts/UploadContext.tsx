@@ -30,6 +30,8 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
     const [uploads, setUploads] = useState<UploadFile[]>([]);
 
     const uploadFiles = useCallback(async (files: File[], commonFormData: FormData) => {
+        if (!files || files.length === 0) return;
+
         // Prepare upload entries for each file for UI tracking
         const newUploads: UploadFile[] = files.map(file => ({
             id: uuidv4(),
@@ -43,38 +45,74 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
 
         setUploads(prev => [...prev, ...newUploads]);
 
-        // Send the full FormData in a single request so the server receives the
-        // `files[0]`, `files[1]`, ... and `relative_paths[...]` keys exactly as built
-        // by the upload modal. This avoids mismatches when the modal constructs
-        // indexed form keys and the context was splitting requests per file.
-        const source = axios.CancelToken.source();
-
-        // Mark all uploads as uploading
-        setUploads(prev => prev.map(u => newUploads.find(nu => nu.id === u.id) ? { ...u, status: 'uploading', startTime: Date.now() } : u));
-
-        try {
-            await axios.post('/files', commonFormData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-                onUploadProgress: (progressEvent) => {
-                    const { loaded, total } = progressEvent;
-                    if (!total) return;
-                    const progress = Math.round((loaded * 100) / total);
-
-                    // Update all new uploads with the overall progress percentage
-                    setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, progress, uploadedBytes: Math.round((progress / 100) * u.totalBytes) } : u));
-                },
-                cancelToken: source.token,
-            });
-
-            // Mark all as completed
-            setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, progress: 100, uploadedBytes: u.totalBytes, status: 'completed', endTime: Date.now() } : u));
-        } catch (error) {
-            if (axios.isCancel(error)) {
-                setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, status: 'cancelled', endTime: Date.now(), error: (error as any).message } : u));
-            } else {
-                console.error('Upload failed:', error);
-                setUploads(prev => prev.map(u => newUploads.some(nu => nu.id === u.id) ? { ...u, status: 'failed', endTime: Date.now(), error: 'Upload failed' } : u));
+        // Helper: extract scalar fields (folder_id, disk_id, description, tags, visibility)
+        const scalarFields: Record<string, string> = {};
+        const relativePaths: string[] = [];
+        for (const [key, value] of Array.from(commonFormData.entries())) {
+            if (typeof key === 'string' && key.startsWith('relative_paths[')) {
+                // parse index
+                const match = key.match(/relative_paths\[(\d+)\]/);
+                if (match) {
+                    const idx = Number(match[1]);
+                    relativePaths[idx] = String(value as string);
+                }
+            } else if (key !== 'files' && !key.startsWith('files[')) {
+                scalarFields[key] = String(value as string);
             }
+        }
+
+        // Upload the first file with high priority
+        const uploadSingle = async (fileIndex: number) => {
+            const file = files[fileIndex];
+            const uploadEntry = newUploads[fileIndex];
+
+            const fd = new FormData();
+            fd.append('files[0]', file);
+            fd.append('relative_paths[0]', relativePaths[fileIndex] ?? file.name);
+            // append scalar fields
+            Object.keys(scalarFields).forEach(k => fd.append(k, scalarFields[k]));
+
+            const source = axios.CancelToken.source();
+
+            // mark this upload as uploading and attach cancel
+            setUploads(prev => prev.map(u => u.id === uploadEntry.id ? { ...u, status: 'uploading', startTime: Date.now(), cancelSource: () => source.cancel('cancelled') } : u));
+
+            try {
+                await axios.post('/files', fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                    onUploadProgress: (e) => {
+                        const { loaded, total } = e;
+                        if (!total) return;
+                        const progress = Math.round((loaded * 100) / total);
+                        setUploads(prev => prev.map(u => u.id === uploadEntry.id ? { ...u, progress, uploadedBytes: Math.round((progress / 100) * u.totalBytes) } : u));
+                    },
+                    cancelToken: source.token,
+                });
+
+                setUploads(prev => prev.map(u => u.id === uploadEntry.id ? { ...u, progress: 100, uploadedBytes: u.totalBytes, status: 'completed', endTime: Date.now() } : u));
+            } catch (error) {
+                if (axios.isCancel(error)) {
+                    const err = error as unknown;
+                    const msg = (err && typeof err === 'object' && 'message' in (err as Record<string, unknown>) && typeof (err as Record<string, unknown>).message === 'string')
+                        ? String((err as Record<string, unknown>).message)
+                        : 'Cancelled';
+                    setUploads(prev => prev.map(u => u.id === uploadEntry.id ? { ...u, status: 'cancelled', endTime: Date.now(), error: msg } : u));
+                } else {
+                    console.error('Upload failed for file', uploadEntry.name, error);
+                    setUploads(prev => prev.map(u => u.id === uploadEntry.id ? { ...u, status: 'failed', endTime: Date.now(), error: 'Upload failed' } : u));
+                }
+            }
+        };
+
+        // First file
+        await uploadSingle(0);
+
+        // Upload remaining files sequentially (one at a time) to avoid uploading all at once
+        // Upload remaining files sequentially (one-by-one) so the first file has priority
+        // Continue on errors so one failure doesn't halt the queue
+        for (let i = 1; i < files.length; i++) {
+            // await sequentially
+            await uploadSingle(i);
         }
     }, []);
 
