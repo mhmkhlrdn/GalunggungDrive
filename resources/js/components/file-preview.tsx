@@ -70,38 +70,72 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
     const handleError = () => { setIsLoading(false); setHasError(true); };
 
     useEffect(() => {
-        let cancelled = false;
         let objectUrl: string | null = null;
 
         // Only attempt fetch for previewable types
         if (showPreview) {
             setIsLoading(true);
             setHasError(false);
+
+            const controller = new AbortController();
+            const { signal } = controller;
+
+            const handleAbort = () => {
+                try {
+                    controller.abort();
+                } catch {
+                    // ignore
+                }
+            };
+
+            // Abort preview fetch when navigation or page hide events happen so
+            // navigation isn't postponed by in-flight requests.
+            window.addEventListener('pagehide', handleAbort);
+            window.addEventListener('beforeunload', handleAbort);
+            window.addEventListener('popstate', handleAbort);
+
+            // Inertia emits events on document; try to abort on inertia:start if present
+            const onInertiaStart = () => handleAbort();
+            document.addEventListener('inertia:start', onInertiaStart);
+
             (async () => {
                 try {
-                    const res = await fetch(`/files/${file.id}/preview`, { credentials: 'include' });
+                    const res = await fetch(`/files/${file.id}/preview`, { credentials: 'include', signal });
                     if (!res.ok) throw new Error(`Preview request failed: ${res.status}`);
                     const blob = await res.blob();
                     objectUrl = URL.createObjectURL(blob);
-                    if (!cancelled) {
-                        setSrcUrl(objectUrl);
-                        // let the normal onLoad/onLoadedData handle marking loaded
-                    }
+                    setSrcUrl(objectUrl);
+                    // let the normal onLoad/onLoadedData handle marking loaded
                 } catch (e) {
-                    if (!cancelled) {
-                        console.error('Preview fetch failed for file', file.id, e);
-                        handleError();
+                    // Ignore abort errors - they indicate navigation or unmount
+                    // 'e' is unknown here, check its name property defensively
+                    const errName = e instanceof Error ? e.name : String((e as unknown) || '');
+                    if (errName === 'AbortError') {
+                        // stop showing spinner so navigation can proceed immediately
+                        setIsLoading(false);
+                        return;
                     }
+                    console.error('Preview fetch failed for file', file.id, e);
+                    handleError();
                 }
             })();
+
+            return () => {
+                // Clean up listeners and revoke object URL
+                window.removeEventListener('pagehide', handleAbort);
+                window.removeEventListener('beforeunload', handleAbort);
+                window.removeEventListener('popstate', handleAbort);
+                document.removeEventListener('inertia:start', onInertiaStart);
+                try {
+                    controller.abort();
+                } catch {
+                    // ignore
+                }
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+            };
         }
 
-        return () => {
-            cancelled = true;
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
-        };
+        return () => {};
     }, [file.id, showPreview]);
 
     if (isImage || isVideo) {
