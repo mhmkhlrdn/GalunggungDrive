@@ -1054,7 +1054,7 @@ class FileController extends Controller
 
     try {
         if (class_exists(\App\Services\CacheService::class)) {
-            \App\Services\CacheService::clearFolderCaches($userId, $folderId);
+            \App\Services\CacheService::clearFileCaches($userId);
             return;
         }
     } catch (\Throwable $e) {
