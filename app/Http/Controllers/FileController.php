@@ -855,7 +855,14 @@ class FileController extends Controller
             }
         }
 
-        return response()->json(['deleted' => $deleted, 'errors' => $errors]);
+        // If there were no errors, return 204 No Content so the frontend
+        // Inertia request doesn't receive a JSON body to render.
+        if (empty($errors)) {
+            return response()->noContent();
+        }
+
+        // If some files failed to delete, return 207 Multi-Status with details
+        return response()->json(['deleted' => $deleted, 'errors' => $errors], 207);
     }
 
     /**
