@@ -18,8 +18,10 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
     const [hasError, setHasError] = useState(false);
     const [isVisible, setIsVisible] = useState(!lazy || priority);
     const [hasLoaded, setHasLoaded] = useState(false);
+    const [srcUrl, setSrcUrl] = useState<string | null>(null);
     const elementRef = useRef<HTMLDivElement>(null);
     const controllerRef = useRef<AbortController | null>(null);
+    const srcUrlRef = useRef<string | null>(null);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.startsWith('image/')) return Image;
@@ -68,6 +70,7 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
     const isImage = file.mime_type.startsWith('image/');
     const isVideo = file.mime_type.startsWith('video/');
     const showPreview = (isImage || isVideo) && !hasError && isVisible;
+    const IconComponent = getFileIcon(file.mime_type);
 
     // Intersection Observer for lazy loading
     useEffect(() => {
@@ -147,6 +150,7 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
                 const blob = await res.blob();
                 objectUrl = URL.createObjectURL(blob);
                 setSrcUrl(objectUrl);
+                srcUrlRef.current = objectUrl;
                 setHasLoaded(true);
             } catch (e) {
                 const errName = e instanceof Error ? e.name : String((e as unknown) || '');
@@ -169,7 +173,10 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
                 } catch {
                     // ignore
                 }
-                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                if (objectUrl) {
+                    URL.revokeObjectURL(objectUrl);
+                    srcUrlRef.current = null;
+                }
             };
         };
 
@@ -182,11 +189,11 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
             if (controllerRef.current) {
                 controllerRef.current.abort();
             }
-            if (srcUrl) {
-                URL.revokeObjectURL(srcUrl);
+            if (srcUrlRef.current) {
+                URL.revokeObjectURL(srcUrlRef.current);
             }
         };
-    }, [srcUrl]);
+    }, []); // Empty dependency array - only run on unmount
 
     if (isImage || isVideo) {
         return (
@@ -231,8 +238,6 @@ export default function FilePreview({ file, size = 'md', className = '', lazy = 
             </div>
         );
     }
-
-    const IconComponent = getFileIcon(file.mime_type);
 
     return (
         <div className={`${getSizeClasses()} rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center ${className}`}>
