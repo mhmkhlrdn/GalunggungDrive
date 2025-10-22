@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { File, Image, Video, Music, FileText, Archive } from 'lucide-react';
 
 interface FilePreviewProps {
@@ -64,8 +64,45 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
     const showPreview = (isImage || isVideo) && !hasError;
     const IconComponent = getFileIcon(file.mime_type);
 
+    const [srcUrl, setSrcUrl] = useState<string | null>(null);
+
     const handleLoad = () => setIsLoading(false);
     const handleError = () => { setIsLoading(false); setHasError(true); };
+
+    useEffect(() => {
+        let cancelled = false;
+        let objectUrl: string | null = null;
+
+        // Only attempt fetch for previewable types
+        if (showPreview) {
+            setIsLoading(true);
+            setHasError(false);
+            (async () => {
+                try {
+                    const res = await fetch(`/files/${file.id}/preview`, { credentials: 'include' });
+                    if (!res.ok) throw new Error(`Preview request failed: ${res.status}`);
+                    const blob = await res.blob();
+                    objectUrl = URL.createObjectURL(blob);
+                    if (!cancelled) {
+                        setSrcUrl(objectUrl);
+                        // let the normal onLoad/onLoadedData handle marking loaded
+                    }
+                } catch (e) {
+                    if (!cancelled) {
+                        console.error('Preview fetch failed for file', file.id, e);
+                        handleError();
+                    }
+                }
+            })();
+        }
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [file.id, showPreview]);
 
     if (isImage || isVideo) {
         return (
@@ -78,24 +115,27 @@ export default function FilePreview({ file, size = 'md', className = '' }: FileP
                 {showPreview ? (
                     isImage ? (
                         <img
-                            src={`/files/${file.id}/preview`}
+                            src={srcUrl ?? undefined}
                             alt={file.name}
-                            className={`w-full h-full object-cover ${isLoading ? 'hidden' : ''}`}
+                            className={`w-full h-full object-cover transition-opacity duration-200`}
+                            style={{ opacity: isLoading ? 0 : 1 }}
                             onLoad={handleLoad}
                             onError={handleError}
-                            loading="lazy"
+                            // avoid native lazy loading when we fetch blob manually
+                            loading="eager"
                         />
                     ) : (
                         <video
-                            src={`/files/${file.id}/preview`}
-                            className={`w-full h-full object-cover ${isLoading ? 'hidden' : ''}`}
-                            onLoad={handleLoad}
+                            src={srcUrl ?? undefined}
+                            className={`w-full h-full object-cover transition-opacity duration-200`}
+                            style={{ opacity: isLoading ? 0 : 1 }}
+                            onLoadedData={handleLoad}
                             onError={handleError}
                             controls={false}
                             muted
                             loop
                             playsInline
-                            preload="none"
+                            preload="metadata"
                         />
                     )
                 ) : (
