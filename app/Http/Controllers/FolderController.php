@@ -562,6 +562,9 @@ class FolderController extends Controller
 
 
         $cloudKey = "cloud_data_{$userId}_version";
+                if (!Cache::has($cloudKey)) {
+            Cache::put($cloudKey, 0);
+        }
         try {
             Cache::increment($cloudKey);
         } catch (\Throwable $e) {

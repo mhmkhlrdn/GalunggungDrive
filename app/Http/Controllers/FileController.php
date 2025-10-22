@@ -1193,6 +1193,10 @@ class FileController extends Controller
     }
 
 
+    $versionKey = "folders_version_{$userId}";
+        if (!Cache::has($versionKey)) {
+            Cache::put($versionKey, 0);
+        }
     try {
         $versionKey = "folders_version_{$userId}";
         Cache::increment($versionKey);
