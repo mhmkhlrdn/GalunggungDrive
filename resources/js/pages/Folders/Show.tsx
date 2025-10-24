@@ -405,7 +405,6 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                                                 <div className="flex items-center gap-3">
                                                                 <input type="checkbox" checked={selectedFiles.includes(file.id)} onChange={() => toggleFileSelection(file.id)} className="mr-2" />
                                                                 <FilePreview file={file} size="sm"/>
-                                                    {/* <span className="text-2xl mr-3">{getFileIcon(file.mime_type)}</span> */}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2">
                                                             <button

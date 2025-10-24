@@ -156,7 +156,6 @@ export default function UserCreate() {
                                                 <SelectValue placeholder="Pilih peran" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="user">Pengguna</SelectItem>
                                                 <SelectItem value="staff">Staf</SelectItem>
                                                 <SelectItem value="admin">Admin</SelectItem>
                                                 <SelectItem value="super-admin">Super Admin</SelectItem>
