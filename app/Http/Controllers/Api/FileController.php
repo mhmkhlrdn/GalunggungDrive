@@ -22,6 +22,7 @@ class FileController extends Controller
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
+        $myFilesOnly = $request->get('my_files_only', false);
 
         $query = File::with(['user', 'folder', 'storageLocation'])
             ->whereHas('storageLocation', function ($q) {
@@ -33,19 +34,24 @@ class FileController extends Controller
             if ($user->isStaff() && !$user->isAdmin()) {
                 $query->where('user_id', $user->id);
             } else {
-                // Admin and regular users can see their own files, public files, shared files, and files shared with them
-                $query->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
-                      ->orWhereHas('shares', function ($shareQuery) use ($user) {
-                          $shareQuery->where('shared_with', $user->id)
-                                     ->where(function ($expireQuery) {
-                                         $expireQuery->whereNull('expires_at')
-                                                    ->orWhere('expires_at', '>', now());
-                                     });
-                      });
-                });
+                // If my_files_only is true, only show user's own files
+                if ($myFilesOnly) {
+                    $query->where('user_id', $user->id);
+                } else {
+                    // Admin and regular users can see their own files, public files, shared files, and files shared with them
+                    $query->where(function ($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                          ->orWhere('visibility', 'public')
+                          ->orWhere('visibility', 'shared')
+                          ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                              $shareQuery->where('shared_with', $user->id)
+                                         ->where(function ($expireQuery) {
+                                             $expireQuery->whereNull('expires_at')
+                                                        ->orWhere('expires_at', '>', now());
+                                         });
+                          });
+                    });
+                }
             }
         }
 
