@@ -21,8 +21,13 @@ class FolderController extends Controller
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
 
-        $query = Folder::with(['user', 'parent'])
-            ->where('user_id', Auth::id());
+        $user = Auth::user();
+        $query = Folder::with(['user', 'parent']);
+
+        // Super-admin can see all folders, others are restricted
+        if (!$user->isSuperAdmin()) {
+            $query->where('user_id', $user->id);
+        }
 
         if ($parentId) {
             $query->where('parent_id', $parentId);
@@ -36,20 +41,30 @@ class FolderController extends Controller
 
         $folders = $query->orderBy($sortBy, $sortOrder)->paginate(20);
 
-        $folders->getCollection()->transform(function ($folder) {
-            $filesCount = File::where('folder_id', $folder->id)
+        $user = Auth::user();
+        $folders->getCollection()->transform(function ($folder) use ($user) {
+            $filesQuery = File::where('folder_id', $folder->id)
                 ->whereHas('storageLocation', function ($q) {
                     $q->where('is_active', true);
-                })
-                ->where('user_id', Auth::id())
-                ->count();
+                });
 
-            $totalSize = File::where('folder_id', $folder->id)
+            // Super-admin can see all files, others only their own
+            if (!$user->isSuperAdmin()) {
+                $filesQuery->where('user_id', $user->id);
+            }
+
+            $filesCount = $filesQuery->count();
+
+            $sizeQuery = File::where('folder_id', $folder->id)
                 ->whereHas('storageLocation', function ($q) {
                     $q->where('is_active', true);
-                })
-                ->where('user_id', Auth::id())
-                ->sum('size');
+                });
+
+            if (!$user->isSuperAdmin()) {
+                $sizeQuery->where('user_id', $user->id);
+            }
+
+            $totalSize = $sizeQuery->sum('size');
 
             $folder->files_count = $filesCount;
             $folder->total_size = $totalSize;
@@ -120,22 +135,124 @@ class FolderController extends Controller
     {
         $this->authorize('view', $folder);
 
-        $files = File::where('folder_id', $folder->id)
-            ->where('user_id', Auth::id())
+        $user = Auth::user();
+
+        $files = File::with(['user', 'storageLocation'])
+            ->where('folder_id', $folder->id)
+            ->whereHas('storageLocation', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->where(function ($q) use ($user) {
+                if ($user->isStaff() && !$user->isAdmin()) {
+                    $q->where('user_id', $user->id);
+                } else {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('visibility', 'public')
+                      ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                          $shareQuery->where('shared_with', $user->id)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                }
+            })
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        $subfolders = Folder::where('parent_id', $folder->id)
-            ->where('user_id', Auth::id())
+        $files->transform(function ($file) use ($user) {
+            $file->starred = $file->isStarredBy($user);
+            return $file;
+        });
+
+        $subfolders = Folder::with(['user'])
+            ->where('parent_id', $folder->id)
+            ->where(function ($q) use ($user) {
+                if ($user->isStaff() && !$user->isAdmin()) {
+                    $q->where('user_id', $user->id);
+                } else {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('visibility', 'public')
+                      ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                          $shareQuery->where('shared_with', $user->id)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                }
+            })
             ->orderBy('name')
             ->get();
+
+        // Transform files
+        $filesData = $files->map(function ($file) {
+            return [
+                'id' => $file->id,
+                'name' => $file->name,
+                'size' => $file->size,
+                'mime_type' => $file->mime_type,
+                'description' => $file->description,
+                'tags' => $file->tags,
+                'visibility' => $file->visibility,
+                'starred' => $file->starred ?? false,
+                'folder_id' => $file->folder_id,
+                'created_at' => $file->created_at->toISOString(),
+                'updated_at' => $file->updated_at->toISOString(),
+                'user' => [
+                    'id' => $file->user->id,
+                    'name' => $file->user->name,
+                    'email' => $file->user->email,
+                ],
+                'storage_location' => $file->storageLocation ? [
+                    'id' => $file->storageLocation->id,
+                    'name' => $file->storageLocation->name,
+                ] : null,
+            ];
+        });
+
+        // Transform subfolders
+        $subfoldersData = $subfolders->map(function ($subfolder) {
+            $filesCount = File::where('folder_id', $subfolder->id)
+                ->whereHas('storageLocation', function ($q) {
+                    $q->where('is_active', true);
+                })
+                ->count();
+
+            return [
+                'id' => $subfolder->id,
+                'name' => $subfolder->name,
+                'parent_id' => $subfolder->parent_id,
+                'visibility' => $subfolder->visibility,
+                'created_at' => $subfolder->created_at->toISOString(),
+                'updated_at' => $subfolder->updated_at->toISOString(),
+                'user' => [
+                    'id' => $subfolder->user->id,
+                    'name' => $subfolder->user->name,
+                    'email' => $subfolder->user->email,
+                ],
+                'files_count' => $filesCount,
+            ];
+        });
 
         return response()->json([
             'status' => 'success',
             'data' => [
-                'folder' => $folder,
-                'files' => $files,
-                'subfolders' => $subfolders,
+                'folder' => [
+                    'id' => $folder->id,
+                    'name' => $folder->name,
+                    'parent_id' => $folder->parent_id,
+                    'visibility' => $folder->visibility,
+                    'created_at' => $folder->created_at->toISOString(),
+                    'updated_at' => $folder->updated_at->toISOString(),
+                    'user' => [
+                        'id' => $folder->user->id,
+                        'name' => $folder->user->name,
+                        'email' => $folder->user->email,
+                    ],
+                ],
+                'files' => $filesData,
+                'subfolders' => $subfoldersData,
             ],
         ]);
     }

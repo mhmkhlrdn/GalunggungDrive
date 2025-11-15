@@ -28,10 +28,25 @@ class FileController extends Controller
                 $q->where('is_active', true);
             });
 
-        if ($user->isStaff() && !$user->isAdmin()) {
-            $query->where('user_id', $user->id);
-        } else {
-            $query->where('user_id', $user->id);
+        // Super-admin can see all files, others are restricted
+        if (!$user->isSuperAdmin()) {
+            if ($user->isStaff() && !$user->isAdmin()) {
+                $query->where('user_id', $user->id);
+            } else {
+                // Admin and regular users can see their own files, public files, shared files, and files shared with them
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('visibility', 'public')
+                      ->orWhere('visibility', 'shared')
+                      ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                          $shareQuery->where('shared_with', $user->id)
+                                     ->where(function ($expireQuery) {
+                                         $expireQuery->whereNull('expires_at')
+                                                    ->orWhere('expires_at', '>', now());
+                                     });
+                      });
+                });
+            }
         }
 
         if ($folderId) {
