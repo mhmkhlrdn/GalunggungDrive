@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, File, Folder, AlertCircle } from 'lucide-react';
+import { Upload, X, File, Folder, AlertCircle, ChevronRight, ChevronDown, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,12 @@ interface StorageLocationOption {
     name: string;
 }
 
+interface Folder {
+    id: number;
+    name: string;
+    parent_id?: number;
+}
+
 interface FileUploadModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -23,6 +29,7 @@ interface FileUploadModalProps {
     currentFolderId?: number;
     currentFolderName?: string;
     storageLocations?: StorageLocationOption[];
+    folders?: Folder[];
 }
 
 interface UploadEntry {
@@ -32,13 +39,16 @@ interface UploadEntry {
 
 import { useEffect } from 'react';
 
-export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, currentFolderName, storageLocations = [] }: FileUploadModalProps) {
+export default function FileUploadModal({ isOpen, onClose, onUpload, currentFolderId, storageLocations = [], folders = [] }: FileUploadModalProps) {
     const { auth } = usePage<SharedData>().props;
     const user = auth?.user;
     const isStaff = user && user.role === 'staff';
     const { uploadFiles } = useUpload();
 
     const [uploadedFiles, setUploadedFiles] = useState<UploadEntry[]>([]);
+    const [selectedFolderId, setSelectedFolderId] = useState<number | null>(currentFolderId || null);
+    const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
+    const [showFolderSelector, setShowFolderSelector] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,12 +61,17 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
 
     const { data, setData, errors, reset } = useForm({
         files: [] as UploadEntry[],
-        folder_id: currentFolderId || null,
+        folder_id: selectedFolderId,
         disk_id: storageLocations.length ? storageLocations[0].id : undefined as number | undefined,
         description: '',
         tags: '',
         visibility: 'public',
     });
+
+    // Update form data when selectedFolderId changes
+    useEffect(() => {
+        setData('folder_id', selectedFolderId);
+    }, [selectedFolderId, setData]);
 
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -132,7 +147,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
             formData.append(`relative_paths[${index}]`, entry.relativePath);
             filesToUpload.push(entry.file);
         });
-        formData.append('folder_id', data.folder_id ? String(data.folder_id) : '');
+        formData.append('folder_id', selectedFolderId ? String(selectedFolderId) : '');
         formData.append('disk_id', data.disk_id ? String(data.disk_id) : '');
         formData.append('description', data.description);
         formData.append('tags', data.tags);
@@ -166,6 +181,77 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    const buildFolderTree = (folders: Folder[], parentId: number | null = null): Folder[] => {
+        return folders.filter(folder => folder.parent_id === parentId);
+    };
+
+    const toggleFolder = (folderId: number) => {
+        const newExpanded = new Set(expandedFolders);
+        if (newExpanded.has(folderId)) {
+            newExpanded.delete(folderId);
+        } else {
+            newExpanded.add(folderId);
+        }
+        setExpandedFolders(newExpanded);
+    };
+
+    const selectFolder = (folderId: number | null) => {
+        setSelectedFolderId(folderId);
+        setShowFolderSelector(false);
+    };
+
+    const renderFolderTree = (foldersToRender: Folder[], level = 0): React.ReactElement[] => {
+        return foldersToRender.map(folder => {
+            const hasChildren = folders.some(f => f.parent_id === folder.id);
+            const isExpanded = expandedFolders.has(folder.id);
+            const isSelected = selectedFolderId === folder.id;
+
+            return (
+                <div key={folder.id}>
+                    <div
+                        className={`flex items-center gap-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer ${
+                            isSelected ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-600' : ''
+                        }`}
+                        style={{ paddingLeft: `${level * 20 + 8}px` }}
+                        onClick={() => selectFolder(folder.id)}
+                    >
+                        {hasChildren ? (
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggleFolder(folder.id);
+                                }}
+                                className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex-shrink-0"
+                                type="button"
+                            >
+                                {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                                )}
+                            </button>
+                        ) : (
+                            <div className="w-5 h-5 flex-shrink-0" />
+                        )}
+                        <Folder className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm text-slate-900 dark:text-white">{folder.name}</span>
+                    </div>
+                    {hasChildren && isExpanded && (
+                        <div>
+                            {renderFolderTree(buildFolderTree(folders, folder.id), level + 1)}
+                        </div>
+                    )}
+                </div>
+            );
+        });
+    };
+
+    const rootFolders = buildFolderTree(folders);
+    const selectedFolderName = selectedFolderId
+        ? folders.find(f => f.id === selectedFolderId)?.name || 'Root'
+        : 'Root (No folder)';
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -177,13 +263,44 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, currentFold
                 </DialogHeader>
 
                 <div className="space-y-6 overflow-y-auto flex-1">
-                    {/* Folder Indicator */}
-                    {currentFolderName && (
-                        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                            <Folder className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm text-blue-800 dark:text-blue-200">
-                                File akan diunggah ke: <strong>{currentFolderName}</strong>
-                            </span>
+                    {/* Folder Selection */}
+                    {folders.length > 0 && (
+                        <div className="space-y-2">
+                            <Label htmlFor="folder">Pilih Folder Tujuan</Label>
+                            <div className="relative">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowFolderSelector(!showFolderSelector)}
+                                    className="w-full justify-between"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <Folder className="h-4 w-4" />
+                                        {selectedFolderName}
+                                    </span>
+                                    <ChevronDown className={`h-4 w-4 transition-transform ${showFolderSelector ? 'rotate-180' : ''}`} />
+                                </Button>
+                                {showFolderSelector && (
+                                    <div className="absolute z-10 w-full mt-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-lg max-h-64 overflow-y-auto">
+                                        <div
+                                            className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                                                selectedFolderId === null ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-600' : ''
+                                            }`}
+                                            onClick={() => selectFolder(null)}
+                                        >
+                                            <Home className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                                            <span className="text-sm text-slate-900 dark:text-white font-medium">Root (No folder)</span>
+                                        </div>
+                                        {rootFolders.length > 0 ? (
+                                            renderFolderTree(rootFolders)
+                                        ) : (
+                                            <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+                                                No folders available
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

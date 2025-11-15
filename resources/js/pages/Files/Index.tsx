@@ -623,6 +623,7 @@ export default function FilesIndex({ files, currentFolder, breadcrumbs, filters,
                     currentFolderId={currentFolder?.id}
                     currentFolderName={currentFolder?.name}
                     storageLocations={disks ?? []}
+                    folders={folders}
                 />
                 <CreateFolderModal
                     isOpen={showCreateFolderModal}

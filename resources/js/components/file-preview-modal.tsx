@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { route } from 'ziggy-js';
-import { X, Download, Share2, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
+import { X, Download, Share2, FileText, Image, Video, Music, Archive, File, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ShareModal from '@/components/share-modal';
@@ -40,6 +40,7 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
     const touchStartXRef = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -318,44 +319,67 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
                                 </Button>
                             </div>
 
-                            {/* File Information */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                <div>
-                                    <h4 className="font-medium text-slate-900 dark:text-white mb-2">Informasi File</h4>
-                                    <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                                        <p><strong>Nama:</strong> {file.name}</p>
-                                        <p><strong>Ukuran:</strong> {formatFileSize(Number(file.size) || 0)}</p>
-                                        <p><strong>Jenis File:</strong> {file.mime_type}</p>
-                                        <p><strong>Dibuat pada:</strong> {new Date(file.created_at).toLocaleDateString()}</p>
-                                        {file.uploader && (
-                                            <p><strong>Diunggah oleh:</strong> {file.uploader.name}</p>
-                                        )}
-                                    </div>
-                                </div>
+                            {/* Show Details Button */}
+                            <div className="flex justify-center py-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowDetails(!showDetails)}
+                                    className="flex items-center gap-2"
+                                >
+                                    {showDetails ? (
+                                        <>
+                                            <Eye className="h-4 w-4" />
+                                            Sembunyikan Detail
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Eye className="h-4 w-4" />
+                                            Tampilkan Detail
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
 
-                                {file.description && (
+                            {/* File Information - Hidden by default */}
+                            {showDetails && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                     <div>
-                                        <h4 className="font-medium text-slate-900 dark:text-white mb-2">Description</h4>
-                                        <p className="text-sm text-slate-600 dark:text-slate-300">{file.description}</p>
-                                    </div>
-                                )}
-
-                                {file.tags && file.tags.length > 0 && (
-                                    <div className="md:col-span-2">
-                                        <h4 className="font-medium text-slate-900 dark:text-white mb-2">Tags</h4>
-                                        <div className="flex flex-wrap gap-1">
-                                            {file.tags.map((tag, index) => (
-                                                <span
-                                                    key={index}
-                                                    className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-                                                >
-                                                    {tag}
-                                                </span>
-                                            ))}
+                                        <h4 className="font-medium text-slate-900 dark:text-white mb-2">Informasi File</h4>
+                                        <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                                            <p><strong>Nama:</strong> {file.name}</p>
+                                            <p><strong>Ukuran:</strong> {formatFileSize(Number(file.size) || 0)}</p>
+                                            <p><strong>Jenis File:</strong> {file.mime_type}</p>
+                                            <p><strong>Dibuat pada:</strong> {new Date(file.created_at).toLocaleDateString()}</p>
+                                            {file.uploader && (
+                                                <p><strong>Diunggah oleh:</strong> {file.uploader.name}</p>
+                                            )}
                                         </div>
                                     </div>
-                                )}
-                            </div>
+
+                                    {file.description && (
+                                        <div>
+                                            <h4 className="font-medium text-slate-900 dark:text-white mb-2">Description</h4>
+                                            <p className="text-sm text-slate-600 dark:text-slate-300">{file.description}</p>
+                                        </div>
+                                    )}
+
+                                    {file.tags && file.tags.length > 0 && (
+                                        <div className="md:col-span-2">
+                                            <h4 className="font-medium text-slate-900 dark:text-white mb-2">Tags</h4>
+                                            <div className="flex flex-wrap gap-1">
+                                                {file.tags.map((tag, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
