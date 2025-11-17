@@ -107,10 +107,20 @@ Route::middleware('auth:sanctum')->group(function () {
     // Storage
     Route::get('/storage', [StorageController::class, 'index']);
 
-    // Activity (admin only)
-    Route::middleware('admin')->group(function () {
-        Route::get('/activity', [ActivityController::class, 'index']);
-        Route::post('/activity/clear', [ActivityController::class, 'clear']);
+        // Activity (admin only)
+        Route::middleware('admin')->group(function () {
+            Route::get('/activity', [ActivityController::class, 'index']);
+            Route::post('/activity/clear', [ActivityController::class, 'clear']);
+        });
+
+        // Users (admin only)
+        Route::middleware('admin')->group(function () {
+            Route::get('/users', [\App\Http\Controllers\Api\UserController::class, 'index']);
+            Route::post('/users', [\App\Http\Controllers\Api\UserController::class, 'store']);
+            Route::get('/users/{user}', [\App\Http\Controllers\Api\UserController::class, 'show']);
+            Route::put('/users/{user}', [\App\Http\Controllers\Api\UserController::class, 'update']);
+            Route::delete('/users/{user}', [\App\Http\Controllers\Api\UserController::class, 'destroy']);
+            Route::post('/users/{user}/toggle-approval', [\App\Http\Controllers\Api\UserController::class, 'toggleApproval']);
+        });
     });
-});
 

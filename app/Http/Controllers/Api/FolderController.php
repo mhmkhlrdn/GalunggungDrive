@@ -20,12 +20,16 @@ class FolderController extends Controller
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
+        $myFoldersOnly = $request->get('my_folders_only', false);
 
         $user = Auth::user();
         $query = Folder::with(['user', 'parent']);
 
-        // Super-admin can see all folders, others are restricted
-        if (!$user->isSuperAdmin()) {
+        // If my_folders_only is true, only show user's own folders (even for super-admin)
+        if ($myFoldersOnly) {
+            $query->where('user_id', $user->id);
+        } elseif (!$user->isSuperAdmin()) {
+            // Super-admin can see all folders, others are restricted
             $query->where('user_id', $user->id);
         }
 
@@ -264,11 +268,13 @@ class FolderController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'visibility' => 'nullable|in:private,shared,public',
+            'parent_id' => 'nullable|exists:folders,id',
         ]);
 
         $folder->update([
             'name' => $request->name,
             'visibility' => $request->input('visibility', $folder->visibility),
+            'parent_id' => $request->input('parent_id', $folder->parent_id),
         ]);
 
         return response()->json([
