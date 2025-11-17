@@ -28,17 +28,6 @@ class FileController extends Controller
             ->whereHas('storageLocation', function ($q) {
                 $q->where('is_active', true);
             });
-
-        // Super-admin can see all files, others are restricted
-        if (!$user->isSuperAdmin()) {
-            if ($user->isStaff() && !$user->isAdmin()) {
-                $query->where('user_id', $user->id);
-            } else {
-                // If my_files_only is true, only show user's own files
-                if ($myFilesOnly) {
-                    $query->where('user_id', $user->id);
-                } else {
-                    // Admin and regular users can see their own files, public files, shared files, and files shared with them
                     $query->where(function ($q) use ($user) {
                         $q->where('user_id', $user->id)
                           ->orWhere('visibility', 'public')
@@ -51,9 +40,6 @@ class FileController extends Controller
                                          });
                           });
                     });
-                }
-            }
-        }
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
@@ -67,7 +53,7 @@ class FileController extends Controller
             });
         }
 
-        $files = $query->orderBy($sortBy, $sortOrder)->paginate(20);
+        $files = $query->orderBy($sortBy, $sortOrder);
 
         $files->getCollection()->transform(function ($file) use ($user) {
             $file->starred = $file->isStarredBy($user);
