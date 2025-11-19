@@ -153,10 +153,22 @@ class FolderShareController extends Controller
     {
         $share = FolderShare::where('token', $token)
             ->where('is_public_link', true)
-            ->with(['folder.files', 'folder.children'])
+            ->with([
+                'folder' => function ($query) {
+                    $query->with([
+                        'user:id,name,email',
+                        'files' => function ($fileQuery) {
+                            $fileQuery->select('id', 'folder_id', 'name', 'size', 'mime_type', 'created_at', 'updated_at');
+                        },
+                        'children' => function ($childQuery) {
+                            $childQuery->select('id', 'parent_id', 'name', 'created_at');
+                        },
+                    ]);
+                },
+            ])
             ->first();
 
-        if (!$share) {
+        if (!$share || !$share->folder) {
             abort(404, 'Link tidak ditemukan atau sudah tidak valid.');
         }
 
@@ -165,6 +177,47 @@ class FolderShareController extends Controller
         }
 
         $folder = $share->folder;
+
+        $folderData = [
+            'id' => $folder->id,
+            'name' => $folder->name,
+            'path' => $folder->path,
+            'owner' => $folder->user ? [
+                'name' => $folder->user->name,
+                'email' => $folder->user->email,
+            ] : null,
+            'stats' => [
+                'files_count' => $folder->files->count(),
+                'folders_count' => $folder->children->count(),
+                'total_size' => $folder->files->sum('size'),
+            ],
+            'files' => $folder->files->map(function ($file) {
+                return [
+                    'id' => $file->id,
+                    'name' => $file->name,
+                    'size' => $file->size,
+                    'mime_type' => $file->mime_type,
+                    'created_at' => $file->created_at?->toISOString(),
+                ];
+            })->values()->all(),
+            'subfolders' => $folder->children->map(function ($child) {
+                return [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'created_at' => $child->created_at?->toISOString(),
+                ];
+            })->values()->all(),
+        ];
+
+        $shareData = [
+            'token' => $share->token,
+            'permission' => $share->permission,
+            'expires_at' => $share->expires_at?->toISOString(),
+            'created_at' => $share->created_at?->toISOString(),
+            'is_public_link' => $share->is_public_link,
+        ];
+
+        $publicUrl = route('public.folder', $share->token);
 
         // Log access
         ActivityLog::create([
@@ -183,8 +236,9 @@ class FolderShareController extends Controller
         ]);
 
         return Inertia::render('Folders/PublicView', [
-            'folder' => $folder,
-            'share' => $share,
+            'folder' => $folderData,
+            'share' => $shareData,
+            'publicUrl' => $publicUrl,
         ]);
     }
 }
