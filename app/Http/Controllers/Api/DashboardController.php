@@ -89,7 +89,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $folder->id,
                     'name' => $folder->name,
-                    'filesCount' => File::where('folder_id', $folder->id)
+                    'files_count' => File::where('folder_id', $folder->id)
                         ->whereHas('storageLocation', function ($q) {
                             $q->where('is_active', true);
                         })
