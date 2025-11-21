@@ -22,24 +22,13 @@ class FileController extends Controller
         $search = $request->get('search');
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
-        $myFilesOnly = $request->get('my_files_only', false);
 
         $query = File::with(['user', 'folder', 'storageLocation'])
-            ->whereHas('storageLocation', function ($q) {
-                $q->where('is_active', true);
-            });
-                    $query->where(function ($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->orWhere('visibility', 'public')
-                          ->orWhere('visibility', 'shared')
-                          ->orWhereHas('shares', function ($shareQuery) use ($user) {
-                              $shareQuery->where('shared_with', $user->id)
-                                         ->where(function ($expireQuery) {
-                                             $expireQuery->whereNull('expires_at')
-                                                        ->orWhere('expires_at', '>', now());
-                                         });
-                          });
-                    });
+    ->whereHas('storageLocation', function ($q) {
+        $q->where('is_active', true);
+    })
+    ->where('user_id', $user->id);
+
 
         if ($folderId) {
             $query->where('folder_id', $folderId);
@@ -53,22 +42,17 @@ class FileController extends Controller
             });
         }
 
-        $files = $query->orderBy($sortBy, $sortOrder);
+        $files = $query->orderBy($sortBy, $sortOrder)->get();
 
-        $files->getCollection()->transform(function ($file) use ($user) {
+        $files->transform(function ($file) use ($user) {
             $file->starred = $file->isStarredBy($user);
             return $file;
         });
 
         return response()->json([
             'status' => 'success',
-            'data' => $files->items(),
-            'meta' => [
-                'current_page' => $files->currentPage(),
-                'last_page' => $files->lastPage(),
-                'per_page' => $files->perPage(),
-                'total' => $files->total(),
-            ],
+            'data' => $files
+
         ]);
     }
 

@@ -298,10 +298,10 @@ class FileShareController extends Controller
     {
         $share = FileShare::where('token', $token)
             ->where('is_public_link', true)
-            ->with('file')
+            ->with(['file.user'])
             ->first();
 
-        if (!$share) {
+        if (!$share || !$share->file) {
             abort(404, 'Link tidak ditemukan atau sudah tidak valid.');
         }
 
@@ -310,6 +310,31 @@ class FileShareController extends Controller
         }
 
         $file = $share->file;
+
+        $fileData = [
+            'id' => $file->id,
+            'name' => $file->name,
+            'size' => $file->size,
+            'mime_type' => $file->mime_type,
+            'description' => $file->description,
+            'created_at' => $file->created_at?->toISOString(),
+            'updated_at' => $file->updated_at?->toISOString(),
+            'owner' => $file->user ? [
+                'name' => $file->user->name,
+                'email' => $file->user->email,
+            ] : null,
+        ];
+
+        $shareData = [
+            'token' => $share->token,
+            'permission' => $share->permission,
+            'expires_at' => $share->expires_at?->toISOString(),
+            'created_at' => $share->created_at?->toISOString(),
+            'is_public_link' => $share->is_public_link,
+        ];
+
+        $publicUrl = route('public.file', $share->token);
+        $downloadUrl = route('public.file.download', $share->token);
 
         // Log access (view)
         ActivityLog::create([
@@ -328,8 +353,11 @@ class FileShareController extends Controller
         ]);
 
         return Inertia::render('Files/PublicView', [
-            'file' => $file,
-            'share' => $share,
+            'file' => $fileData,
+            'share' => $shareData,
+            'downloadUrl' => $downloadUrl,
+            'publicUrl' => $publicUrl,
+            'canDownload' => in_array($share->permission, ['download', 'edit']),
         ]);
     }
 
@@ -340,7 +368,7 @@ class FileShareController extends Controller
             ->with('file')
             ->first();
 
-        if (!$share) {
+        if (!$share || !$share->file) {
             abort(404, 'Link tidak ditemukan atau sudah tidak valid.');
         }
 
