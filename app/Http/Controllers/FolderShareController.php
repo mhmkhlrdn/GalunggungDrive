@@ -17,7 +17,7 @@ class FolderShareController extends Controller
     public function create(Folder $folder): Response
     {
         $this->authorize('view', $folder);
-        
+
         $users = User::where('id', '!=', auth()->id())
             ->select('id', 'name', 'email')
             ->get();
@@ -46,12 +46,12 @@ class FolderShareController extends Controller
         } else {
             $token = null;
             $sharedWith = $request->shared_with;
-            
+
             // Check if already shared with this user
             $existingShare = FolderShare::where('folder_id', $folder->id)
                 ->where('shared_with', $sharedWith)
                 ->first();
-                
+
             if ($existingShare) {
                 return redirect()->back()->with('error', 'Folder sudah dibagikan dengan pengguna ini.');
             }
@@ -84,8 +84,8 @@ class FolderShareController extends Controller
             ],
         ]);
 
-        $message = $request->is_public_link 
-            ? 'Link publik folder berhasil dibuat.' 
+        $message = $request->is_public_link
+            ? 'Link publik folder berhasil dibuat.'
             : 'Folder berhasil dibagikan.';
 
         return redirect()->back()->with('success', $message);

@@ -17,7 +17,7 @@ class FileShareController extends Controller
     public function index(Request $request): Response
     {
         $user = auth()->user();
-        
+
         try {
             // Get files shared by the user - group by file to avoid duplicates
             $sharedByMeFiles = File::with(['shares' => function($query) use ($user) {
@@ -29,27 +29,27 @@ class FileShareController extends Controller
             })
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
-            
+
             // Get files shared with the user
             $sharedWithMe = FileShare::with(['file', 'sharedBy'])
                 ->where('shared_with', $user->id)
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
-            
+
             // Get public links created by the user
             $publicLinks = FileShare::with(['file'])
                 ->where('shared_by', $user->id)
                 ->where('is_public_link', true)
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
-            
-            
+
+
         } catch (\Exception $e) {
             // If there's an error, return empty paginated results
             $sharedByMeFiles = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
             $sharedWithMe = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
             $publicLinks = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
-            
+
             \Log::error('FileShareController error: ' . $e->getMessage());
         }
 
@@ -132,7 +132,7 @@ class FileShareController extends Controller
     {
         $fileIds = $request->input('file_ids', []);
         $user = auth()->user();
-        
+
         $shares = FileShare::with(['sharedWith', 'sharedBy'])
             ->whereIn('file_id', $fileIds)
             ->where('shared_by', $user->id)
@@ -162,7 +162,7 @@ class FileShareController extends Controller
     public function create(File $file): Response
     {
         $this->authorize('view', $file);
-        
+
         $users = User::where('id', '!=', auth()->id())
             ->select('id', 'name', 'email')
             ->get();
@@ -191,12 +191,12 @@ class FileShareController extends Controller
         } else {
             $token = null;
             $sharedWith = $request->shared_with;
-            
+
             // Check if already shared with this user
             $existingShare = FileShare::where('file_id', $file->id)
                 ->where('shared_with', $sharedWith)
                 ->first();
-                
+
             if ($existingShare) {
                 return redirect()->back()->with('error', 'File sudah dibagikan dengan pengguna ini.');
             }
@@ -216,6 +216,7 @@ class FileShareController extends Controller
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'share',
+        
             'target_type' => 'file',
             'target_id' => $file->id,
             'ip_address' => $request->ip(),
@@ -229,8 +230,8 @@ class FileShareController extends Controller
             ],
         ]);
 
-        $message = $request->is_public_link 
-            ? 'Link publik berhasil dibuat.' 
+        $message = $request->is_public_link
+            ? 'Link publik berhasil dibuat.'
             : 'File berhasil dibagikan.';
 
         return redirect()->back()->with('success', $message);
@@ -339,7 +340,7 @@ class FileShareController extends Controller
         // Log access (view)
         ActivityLog::create([
             'user_id' => null, // Anonymous access
-            'action' => 'view',
+            'action' => 'preview',
             'target_type' => 'file',
             'target_id' => $file->id,
             'ip_address' => request()->ip(),
@@ -400,11 +401,11 @@ class FileShareController extends Controller
     private function formatFileSize($bytes)
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 }
