@@ -9,6 +9,7 @@ use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -362,11 +363,12 @@ class FileShareController extends Controller
         ]);
     }
 
+
     public function publicDownload(string $token)
     {
         $share = FileShare::where('token', $token)
             ->where('is_public_link', true)
-            ->with('file')
+            ->with(['file.storageLocation'])
             ->first();
 
         if (!$share || !$share->file) {
@@ -377,7 +379,22 @@ class FileShareController extends Controller
             abort(410, 'Link sudah kedaluwarsa.');
         }
 
+        // Check if download permission is granted
+        if (!in_array($share->permission, ['download', 'edit'])) {
+            abort(403, 'Anda tidak memiliki izin untuk mengunduh file ini.');
+        }
+
         $file = $share->file;
+
+        // Check if storage location is active
+        if (!$file->storageLocation || !$file->storageLocation->is_active) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        $diskKey = $file->storageLocation->diskKey();
+        if (!Storage::disk($diskKey)->exists($file->path)) {
+            abort(404, 'File tidak ditemukan.');
+        }
 
         // Log download
         ActivityLog::create([
@@ -395,7 +412,7 @@ class FileShareController extends Controller
             ],
         ]);
 
-        return \Storage::disk($file->disk)->download($file->path, $file->name);
+        return response()->download(Storage::disk($diskKey)->path($file->path), $file->name);
     }
 
     private function formatFileSize($bytes)
