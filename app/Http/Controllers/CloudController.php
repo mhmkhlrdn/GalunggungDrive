@@ -66,7 +66,6 @@ class CloudController extends Controller
                 $query->where(function ($q) use ($userId) {
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($userId) {
                           $shareQuery->where('shared_with', $userId)
                                      ->where(function ($expireQuery) {
@@ -81,7 +80,6 @@ class CloudController extends Controller
                 $query->where(function ($q) use ($userId) {
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($userId) {
                           $shareQuery->where('shared_with', $userId)
                                      ->where(function ($expireQuery) {
@@ -121,7 +119,6 @@ class CloudController extends Controller
                 $query->where(function ($q) use ($userId) {
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($userId) {
                           $shareQuery->where('shared_with', $userId)
                                      ->where(function ($expireQuery) {
@@ -136,7 +133,6 @@ class CloudController extends Controller
                 $query->where(function ($q) use ($userId) {
                     $q->where('user_id', $userId)
                       ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($userId) {
                           $shareQuery->where('shared_with', $userId)
                                      ->where(function ($expireQuery) {
@@ -208,7 +204,6 @@ class CloudController extends Controller
                 $filesQuery->where(function ($q) use ($user) {
                     $q->where('user_id', $user->id)
                       ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($user) {
                           $shareQuery->where('shared_with', $user->id)
                                      ->where(function ($expireQuery) {
@@ -229,7 +224,6 @@ class CloudController extends Controller
                 $foldersQuery->where(function ($q) use ($user) {
                     $q->where('user_id', $user->id)
                       ->orWhere('visibility', 'public')
-                      ->orWhere('visibility', 'shared')
                       ->orWhereHas('shares', function ($shareQuery) use ($user) {
                           $shareQuery->where('shared_with', $user->id)
                                      ->where(function ($expireQuery) {
