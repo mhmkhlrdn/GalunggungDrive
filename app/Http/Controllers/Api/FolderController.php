@@ -147,9 +147,14 @@ class FolderController extends Controller
                 $q->where('is_active', true);
             })
             ->where(function ($q) use ($user) {
-                if ($user->isStaff() && !$user->isAdmin()) {
+                // Super-admins can see all files
+                if ($user->isSuperAdmin()) {
+                    // No restrictions for super-admins
+                } elseif ($user->isStaff() && !$user->isAdmin()) {
+                    // Staff can only see their own files
                     $q->where('user_id', $user->id);
                 } else {
+                    // Regular users and admins see their own, public, or shared files
                     $q->where('user_id', $user->id)
                       ->orWhere('visibility', 'public')
                       ->orWhereHas('shares', function ($shareQuery) use ($user) {
@@ -172,9 +177,14 @@ class FolderController extends Controller
         $subfolders = Folder::with(['user'])
             ->where('parent_id', $folder->id)
             ->where(function ($q) use ($user) {
-                if ($user->isStaff() && !$user->isAdmin()) {
+                // Super-admins can see all folders
+                if ($user->isSuperAdmin()) {
+                    // No restrictions for super-admins
+                } elseif ($user->isStaff() && !$user->isAdmin()) {
+                    // Staff can only see their own folders
                     $q->where('user_id', $user->id);
                 } else {
+                    // Regular users and admins see their own, public, or shared folders
                     $q->where('user_id', $user->id)
                       ->orWhere('visibility', 'public')
                       ->orWhereHas('shares', function ($shareQuery) use ($user) {
@@ -188,6 +198,7 @@ class FolderController extends Controller
             })
             ->orderBy('name')
             ->get();
+
 
         // Transform files
         $filesData = $files->map(function ($file) {
