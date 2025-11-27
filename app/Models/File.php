@@ -74,6 +74,11 @@ public function toFrontend()
 }
     public function scopeVisibleTo($query, $user)
     {
+        // Super-admins can see all files
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
         return $query->where('user_id', $user->id)
             ->orWhere('visibility', 'public')
             ->orWhere('visibility', 'shared')

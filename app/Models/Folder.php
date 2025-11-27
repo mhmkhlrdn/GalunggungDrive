@@ -45,14 +45,19 @@ class Folder extends Model
     }
 
     public function scopeVisibleTo($query, User $user)
-{
-    return $query->where('user_id', $user->id)
-        ->orWhere('visibility', 'public')
-        ->orWhereHas('shares', function ($shareQuery) use ($user) {
-            $shareQuery->where('shared_with', $user->id)
-                ->where(fn($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
-        });
-}
+    {
+        // Super-admins can see all folders
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        return $query->where('user_id', $user->id)
+            ->orWhere('visibility', 'public')
+            ->orWhereHas('shares', function ($shareQuery) use ($user) {
+                $shareQuery->where('shared_with', $user->id)
+                    ->where(fn($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+            });
+    }
 
 
     public function getPathAttribute(): string
