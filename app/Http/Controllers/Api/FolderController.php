@@ -128,6 +128,13 @@ class FolderController extends Controller
             ],
         ]);
 
+        // Clear cache so new folder appears immediately
+        try {
+            \Illuminate\Support\Facades\Cache::forget(\App\Services\CacheService::getCloudCacheKey(Auth::user()));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to clear cache in Api\FolderController::store: ' . $e->getMessage());
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Folder created successfully',
@@ -288,6 +295,13 @@ class FolderController extends Controller
             'parent_id' => $request->input('parent_id', $folder->parent_id),
         ]);
 
+        // Clear cache so changes appear immediately
+        try {
+            \Illuminate\Support\Facades\Cache::forget(\App\Services\CacheService::getCloudCacheKey(Auth::user()));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to clear cache in Api\FolderController::update: ' . $e->getMessage());
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Folder updated successfully',
@@ -299,6 +313,13 @@ class FolderController extends Controller
     {
         $this->authorize('delete', $folder);
         $folder->delete();
+
+        // Clear cache so changes appear immediately
+        try {
+            \Illuminate\Support\Facades\Cache::forget(\App\Services\CacheService::getCloudCacheKey(Auth::user()));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to clear cache in Api\FolderController::destroy: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'success',
@@ -351,6 +372,13 @@ class FolderController extends Controller
     {
         $this->authorize('restore', $folder);
         $folder->restore();
+
+        // Clear cache so changes appear immediately
+        try {
+            \Illuminate\Support\Facades\Cache::forget(\App\Services\CacheService::getCloudCacheKey(Auth::user()));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to clear cache in Api\FolderController::restore: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'success',

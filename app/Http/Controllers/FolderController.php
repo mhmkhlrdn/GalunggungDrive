@@ -453,6 +453,8 @@ class FolderController extends Controller
                 ],
             ]);
 
+            $this->clearFolderCaches(Auth::id(), $folder->parent_id);
+
             return redirect()->back()->with('success', 'Folder updated successfully.');
         } catch (\Exception $e) {
             Log::error('Folder update failed: ' . $e->getMessage(), [
@@ -516,6 +518,8 @@ class FolderController extends Controller
                 'folder_name' => $folder->name,
             ],
         ]);
+
+        $this->clearFolderCaches(Auth::id(), $folder->parent_id);
 
         return redirect()->back()->with('success', 'Folder berhasil dipulihkan.');
     }

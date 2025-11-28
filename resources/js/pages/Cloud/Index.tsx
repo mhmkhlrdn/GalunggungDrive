@@ -46,6 +46,8 @@ interface CloudFolder {
         id: number;
         name: string;
     };
+    files_count?: number;
+    folders_count?: number;
 }
 
 interface Props {
@@ -178,9 +180,11 @@ export default function CloudIndex({ folders, files, breadcrumbs, filters = {}, 
                                                     <User className="h-3 w-3" />
                                                     <span>{folder.user.name}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1">
                                                     <Calendar className="h-3 w-3" />
                                                     <span>{new Date(folder.updated_at).toLocaleDateString('id-ID')}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-xs">{folder.folders_count || 0} folder, {folder.files_count || 0} file</span>
                                                 </div>
                                             </div>
                                         </div>

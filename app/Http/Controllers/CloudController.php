@@ -21,7 +21,8 @@ class CloudController extends Controller
 
         $cacheKey = CacheService::getCloudCacheKey($user);
 
-        $cachedData = Cache::remember($cacheKey, 300, function () use ($userId, $user) {
+        // Reduced cache time to 30 seconds so new folders appear faster
+        $cachedData = Cache::remember($cacheKey, 30, function () use ($userId, $user) {
             return $this->getCloudData($userId, $user);
         });
 
@@ -92,6 +93,16 @@ class CloudController extends Controller
         }
 
         return $query->orderBy('name')->get()->map(function ($folder) {
+            // Count files in this folder
+            $filesCount = File::where('folder_id', $folder->id)
+                ->whereHas('storageLocation', function ($q) {
+                    $q->where('is_active', true);
+                })
+                ->count();
+
+            // Count subfolders in this folder
+            $subfoldersCount = Folder::where('parent_id', $folder->id)->count();
+
             return [
                 'id' => $folder->id,
                 'name' => $folder->name,
@@ -100,6 +111,8 @@ class CloudController extends Controller
                     'id' => $folder->user->id,
                     'name' => $folder->user->name,
                 ],
+                'files_count' => $filesCount,
+                'folders_count' => $subfoldersCount,
             ];
         })->toArray();
     }

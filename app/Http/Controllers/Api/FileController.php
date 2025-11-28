@@ -11,6 +11,7 @@ use App\Models\StorageLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class FileController extends Controller
@@ -58,109 +59,145 @@ class FileController extends Controller
 
     public function store(Request $request)
     {
-        $user = Auth::user();
-        $uploadConfig = config('upload', []);
+        try {
+            Log::info('File upload request received', [
+                'user_id' => Auth::id(),
+                'folder_id' => $request->folder_id,
+                'disk_id' => $request->disk_id,
+                'file_count' => $request->hasFile('files') ? count($request->file('files')) : 0,
+            ]);
 
-        $validationRules = [
-            'files' => 'required|array|min:1',
-            'files.*' => 'file',
-            'folder_id' => 'nullable|exists:folders,id',
-            'disk_id' => 'required|integer|exists:storage_locations,id',
-            'description' => 'nullable|string|max:1000',
-            'tags' => 'nullable|string',
-            'visibility' => 'required|in:private,shared,public',
-        ];
+            $user = Auth::user();
+            $uploadConfig = config('upload', []);
 
-        $staffAllowedMimeTypes = [
-            'image/*',
-            'video/*',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-        ];
+            $validationRules = [
+                'files' => 'required|array|min:1',
+                'files.*' => 'file',
+                'folder_id' => 'nullable|exists:folders,id',
+                'disk_id' => 'required|integer|exists:storage_locations,id',
+                'description' => 'nullable|string|max:1000',
+                'tags' => 'nullable|string',
+                'visibility' => 'required|in:private,shared,public',
+            ];
 
-        if ($user->isAdmin()) {
-            // Admins can upload any file type
-        } elseif ($user->isStaff()) {
-            $validationRules['files.*'] .= '|mimetypes:' . implode(',', $staffAllowedMimeTypes);
-            $validationRules['visibility'] = 'required|in:public';
-        } elseif (!empty($uploadConfig['allowed_mime_types'])) {
-            $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
-        }
+            $staffAllowedMimeTypes = [
+                'image/*',
+                'video/*',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain',
+            ];
 
-        $validated = $request->validate($validationRules);
+            if ($user->isAdmin()) {
+                // Admins can upload any file type
+            } elseif ($user->isStaff()) {
+                $validationRules['files.*'] .= '|mimetypes:' . implode(',', $staffAllowedMimeTypes);
+                $validationRules['visibility'] = 'required|in:public';
+            } elseif (!empty($uploadConfig['allowed_mime_types'])) {
+                $validationRules['files.*'] .= '|mimetypes:' . implode(',', $uploadConfig['allowed_mime_types']);
+            }
 
-        $storageLocation = StorageLocation::active()->where('id', $validated['disk_id'])->first();
-        if (!$storageLocation || !(bool) ($storageLocation->can_serve ?? false)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Lokasi penyimpanan tidak tersedia untuk upload.',
-            ], 400);
-        }
-
-        $storageDisk = $storageLocation->diskKey();
-        $uploadedFiles = [];
-        $storagePath = $uploadConfig['storage_path'] ?? 'files';
-
-        foreach ($request->file('files') as $uploadedFile) {
             try {
-                $path = $uploadedFile->store($storagePath, $storageDisk);
-                if ($path === false) {
+                $validated = $request->validate($validationRules);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                Log::warning('File upload validation failed', ['errors' => $e->errors()]);
+                throw $e;
+            }
+
+            $storageLocation = StorageLocation::active()->where('id', $validated['disk_id'])->first();
+            if (!$storageLocation || !(bool) ($storageLocation->can_serve ?? false)) {
+                Log::error('Storage location invalid or not serving', ['disk_id' => $validated['disk_id']]);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Lokasi penyimpanan tidak tersedia untuk upload.',
+                ], 400);
+            }
+
+            $storageDisk = $storageLocation->diskKey();
+            $uploadedFiles = [];
+            $storagePath = $uploadConfig['storage_path'] ?? 'files';
+
+            foreach ($request->file('files') as $uploadedFile) {
+                try {
+                    Log::info('Processing file upload', ['original_name' => $uploadedFile->getClientOriginalName()]);
+                    
+                    $path = $uploadedFile->store($storagePath, $storageDisk);
+                    if ($path === false) {
+                        Log::error('Failed to store file on disk', ['disk' => $storageDisk, 'path' => $storagePath]);
+                        continue;
+                    }
+
+                    $checksum = hash_file('sha256', $uploadedFile->getRealPath());
+
+                    $file = File::create([
+                        'user_id' => Auth::id(),
+                        'folder_id' => $request->folder_id,
+                        'name' => $uploadedFile->getClientOriginalName(),
+                        'path' => $path,
+                        'disk_id' => $storageLocation->id,
+                        'size' => $uploadedFile->getSize(),
+                        'mime_type' => $uploadedFile->getMimeType(),
+                        'checksum' => $checksum,
+                        'description' => $request->description,
+                        'visibility' => $request->visibility,
+                        'tags' => $request->tags ? explode(',', $request->tags) : null,
+                    ]);
+
+                    $file->versions()->create([
+                        'version_number' => 1,
+                        'path' => $path,
+                        'size' => $uploadedFile->getSize(),
+                        'mime_type' => $uploadedFile->getMimeType(),
+                        'checksum' => $checksum,
+                        'uploaded_by' => Auth::id(),
+                    ]);
+
+                    ActivityLog::create([
+                        'user_id' => Auth::id(),
+                        'action' => 'upload',
+                        'target_type' => 'file',
+                        'target_id' => $file->id,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'success' => true,
+                        'details' => [
+                            'file_name' => $file->name,
+                            'file_size' => $file->size,
+                            'mime_type' => $file->mime_type,
+                        ],
+                    ]);
+
+                    $uploadedFiles[] = $file;
+                } catch (\Exception $e) {
+                    Log::error('Error processing individual file upload', [
+                        'file' => $uploadedFile->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
                     continue;
                 }
-
-                $checksum = hash_file('sha256', $uploadedFile->getRealPath());
-
-                $file = File::create([
-                    'user_id' => Auth::id(),
-                    'folder_id' => $request->folder_id,
-                    'name' => $uploadedFile->getClientOriginalName(),
-                    'path' => $path,
-                    'disk_id' => $storageLocation->id,
-                    'size' => $uploadedFile->getSize(),
-                    'mime_type' => $uploadedFile->getMimeType(),
-                    'checksum' => $checksum,
-                    'description' => $request->description,
-                    'visibility' => $request->visibility,
-                    'tags' => $request->tags ? explode(',', $request->tags) : null,
-                ]);
-
-                $file->versions()->create([
-                    'version_number' => 1,
-                    'path' => $path,
-                    'size' => $uploadedFile->getSize(),
-                    'mime_type' => $uploadedFile->getMimeType(),
-                    'checksum' => $checksum,
-                    'uploaded_by' => Auth::id(),
-                ]);
-
-                ActivityLog::create([
-                    'user_id' => Auth::id(),
-                    'action' => 'upload',
-                    'target_type' => 'file',
-                    'target_id' => $file->id,
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'success' => true,
-                    'details' => [
-                        'file_name' => $file->name,
-                        'file_size' => $file->size,
-                        'mime_type' => $file->mime_type,
-                    ],
-                ]);
-
-                $uploadedFiles[] = $file;
-            } catch (\Exception $e) {
-                continue;
             }
-        }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => count($uploadedFiles) . ' file berhasil diunggah.',
-            'data' => $uploadedFiles,
-        ], 201);
+            return response()->json([
+                'status' => 'success',
+                'message' => count($uploadedFiles) . ' file berhasil diunggah.',
+                'data' => $uploadedFiles,
+            ], 201);
+
+        } catch (\Throwable $e) {
+            Log::error('Critical error in file upload process', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id() ?? 'unauthenticated',
+            ]);
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Internal Server Error during upload',
+                'debug_message' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
     }
 
     public function show(File $file)
