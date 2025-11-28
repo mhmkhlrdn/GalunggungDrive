@@ -29,6 +29,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Recruitment file access (public API for GASNET Rekrutmen website)
+Route::get('/recruitment/files/{file}/preview', [\App\Http\Controllers\Api\RecruitmentFileController::class, 'preview']);
+Route::get('/recruitment/files/{file}/download', [\App\Http\Controllers\Api\RecruitmentFileController::class, 'download']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication
