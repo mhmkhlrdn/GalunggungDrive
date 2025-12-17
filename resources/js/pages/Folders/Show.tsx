@@ -63,6 +63,7 @@ interface Props {
 }
 
 export default function FolderShow({ folder, files, folders, breadcrumbs, allFolders, from, storageLoc }: Props) {
+    console.log(folders);
     const { showError, showSuccess } = useSnackbar();
     const { post } = useInertiaOperations();
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -261,8 +262,11 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Folders</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        
                         {folders.map((subfolder) => (
                             <div key={subfolder.id} className="relative group">
+                                
+                                
                                 <Link href={`/folders/${subfolder.id}`}>
                                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                                         <CardHeader className="pb-3">
@@ -548,6 +552,7 @@ export default function FolderShow({ folder, files, folders, breadcrumbs, allFol
                 tags: f.tags,
             }))}
             currentIndex={previewIndex}
+            onNavigate={(index) => setPreviewIndex(index)}
         />
 
             {/* File Upload Modal */}

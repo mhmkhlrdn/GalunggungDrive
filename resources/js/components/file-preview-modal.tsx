@@ -25,9 +25,10 @@ interface FilePreviewModalProps {
         };
     }>;
     currentIndex: number;
+    onNavigate?: (index: number) => void;
 }
 
-export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null, filesInDirectory = [], currentIndex = 0, users = [] }: FilePreviewModalProps & { users?: Array<{ id: number; name: string; email: string }> }) {
+export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null, filesInDirectory = [], currentIndex = 0, users = [], onNavigate }: FilePreviewModalProps & { users?: Array<{ id: number; name: string; email: string }> }) {
     const clampIndex = (idx: number) => {
         if (!Array.isArray(filesInDirectory) || filesInDirectory.length === 0) return 0;
         if (idx < 0) return 0;
@@ -45,18 +46,28 @@ export default function FilePreviewModal({ isOpen, onClose, loggedinUser = null,
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        setCurrentFileIndex(clampIndex(currentIndex));
+        if (isOpen) {
+            setCurrentFileIndex(clampIndex(currentIndex));
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentIndex, filesInDirectory?.length]);
+    }, [currentIndex, filesInDirectory?.length, isOpen]);
 
     const goPrev = useCallback(() => {
-        setCurrentFileIndex((idx) => (idx > 0 ? idx - 1 : idx));
-    }, []);
+        if (currentFileIndex > 0) {
+            const newIndex = currentFileIndex - 1;
+            setCurrentFileIndex(newIndex);
+            onNavigate?.(newIndex);
+        }
+    }, [currentFileIndex, onNavigate]);
 
     const goNext = useCallback(() => {
         const maxIndex = (Array.isArray(filesInDirectory) ? filesInDirectory.length : 0) - 1;
-        setCurrentFileIndex((idx) => (idx < maxIndex ? idx + 1 : idx));
-    }, [filesInDirectory]);
+        if (currentFileIndex < maxIndex) {
+            const newIndex = currentFileIndex + 1;
+            setCurrentFileIndex(newIndex);
+            onNavigate?.(newIndex);
+        }
+    }, [currentFileIndex, filesInDirectory, onNavigate]);
 
     useEffect(() => {
         if (!isOpen) return;

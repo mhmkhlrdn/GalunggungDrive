@@ -215,9 +215,16 @@ class FolderController extends Controller
 
         $subfolders = Folder::where('parent_id', $folder->id)
             ->visibleTo($user)
-            ->withCount(['files', 'children as folders_count'])
+            ->withCount([
+                'files' => function ($query) use ($user) {
+                    $query->visibleTo($user)
+                          ->whereHas('storageLocation', fn($q) => $q->where('is_active', true));
+                },
+                'children as folders_count' => function ($query) use ($user) {
+                    $query->visibleTo($user);
+                }
+            ])
             ->orderBy('name')
-            ->select(['id', 'name', 'parent_id', 'created_at', 'updated_at', 'visibility'])
             ->get()
             ->map(fn($subfolder) => [
                 'id' => $subfolder->id,
@@ -227,6 +234,7 @@ class FolderController extends Controller
                 'updated_at' => $subfolder->updated_at->toISOString(),
                 'files_count' => $subfolder->files_count,
                 'folders_count' => $subfolder->folders_count,
+                'visibility' => $subfolder->visibility,
             ]);
 
         $breadcrumbs = $this->getBreadcrumbs($folder);
@@ -526,9 +534,6 @@ class FolderController extends Controller
 
     private function getBreadcrumbs(?Folder $folder): array
     {
-        $breadcrumbs = [
-            ['id' => 0, 'name' => 'Semua Folder', 'link' => route('folders.index')],
-        ];
 
         if ($folder) {
             $path = collect([$folder]);
