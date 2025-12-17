@@ -534,6 +534,7 @@ class FolderController extends Controller
 
     private function getBreadcrumbs(?Folder $folder): array
     {
+        $breadcrumbs = [];
 
         if ($folder) {
             $path = collect([$folder]);
@@ -549,6 +550,8 @@ class FolderController extends Controller
                     'id' => $folderItem->id,
                     'name' => $folderItem->name,
                     'link' => route('folders.show', ['folder' => $folderItem->id]),
+                    'title' => $folderItem->name,
+                    'href' => route('folders.show', ['folder' => $folderItem->id]),
                 ];
             }
         }
